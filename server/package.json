@@ -1,0 +1,24 @@
+{
+  "name": "egonetics-memory-server",
+  "version": "0.1.0",
+  "description": "Memory module backend for Egonetics project",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "init-db": "node init-db.js",
+    "import-data": "python3 import_jsonl.py"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "sqlite3": "^5.1.6",
+    "body-parser": "^1.20.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

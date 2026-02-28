@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+
+  ::selection {
+    @apply bg-primary-500/30 text-primary-100;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply backdrop-blur-md bg-white/5 border border-white/10 rounded-xl shadow-2xl;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg 
+           transition-all duration-200 hover:scale-105 active:scale-95 
+           font-medium shadow-lg hover:shadow-xl;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg 
+           transition-all duration-200 border border-white/20 
+           font-medium backdrop-blur-sm;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
+           text-white placeholder:text-neutral-400 focus:outline-none 
+           focus:ring-2 focus:ring-primary-500 focus:border-transparent 
+           transition-all duration-200;
+  }
+
+  .card {
+    @apply glass-panel p-6 hover:bg-white/10 transition-all duration-300;
+  }
+
+  /* Logo 专用样式 - 完全透明，无边框无背景 */
+  .app-logo {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 自定义滚动条 */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  /* 文本选择 */
+  .select-text {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 400px;
+  color: #e5e7eb;
+  line-height: 1.7;
+}
+
+.ProseMirror > * + * {
+  margin-top: 0.75em;
+}
+
+.ProseMirror h1 {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #fff;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  color: #f3f4f6;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: #f9fafb;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+}
+
+.ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  margin-top: 0.35em;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 1em;
+  margin-left: 0;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.ProseMirror code {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+}
+
+.ProseMirror pre {
+  background: #1f2937;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+  color: #e5e7eb;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 2em 0;
+}
+
+.ProseMirror a {
+  color: #818cf8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror a:hover {
+  color: #a5b4fc;
+}
+
+.ProseMirror mark {
+  background-color: rgba(234, 179, 8, 0.3);
+  color: #fef08a;
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+.ProseMirror s {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5em 1em;
+  text-align: left;
+}
+
+.ProseMirror th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #4b5563;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Placeholder style */
+.ProseMirror .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #6b7280;
+  pointer-events: none;
+  height: 0;
+}
