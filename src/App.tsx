@@ -2,16 +2,11 @@ import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import MemoryView from './components/MemoryView'
-import TheoryView from './components/TheoryView'
-import ChronicleView from './components/ChronicleView'
 import EgoneticsView from './components/EgoneticsView'
 import KanbanBoard from './components/taskBoard/KanbanBoard'
 import TaskDetailPage from './components/taskBoard/TaskDetailPage'
 import ChroniclePageView from './components/ChroniclePageView'
 import TheoryPageView from './components/TheoryPageView'
-import BlogEditor from './components/BlogEditor'
-import NotionStyleEditor from './components/NotionStyleEditor'
-import NewNotionStyleEditor from './components/NewNotionStyleEditor'
 import BlogPage from './components/BlogPage'
 import { useChronicleStore } from './stores/useChronicleStore'
 
@@ -181,9 +176,9 @@ const AppContent: React.FC = () => {
               <Route path="/tasks" element={<KanbanBoard />} />
               <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
               <Route path="/blog" element={<BlogPage />} />
-              <Route path="/old-blog" element={<BlogEditor />} />
-              <Route path="/editor1" element={<NewNotionStyleEditor />} />
-              <Route path="/editor2" element={<NotionStyleEditor />} />
+              {/* <Route path="/old-blog" element={<BlogEditor />} /> */}
+              {/* <Route path="/editor1" element={<NewNotionStyleEditor />} /> */}
+              {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/memory" replace />} />
