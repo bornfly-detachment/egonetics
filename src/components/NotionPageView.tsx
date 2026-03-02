@@ -1,268 +1,214 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Type, Braces, Image, Film, Music, ChevronRight } from 'lucide-react'
-import { useTasksStore } from '@/stores/useTasksStore'
-import { useChronicleStore } from '@/stores/useChronicleStore'
 import PageLayout from './PageLayout'
-import BlockWrapper from './blocks/BlockWrapper'
-import MarkdownBlock from './blocks/MarkdownBlock'
-import JsonBlock from './blocks/JsonBlock'
-import ImageBlock from './blocks/ImageBlock'
-import VideoBlock from './blocks/VideoBlock'
-import AudioBlock from './blocks/AudioBlock'
+import PageManager from './PageManager'
+import { createApiClient } from './apiClient'
+import type { ApiClient, PageMeta, Block, CreatePageInput } from './types'
 
-// 块类型定义
-export type BlockType = 
-  | 'markdown'       // Markdown编辑显示块
-  | 'json'           // JSON格式展示块
-  | 'image'          // 图片
-  | 'video'          // 视频
-  | 'audio'          // 音频
+const KANBAN_API_BASE = 'http://localhost:3003/api'
 
-export interface PageBlock {
+// Task 类型定义
+interface Task {
   id: string
-  type: BlockType
-  title: string                // 块标题（在列表中显示）
-  content: string | Record<string, any>
-  order: number
+  name: string
+  icon: string
+  assignee?: string
+  startDate?: string
+  dueDate?: string
+  project?: string
+  projectIcon?: string
+  status: string
+  priority: string
+  sortOrder: number
+  tags?: string[]
+  pageId?: string
+  created_at: string
+  updated_at: string
 }
 
-// 块类型信息
-const BLOCK_TYPES = [
-  { type: 'markdown' as const, label: 'Markdown', icon: Type, defaultTitle: '新 Markdown 块' },
-  { type: 'json' as const, label: 'JSON', icon: Braces, defaultTitle: '新 JSON 块' },
-  { type: 'image' as const, label: '图片', icon: Image, defaultTitle: '新图片块' },
-  { type: 'video' as const, label: '视频', icon: Film, defaultTitle: '新视频块' },
-  { type: 'audio' as const, label: '音频', icon: Music, defaultTitle: '新音频块' },
-]
+// 获取单个 task
+async function fetchTask(taskId: string): Promise<Task | null> {
+  try {
+    const res = await fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch (e) {
+    console.error('Fetch task failed:', e)
+    return null
+  }
+}
 
-// 生成唯一 ID
-const generateId = () => `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+// 为 Task 系统定制的 API 客户端
+function createTaskApiClient(taskId: string, taskName: string, taskIcon: string): ApiClient {
+  const baseClient = createApiClient('task', taskId)
+  const storageKey = `task-page-${taskId}`
+
+  async function getOrCreateTaskPage(): Promise<PageMeta> {
+    const storedPageId = localStorage.getItem(storageKey)
+
+    if (storedPageId) {
+      try {
+        const pages = await baseClient.listPages()
+        const existingPage = pages.find(p => p.id === storedPageId)
+        if (existingPage) {
+          if (existingPage.title !== taskName || existingPage.icon !== taskIcon) {
+            return await baseClient.updatePage(storedPageId, { title: taskName, icon: taskIcon })
+          }
+          return existingPage
+        }
+      } catch (e) {
+        console.log('Page not found, creating new one')
+      }
+    }
+
+    const newPage = await baseClient.createPage({
+      parentId: null,
+      pageType: 'task',
+      refId: taskId,
+      title: taskName,
+      icon: taskIcon,
+      position: 1,
+    })
+
+    localStorage.setItem(storageKey, newPage.id)
+    return newPage
+  }
+
+  return {
+    async listPages() {
+      const page = await getOrCreateTaskPage()
+      return [page]
+    },
+
+    async createPage(input: CreatePageInput) {
+      const page = await baseClient.createPage({
+        ...input,
+        parentId: input.parentId || (await getOrCreateTaskPage()).id,
+      })
+      return page
+    },
+
+    async updatePage(id: string, patch) {
+      const updated = await baseClient.updatePage(id, patch)
+      return updated
+    },
+
+    async deletePage(id: string) {
+      await baseClient.deletePage(id)
+      const storedPageId = localStorage.getItem(storageKey)
+      if (storedPageId === id) {
+        localStorage.removeItem(storageKey)
+      }
+    },
+
+    async movePage(id: string, input) {
+      const updated = await baseClient.movePage(id, input)
+      return updated
+    },
+
+    async listBlocks(pageId: string) {
+      const blocks = await baseClient.listBlocks(pageId)
+      return blocks
+    },
+
+    async saveBlocks(pageId: string, blocks: Block[]) {
+      const saved = await baseClient.saveBlocks(pageId, blocks)
+      return saved
+    },
+  }
+}
 
 const NotionPageView: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
-  const { tasks, loadTask, currentTaskId, setCurrentTask, updateContent } = useTasksStore()
-  const setUIState = useChronicleStore(s => s.setUIState)
-  
-  const [blocks, setBlocks] = useState<PageBlock[]>([])
-  const [showMenu, setShowMenu] = useState(false)
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
-  const menuRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLDivElement>(null)
+  const [task, setTask] = useState<Task | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // 从 URL 同步到 store
+  // 加载 task 数据
   useEffect(() => {
-    if (taskId && taskId !== currentTaskId) {
-      setCurrentTask(taskId)
-      loadTask(taskId)
-    }
-  }, [taskId, currentTaskId, setCurrentTask, loadTask])
-
-  // 从任务内容初始化块
-  useEffect(() => {
-    const task = tasks.find(t => t.id === taskId)
-    if (task && task.content) {
-      try {
-        const parsed = JSON.parse(task.content)
-        if (Array.isArray(parsed)) {
-          setBlocks(parsed)
-          return
-        }
-      } catch (e) {
-        // 如果不是 JSON，创建一个默认 Markdown 块
-      }
-    }
-    
-    // 默认块
-    setBlocks([
-      {
-        id: generateId(),
-        type: 'markdown',
-        title: '欢迎',
-        content: '# 欢迎使用 Notion 风格编辑器\n\n这是你的第一个块。',
-        order: 0
-      }
-    ])
-  }, [taskId, tasks])
-
-  // 保存块到任务
-  const saveBlocks = useCallback((newBlocks: PageBlock[]) => {
-    if (taskId) {
-      updateContent(taskId, JSON.stringify(newBlocks))
-    }
-  }, [taskId, updateContent])
-
-  // 处理 "/" 按键
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === '/' && !showMenu) {
-      e.preventDefault()
-      const rect = inputRef.current?.getBoundingClientRect()
-      if (rect) {
-        setMenuPosition({ top: rect.bottom + 8, left: rect.left })
-        setShowMenu(true)
-      }
-    } else if (e.key === 'Escape' && showMenu) {
-      setShowMenu(false)
-    }
-  }, [showMenu])
-
-  // 点击外部关闭菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false)
-      }
+    if (!taskId) {
+      setIsLoading(false)
+      return
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+    setIsLoading(true)
+    fetchTask(taskId).then((taskData) => {
+      setTask(taskData)
+      setIsLoading(false)
+    })
+  }, [taskId])
 
-  // 添加新块
-  const addBlock = useCallback((type: BlockType) => {
-    const blockType = BLOCK_TYPES.find(t => t.type === type)
-    const newBlock: PageBlock = {
-      id: generateId(),
-      type,
-      title: blockType?.defaultTitle || '新块',
-      content: type === 'json' ? {} : '',
-      order: blocks.length
-    }
+  // 创建定制的 API 客户端
+  const taskApiClient = useMemo(() => {
+    if (!task) return null
+    return createTaskApiClient(task.id, task.name, task.icon)
+  }, [task])
 
-    const newBlocks = [...blocks, newBlock]
-    setBlocks(newBlocks)
-    saveBlocks(newBlocks)
-    setShowMenu(false)
-  }, [blocks, saveBlocks])
+  const handleBack = useCallback(() => {
+    navigate('/tasks')
+  }, [navigate])
 
-  const task = tasks.find(t => t.id === taskId)
-
-  if (!task) {
+  if (!isLoading && !task) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-neutral-400 mb-4">任务不存在</p>
-        <button 
-          onClick={() => {
-            setCurrentTask(null)
-            setUIState({ currentView: 'tasks' })
-          }}
-          className="btn-secondary"
-        >
-          返回任务列表
-        </button>
-      </div>
+      <PageLayout
+        title="任务不存在"
+        showBack
+        onBack={handleBack}
+      >
+        <div className="p-8 text-center">
+          <p className="text-neutral-400 mb-4">任务不存在或已被删除</p>
+          <button
+            onClick={handleBack}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+          >
+            返回任务列表
+          </button>
+        </div>
+      </PageLayout>
+    )
+  }
+
+  if (isLoading || !taskApiClient) {
+    return (
+      <PageLayout
+        title={task?.name || '加载中...'}
+        icon={task?.icon}
+        showBack
+        onBack={handleBack}
+      >
+        <div className="p-8 text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-400">加载页面...</p>
+        </div>
+      </PageLayout>
     )
   }
 
   return (
-    <PageLayout
-      title={task.name}
-      subtitle="Notion风格页面编辑器"
-      icon={task.icon}
-      showBack
-      onBack={() => {
-        setCurrentTask(null)
-        setUIState({ currentView: 'tasks' })
-      }}
-      variant="blog"
-    >
-      <div className="max-w-3xl mx-auto">
-        {/* 提示 */}
-        <div className="mb-6 p-4 bg-neutral-800/50 rounded-lg border border-neutral-700">
-          <p className="text-sm text-neutral-400">
-            💡 <strong>操作说明：</strong> 点击下方输入框，输入 "/" 添加新块；点击块进行编辑
-          </p>
-        </div>
-
-        {/* 输入区域 - 用于触发 "/" 命令 */}
-        <div
-          ref={inputRef}
-          className="mb-6 p-4 border-2 border-dashed border-neutral-700 rounded-lg bg-neutral-900/30 text-neutral-500 text-sm cursor-text"
-          onClick={() => inputRef.current?.focus()}
-          tabIndex={0}
-          onKeyDown={handleKeyDown}
+    <div className="h-screen flex flex-col bg-[#191919]">
+      {/* 顶部导航栏 */}
+      <div className="h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 shrink-0">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
         >
-          点击这里，输入 <kbd className="px-1.5 py-0.5 bg-neutral-800 rounded text-neutral-300">/</kbd> 添加新块...
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          <span className="text-sm">返回任务列表</span>
+        </button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2 text-neutral-500 text-sm">
+          <span>{task.icon}</span>
+          <span>{task.name}</span>
         </div>
-
-        {/* 块列表 */}
-        <div className="space-y-2">
-          {blocks.map((block) => {
-            const blockType = BLOCK_TYPES.find(t => t.type === block.type)
-            const Icon = blockType?.icon || Type
-
-            return (
-              <div
-                key={block.id}
-                className="group flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-                onClick={() => {
-                  // 简单的编辑方式：直接用 alert 或者后续做模态框
-                  alert(`编辑块: ${block.title}\n\n（完整的编辑页面功能开发中...）`)
-                }}
-              >
-                {/* 块图标 */}
-                <div className="p-2 bg-neutral-800 rounded-lg">
-                  <Icon className="w-4 h-4 text-neutral-400" />
-                </div>
-
-                {/* 块标题 */}
-                <div className="flex-1">
-                  <div className="font-medium text-neutral-200">
-                    {block.title || blockType?.defaultTitle || '未命名块'}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    {blockType?.label}
-                  </div>
-                </div>
-
-                {/* 箭头 */}
-                <ChevronRight className="w-5 h-5 text-neutral-600 group-hover:text-neutral-400 transition-colors" />
-              </div>
-            )
-          })}
-        </div>
-
-        {/* 空状态 */}
-        {blocks.length === 0 && (
-          <div className="text-center py-16">
-            <div className="text-neutral-500 mb-4">还没有块</div>
-            <div className="text-sm text-neutral-600">输入 "/" 添加第一个块</div>
-          </div>
-        )}
-
-        {/* 块菜单 */}
-        {showMenu && (
-          <div
-            ref={menuRef}
-            className="fixed bg-neutral-800 rounded-lg shadow-xl border border-neutral-700 p-2 z-50 min-w-[240px]"
-            style={{
-              top: menuPosition.top,
-              left: menuPosition.left
-            }}
-          >
-            <div className="text-xs text-neutral-500 mb-2 px-2">选择块类型</div>
-            {BLOCK_TYPES.map((blockType) => {
-              const Icon = blockType.icon
-              return (
-                <button
-                  key={blockType.type}
-                  onClick={() => addBlock(blockType.type)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded hover:bg-white/10 text-left"
-                >
-                  <Icon className="w-4 h-4 text-neutral-400" />
-                  <div>
-                    <div className="text-sm font-medium">{blockType.label}</div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
       </div>
-    </PageLayout>
+
+      {/* PageManager 内容区 */}
+      <div className="flex-1 overflow-hidden">
+        <PageManager api={taskApiClient} />
+      </div>
+    </div>
   )
 }
 

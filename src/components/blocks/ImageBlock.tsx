@@ -3,8 +3,8 @@ import { Image as ImageIcon, Edit3, Eye } from 'lucide-react'
 import BlockWrapper from './BlockWrapper'
 
 interface ImageBlockProps {
-  content: string | { url: string; alt?: string }
-  onChange?: (content: string | { url: string; alt?: string }) => void
+  content: string | Record<string, any>
+  onChange?: (content: string | Record<string, any>) => void
 }
 
 const ImageBlock: React.FC<ImageBlockProps> = ({ content, onChange }) => {

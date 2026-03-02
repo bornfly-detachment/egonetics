@@ -1,12 +1,29 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, GripVertical } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import BlockWrapper from './blocks/BlockWrapper'
 import MarkdownBlock from './blocks/MarkdownBlock'
 import JsonBlock from './blocks/JsonBlock'
 import ImageBlock from './blocks/ImageBlock'
 import VideoBlock from './blocks/VideoBlock'
 import AudioBlock from './blocks/AudioBlock'
-import { PageBlock, BlockType } from './NotionPageView'
+
+// 块类型定义
+export type BlockType =
+  | 'markdown'       // Markdown编辑显示块
+  | 'json'           // JSON格式展示块
+  | 'image'          // 图片
+  | 'video'          // 视频
+  | 'audio'          // 音频
+  | 'paragraph'      // 段落块
+  | 'subpage'        // 子页面块
+
+export interface PageBlock {
+  id: string
+  type: BlockType
+  title?: string               // 块标题（在列表中显示）
+  content: string | Record<string, any>
+  order: number
+}
 
 interface NotionStyleEditorProps {
   initialBlocks?: PageBlock[]
@@ -149,21 +166,21 @@ const NotionStyleEditor: React.FC<NotionStyleEditorProps> = ({ initialBlocks = [
       case 'image':
         return (
           <ImageBlock
-            content={block.content}
+            content={typeof block.content === 'string' ? block.content : (block.content?.url ? block.content : '')}
             onChange={(content) => updateBlock(block.id, { content })}
           />
         )
       case 'video':
         return (
           <VideoBlock
-            content={block.content}
+            content={typeof block.content === 'string' ? block.content : (block.content?.url ? block.content : '')}
             onChange={(content) => updateBlock(block.id, { content })}
           />
         )
       case 'audio':
         return (
           <AudioBlock
-            content={block.content}
+            content={typeof block.content === 'string' ? block.content : (block.content?.url ? block.content : '')}
             onChange={(content) => updateBlock(block.id, { content })}
           />
         )

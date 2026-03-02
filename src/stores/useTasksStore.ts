@@ -13,7 +13,7 @@ interface TasksStore {
   loadTask: (id: string) => Promise<TaskDetail | null>
   
   // CRUD
-  addTask: (name: string, icon?: string) => Promise<Task>
+  addTask: (name: string, icon?: string, priority?: number) => Promise<Task>
   updateTask: (id: string, updates: UpdateTaskData) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   
@@ -70,23 +70,34 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
     }
   },
   
-  addTask: async (name: string, icon = '📝') => {
+  addTask: async (name: string, icon = '📝', priority = 50) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await tasksApi.createTask({ name, icon })
-      
+      // 设置默认的任务内容，包含看板状态和优先级
+      const defaultContent = JSON.stringify({
+        kanbanStatus: 'planned',
+        kanbanPriority: priority,
+        blocks: []
+      })
+
+      const response = await tasksApi.createTask({
+        name,
+        icon,
+        content: defaultContent
+      })
+
       // 使用后端返回的任务对象，确保数据一致
       const newTask: Task = {
         ...response.task,
         property_count: response.task.property_count || 0,
         version_count: response.task.version_count || 0
       }
-      
+
       set((state) => ({
         tasks: [...state.tasks, newTask],
         isLoading: false
       }))
-      
+
       return newTask
     } catch (err: any) {
       set({ error: err.message, isLoading: false })

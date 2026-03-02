@@ -1,15 +1,13 @@
 import React from 'react'
-import { 
-  BookOpen, 
-  CheckSquare, 
-  Cpu, 
-  Settings, 
+import {
+  CheckSquare,
+  Cpu,
+  Settings,
   Shield,
   Brain,
   History,
   Calendar,
-  ChevronDown,
-  ChevronRight
+  BookOpen
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
@@ -27,6 +25,7 @@ const Sidebar: React.FC = () => {
 
   const otherItems = [
     { id: 'tasks', label: t.tasks, icon: CheckSquare, color: 'text-green-400' },
+    { id: 'blog', label: '博客', icon: BookOpen, color: 'text-blue-400' },
     { id: 'agents', label: t.agents, icon: Cpu, color: 'text-purple-400' },
     { id: 'settings', label: t.settings, icon: Settings, color: 'text-neutral-400' },
   ]

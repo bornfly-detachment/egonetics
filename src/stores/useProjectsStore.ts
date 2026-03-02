@@ -112,7 +112,7 @@ export const useProjectsStore = create<ProjectsStore>()(
         }))
       },
       
-      deletePropertyDef: (projectId, defId) => {
+      deletePropertyDef: (defId) => {
         set((state) => ({
           projects: state.projects.map(p => {
             const def = p.propertyDefs.find(d => d.id === defId)

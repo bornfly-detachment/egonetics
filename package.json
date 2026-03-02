@@ -21,6 +21,11 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\""
   },
   "dependencies": {
+    "@blocknote/core": "^0.47.0",
+    "@blocknote/react": "^0.47.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@tiptap/extension-code-block": "^3.20.0",
     "@tiptap/extension-color": "^3.20.0",
     "@tiptap/extension-heading": "^3.20.0",
@@ -44,6 +49,7 @@
     "@types/react-router-dom": "^5.3.3",
     "date-fns": "^3.0.0",
     "lucide-react": "^0.309.0",
+    "nanoid": "^5.1.6",
     "react": "^18.2.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",

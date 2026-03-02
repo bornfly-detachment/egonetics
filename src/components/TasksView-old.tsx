@@ -76,18 +76,6 @@ const TasksView: React.FC = () => {
     }
   }
 
-  const getStatusLabel = (status: Task['status']) => {
-    if (language === 'zh') {
-      switch (status) {
-        case 'pending': return '待处理'
-        case 'running': return '进行中'
-        case 'completed': return '已完成'
-        case 'failed': return '失败'
-      }
-    } else {
-      return status.charAt(0).toUpperCase() + status.slice(1)
-    }
-  }
 
   const handleStartTask = (taskId: string) => {
     updateTask(taskId, { status: 'running' })

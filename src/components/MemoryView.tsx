@@ -1,32 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Calendar, Folder, MessageCircle, Brain, Wrench, ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
+import { Calendar, Folder, MessageCircle, Brain, ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 
-// 根据 agent 名称生成颜色（内联样式，更安全
-const getAgentColor = (agent: string) => {
-  // 预定义颜色数组（RGB 格式）
-  const colors = [
-    { bg: 'rgba(59, 130, 246, 0.2)', text: 'rgb(96, 165, 250)', border: 'rgba(59, 130, 246, 0.3)' }, // blue
-    { bg: 'rgba(249, 115, 22, 0.2)', text: 'rgb(251, 146, 60)', border: 'rgba(249, 115, 22, 0.3)' }, // orange
-    { bg: 'rgba(16, 185, 129, 0.2)', text: 'rgb(52, 211, 153)', border: 'rgba(16, 185, 129, 0.3)' }, // green
-    { bg: 'rgba(168, 85, 247, 0.2)', text: 'rgb(192, 132, 252)', border: 'rgba(168, 85, 247, 0.3)' }, // purple
-    { bg: 'rgba(236, 72, 153, 0.2)', text: 'rgb(244, 114, 182)', border: 'rgba(236, 72, 153, 0.3)' }, // pink
-    { bg: 'rgba(20, 184, 166, 0.2)', text: 'rgb(45, 212, 191)', border: 'rgba(20, 184, 166, 0.3)' }, // teal
-    { bg: 'rgba(234, 179, 8, 0.2)', text: 'rgb(250, 204, 21)', border: 'rgba(234, 179, 8, 0.3)' }, // yellow
-    { bg: 'rgba(99, 102, 241, 0.2)', text: 'rgb(129, 140, 248)', border: 'rgba(99, 102, 241, 0.3)' }, // indigo
-    { bg: 'rgba(6, 182, 212, 0.2)', text: 'rgb(34, 211, 238)', border: 'rgba(6, 182, 212, 0.3)' }, // cyan
-    { bg: 'rgba(163, 230, 53, 0.2)', text: 'rgb(190, 242, 100)', border: 'rgba(163, 230, 53, 0.3)' }, // lime
-  ];
-  
-  // 简单的哈希函数，把字符串映射到数组索引
-  let hash = 0;
-  for (let i = 0; i < agent.length; i++) {
-    hash = ((hash << 5) - hash) + agent.charCodeAt(i);
-    hash = hash & hash; // 转换为32位整数
-  }
-  
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
 
 const API_BASE = '/api';
 
@@ -181,9 +155,9 @@ const RichTextEditor: React.FC<EditorProps> = ({ initialContent = '', onChange, 
 
 const ResizableSidebar: React.FC<{
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   children: React.ReactNode;
-}> = ({ isOpen, onClose, children }) => {
+}> = ({ isOpen, children }) => {
   const [width, setWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -231,45 +205,61 @@ const ResizableSidebar: React.FC<{
 
 // ========== 资源消耗组件 ==========
 
-const ResourceUsage: React.FC<{
-  tokenInput?: number;
-  tokenOutput?: number;
-  durationMs?: number;
-  provider?: string;
-}> = ({ tokenInput, tokenOutput, durationMs, provider }) => {
-  return (
-    <div className="text-xs space-y-1 bg-neutral-800/50 rounded p-2">
-      {provider && (
-        <div className="flex items-center justify-between">
-          <span className="text-neutral-500">模型:</span>
-          <span className="text-yellow-400">{provider}</span>
-        </div>
-      )}
-      <div className="flex items-center justify-between">
-        <span className="text-neutral-500">输入Token:</span>
-        <span className="text-blue-400">{tokenInput?.toLocaleString() || '-'}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-neutral-500">输出Token:</span>
-        <span className="text-green-400">{tokenOutput?.toLocaleString() || '-'}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-neutral-500">总消耗:</span>
-        <span className="text-purple-400">
-          {tokenInput && tokenOutput ? (tokenInput + tokenOutput).toLocaleString() : '-'}
-        </span>
-      </div>
-      {durationMs !== undefined && (
-        <div className="flex items-center justify-between">
-          <span className="text-neutral-500">执行耗时:</span>
-          <span className="text-orange-400">{(durationMs / 1000).toFixed(1)}秒</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ========== 树节点组件 ==========
+
+// 可编辑的标题组件
+const EditableTitle: React.FC<{
+  title: string;
+  onUpdate: (newTitle: string) => void;
+  placeholder: string;
+}> = ({ title, onUpdate, placeholder }) => {
+  const [editing, setEditing] = useState(false);
+  const [tempTitle, setTempTitle] = useState(title);
+
+  const handleSave = () => {
+    if (tempTitle.trim()) {
+      onUpdate(tempTitle.trim());
+    } else {
+      setTempTitle(title);
+    }
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setTempTitle(title);
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <span
+        className="flex-1 truncate cursor-pointer hover:text-white"
+        onClick={() => setEditing(true)}
+      >
+        {title || placeholder}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex-1 flex items-center gap-1">
+      <input
+        type="text"
+        value={tempTitle}
+        onChange={(e) => setTempTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleSave();
+          if (e.key === 'Escape') handleCancel();
+        }}
+        onBlur={handleSave}
+        autoFocus
+        className="bg-transparent border-b border-neutral-500 text-neutral-200 text-sm w-full focus:outline-none focus:border-primary-500"
+        placeholder={placeholder}
+      />
+    </span>
+  );
+};
 
 const TreeNode: React.FC<{
   icon: React.ReactNode;
@@ -278,35 +268,91 @@ const TreeNode: React.FC<{
   defaultExpanded?: boolean;
   rightContent?: React.ReactNode;
   onAnnotate?: () => void;
-}> = ({ icon, label, children, defaultExpanded = false, rightContent, onAnnotate }) => {
+  onExpand?: () => void;
+  isSession?: boolean;
+  sessionId?: string;
+  sessionTitle?: string;
+  onTitleUpdate?: (sessionId: string, newTitle: string) => void;
+}> = ({
+  icon, label, children, defaultExpanded = false, rightContent,
+  onAnnotate, onExpand, isSession = false,
+  sessionId, sessionTitle, onTitleUpdate
+}) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const hasChildren = !!children;
+
+  const handleExpandClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(!expanded);
+    if (!expanded && onExpand) {
+      onExpand();
+    }
+  };
+
+  const handleToggle = () => {
+    if (!isSession && hasChildren) {
+      setExpanded(!expanded);
+      if (!expanded && onExpand) {
+        onExpand();
+      }
+    }
+  };
 
   return (
     <div className="group">
       <div
-        className="flex items-center space-x-2 py-1.5 px-2 hover:bg-white/5 rounded cursor-pointer"
-        onClick={() => hasChildren && setExpanded(!expanded)}
+        className="flex items-center space-x-3 py-2 px-3 hover:bg-white/5 rounded cursor-pointer border border-transparent hover:border-primary-500/30 transition-all"
+        onClick={handleToggle}
       >
-        {hasChildren && (
-          <span className="text-neutral-400">
-            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        {hasChildren && !isSession && (
+          <span className="text-primary-400 hover:text-primary-300 transition-colors">
+            {expanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </span>
         )}
-        {!hasChildren && <span className="w-4" />}
+        {(!hasChildren || isSession) && <span className="w-5" />}
         <span className="text-neutral-300">{icon}</span>
-        <span className="text-neutral-200 flex-1 truncate">{label}</span>
-        
-        {/* 标注按钮 - 明确样式 */}
+
+        {isSession && sessionId && onTitleUpdate ? (
+          <EditableTitle
+            title={sessionTitle || ''}
+            onUpdate={(newTitle) => onTitleUpdate(sessionId, newTitle)}
+            placeholder={label}
+          />
+        ) : (
+          <span className="text-neutral-200 flex-1 truncate">{label}</span>
+        )}
+
+        {/* 会话节点的展开按钮 - 真正的按钮 */}
+        {isSession && (
+          <button
+            onClick={handleExpandClick}
+            className={`text-xs px-3 py-1 rounded font-medium shadow-sm transition-all ${
+              expanded
+                ? 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
+                : 'bg-primary-600 text-white hover:bg-primary-700'
+            }`}
+          >
+            {expanded ? '收起' : '展开'}
+          </button>
+        )}
+
+        {/* 非会话节点的展开按钮 */}
+        {!isSession && hasChildren && (
+          <span className="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded-full">
+            {expanded ? '收起' : '展开'}
+          </span>
+        )}
+
+        {/* 标注按钮 - 更明显的样式 */}
         {onAnnotate && (
           <button
             onClick={(e) => { e.stopPropagation(); onAnnotate(); }}
-            className="opacity-0 group-hover:opacity-100 transition-all text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
+            className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium shadow-sm hover:shadow-md transition-all"
           >
             标注
           </button>
         )}
-        
+
         {rightContent}
       </div>
       {expanded && children && (
@@ -375,7 +421,6 @@ const parseRound = (messages: Message[]): ParsedRound => {
 const MemoryView: React.FC = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [annotationTarget, setAnnotationTarget] = useState<AnnotationTarget | null>(null);
   const [editorContent, setEditorContent] = useState('');
@@ -388,23 +433,19 @@ const MemoryView: React.FC = () => {
     try {
       setLoading(true);
       const data = await fetchApi('/sessions');
-      
-      const sessionsWithData = await Promise.all(
-        (data.sessions || []).map(async (s: any) => {
-          const detail = await fetchApi(`/sessions/${s.id}`);
-          return {
-            ...detail,
-            date: new Date(detail.created_at).toLocaleDateString('zh-CN'),
-            agent: detail.agent || 'main'
-          };
-        })
-      );
-      
+
+      // 只获取会话基本信息，不包含消息
+      const sessionsWithData = (data.sessions || []).map((s: any) => ({
+        ...s,
+        date: new Date(s.created_at).toLocaleDateString('zh-CN'),
+        agent: s.agent || 'main'
+      }));
+
       // 按创建时间倒序排列（最新的在前面）
-      sessionsWithData.sort((a, b) => 
+      sessionsWithData.sort((a: any, b: any) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      
+
       setSessions(sessionsWithData);
     } catch (err) {
       console.error('加载失败:', err);
@@ -413,14 +454,43 @@ const MemoryView: React.FC = () => {
     }
   };
 
-  const toggleTool = (msgId: string) => {
-    setExpandedTools(prev => {
-      const next = new Set(prev);
-      if (next.has(msgId)) next.delete(msgId);
-      else next.add(msgId);
-      return next;
-    });
+  // 更新会话标题
+  // 加载会话详细数据（包含消息）
+  const loadSessionDetails = async (sessionId: string) => {
+    try {
+      const detail = await fetchApi(`/sessions/${sessionId}`);
+      setSessions(prevSessions =>
+        prevSessions.map(session =>
+          session.id === sessionId
+            ? { ...session, messages: detail.messages || [] }
+            : session
+        )
+      );
+    } catch (err) {
+      console.error('加载会话详情失败:', err);
+    }
   };
+
+  const updateSessionTitle = async (sessionId: string, newTitle: string) => {
+    try {
+      await fetchApi(`/sessions/${sessionId}/title`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      setSessions(prevSessions =>
+        prevSessions.map(session =>
+          session.id === sessionId
+            ? { ...session, title: newTitle }
+            : session
+        )
+      );
+    } catch (err) {
+      console.error('更新会话标题失败:', err);
+    }
+  };
+
 
   const openAnnotation = (target: AnnotationTarget) => {
     setAnnotationTarget(target);
@@ -469,230 +539,169 @@ const MemoryView: React.FC = () => {
             onAnnotate={() => openAnnotation({ type: 'date', id: date, title: date })}
           >
             {dateSessions.map(session => {
-              // 按user切分轮次
-              const rounds: Message[][] = [];
-              let currentRound: Message[] = [];
-              
-              for (const msg of (session.messages || [])) {
-                if (msg.role === 'user') {
-                  if (currentRound.length > 0) {
-                    rounds.push(currentRound);
-                  }
-                  currentRound = [msg];
-                } else if (currentRound.length > 0) {
-                  currentRound.push(msg);
-                }
-              }
-              if (currentRound.length > 0) rounds.push(currentRound);
-
               return (
                 <TreeNode
                   key={session.id}
                   icon={<Folder className="w-4 h-4 text-yellow-400" />}
-                  label={
-                    <>
-                      {session.title || session.id.slice(0, 8)}
-                      {session.agent && (() => {
-                        const color = getAgentColor(session.agent);
-                        return (
-                          <span 
-                            className="ml-2 px-2 py-0.5 text-xs rounded border"
-                            style={{
-                              backgroundColor: color.bg,
-                              color: color.text,
-                              borderColor: color.border
-                            }}
-                          >
-                            {session.agent}
-                          </span>
-                        );
-                      })()}
-                    </>
-                  }
-                  rightContent={<span className="text-xs text-neutral-500">{rounds.length}轮</span>}
+                  label={session.title || session.id.slice(0, 8)}
                   onAnnotate={() => openAnnotation({ type: 'session', id: session.id, title: session.title })}
+                  onExpand={() => loadSessionDetails(session.id)}
+                  isSession={true}
+                  sessionId={session.id}
+                  sessionTitle={session.title}
+                  onTitleUpdate={updateSessionTitle}
                 >
-                  {rounds.map((round, roundIdx) => {
-                    const parsed = parseRound(round);
-                    const toolCount = parsed.toolResults.length;
-                    
-                    return (
-                      <TreeNode
-                        key={round[0].id}
-                        icon={<MessageCircle className="w-4 h-4 text-green-400" />}
-                        label={`轮次 ${roundIdx + 1}`}
-                        rightContent={
-                          <span className="text-xs text-neutral-500">
-                            {parsed.thoughts.length}思考
-                            {parsed.finalOutput ? '+输出' : ''}
-                            {toolCount > 0 ? `/${toolCount}工具` : ''}
-                          </span>
-                        }
-                        onAnnotate={() => openAnnotation({ 
-                          type: 'round', 
-                          id: round[0].id, 
-                          title: `轮次 ${roundIdx + 1}`,
-                          data: round
-                        })}
-                      >
-                        {/* 用户输入 */}
-                        <div className="py-2 px-2 bg-neutral-800/30 rounded mb-2 group">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs text-blue-400">👤 用户输入</span>
-                            <button
-                              onClick={() => openAnnotation({ 
-                                type: 'message', 
-                                id: parsed.userMsg.id, 
-                                title: '用户输入',
-                                data: parsed.userMsg
-                              })}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
-                            >
-                              标注
-                            </button>
-                          </div>
-                          <div className="text-sm text-neutral-300 pl-4 whitespace-pre-wrap">
-                            {parsed.userMsg.content}
-                          </div>
-                        </div>
+                  {(session as any).messages && (session as any).messages.length > 0 && (
+                    (() => {
+                      // 按user切分轮次
+                      const rounds: Message[][] = [];
+                      let currentRound: Message[] = [];
 
-                        {/* 思考步骤 */}
-                        {parsed.thoughts.map((thought, thoughtIdx) => {
-                          const thinkingContent = thought.content
-                            .replace('[思考]', '')
-                            .split('[工具调用]')[0]
-                            .trim();
-                          
-                          // 查找关联的工具
-                          const relatedTools = parsed.toolResults.filter(
-                            t => t.parent_id === thought.id
-                          );
-                          const hasTools = relatedTools.length > 0;
-                          const isToolExpanded = expandedTools.has(thought.id);
-                          
-                          return (
-                            <div key={thought.id} className="mb-2">
-                              <div className="bg-neutral-800/50 rounded p-3 group">
+                      for (const msg of (session as any).messages || []) {
+                        if (msg.role === 'user') {
+                          if (currentRound.length > 0) {
+                            rounds.push(currentRound);
+                          }
+                          currentRound = [msg];
+                        } else if (currentRound.length > 0) {
+                          currentRound.push(msg);
+                        }
+                      }
+                      if (currentRound.length > 0) rounds.push(currentRound);
+
+                      return rounds.map((round, roundIdx) => {
+                        const parsed = parseRound(round);
+                        const toolCount = parsed.toolResults.length;
+
+                        return (
+                          <TreeNode
+                            key={round[0].id}
+                            icon={<MessageCircle className="w-4 h-4 text-green-400" />}
+                            label={`轮次 ${roundIdx + 1}`}
+                            rightContent={
+                              <span className="text-xs text-neutral-500">
+                                {parsed.thoughts.length}思考
+                                {parsed.finalOutput ? '+输出' : ''}
+                                {toolCount > 0 ? `/${toolCount}工具` : ''}
+                              </span>
+                            }
+                            onAnnotate={() => openAnnotation({
+                              type: 'round',
+                              id: round[0].id,
+                              title: `轮次 ${roundIdx + 1}`,
+                              data: round
+                            })}
+                          >
+                            {/* 用户输入 */}
+                            <div className="py-2 px-2 bg-neutral-800/30 rounded mb-2 group">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-blue-400">👤 用户输入</span>
+                                <button
+                                  onClick={() => openAnnotation({
+                                    type: 'message',
+                                    id: parsed.userMsg.id,
+                                    title: '用户输入',
+                                    data: parsed.userMsg
+                                  })}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
+                                >
+                                  标注
+                                </button>
+                              </div>
+                              <div className="text-sm text-neutral-300 pl-4 whitespace-pre-wrap">
+                                {parsed.userMsg.content}
+                              </div>
+                            </div>
+
+                            {/* 思考步骤 */}
+                            {parsed.thoughts.map((thought, thoughtIdx) => {
+                              const thinkingContent = thought.content
+                                .replace('[思考]', '')
+                                .split('[工具调用]')[0]
+                                .trim();
+
+
+                              return (
+                                <div key={thought.id} className="mb-2">
+                                  <div className="bg-neutral-800/50 rounded p-3 group">
+                                    <div className="flex items-start gap-4">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                          <Brain className="w-4 h-4 text-purple-400 shrink-0" />
+                                          <span className="text-purple-400 text-sm font-medium">
+                                            思考步骤 {thoughtIdx + 1}
+                                          </span>
+
+                                          <button
+                                            onClick={() => openAnnotation({
+                                              type: 'message',
+                                              id: thought.id,
+                                              title: `思考步骤 ${thoughtIdx + 1}`,
+                                              data: thought
+                                            })}
+                                            className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
+                                          >
+                                            标注
+                                          </button>
+
+                                        </div>
+
+                                        <div className="text-neutral-200 text-sm pl-6 whitespace-pre-wrap">
+                                          {thinkingContent}
+                                        </div>
+                                      </div>
+
+                                    </div>
+                                  </div>
+
+                                </div>
+                              );
+                            })}
+
+                            {/* 最终输出 */}
+                            {parsed.finalOutput && (
+                              <div className="bg-green-900/20 rounded p-3 border-l-4 border-green-500 group">
                                 <div className="flex items-start gap-4">
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                      <Brain className="w-4 h-4 text-purple-400 shrink-0" />
-                                      <span className="text-purple-400 text-sm font-medium">
-                                        思考步骤 {thoughtIdx + 1}
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-green-400 text-sm font-medium">
+                                        ✨ 轮次 {roundIdx + 1} Agent输出
                                       </span>
-                                      
+
                                       <button
-                                        onClick={() => openAnnotation({ 
-                                          type: 'message', 
-                                          id: thought.id, 
-                                          title: `思考步骤 ${thoughtIdx + 1}`,
-                                          data: thought
+                                        onClick={() => openAnnotation({
+                                          type: 'message',
+                                          id: parsed.finalOutput!.id,
+                                          title: `轮次 ${roundIdx + 1} 输出`,
+                                          data: parsed.finalOutput
                                         })}
                                         className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
                                       >
                                         标注
                                       </button>
-
-                                      {hasTools && (
-                                        <button
-                                          onClick={() => toggleTool(thought.id)}
-                                          className="text-xs px-2 py-1 bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50 rounded flex items-center gap-1"
-                                        >
-                                          <Wrench className="w-3 h-3" />
-                                          {isToolExpanded ? '隐藏工具' : `查看工具 (${relatedTools.length})`}
-                                          {isToolExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                                        </button>
-                                      )}
                                     </div>
-                                    
+
                                     <div className="text-neutral-200 text-sm pl-6 whitespace-pre-wrap">
-                                      {thinkingContent}
+                                      {(() => {
+                                        try {
+                                          const raw = JSON.parse(parsed.finalOutput!.raw_content || '{}');
+                                          const textContent = raw.content?.find((c: any) => c.type === 'text')?.text;
+                                          return textContent || parsed.finalOutput!.content;
+                                        } catch {
+                                          return parsed.finalOutput!.content;
+                                        }
+                                      })()}
                                     </div>
                                   </div>
 
-                                  <div className="w-40 shrink-0">
-                                    <ResourceUsage
-                                      tokenInput={thought.token_input}
-                                      tokenOutput={thought.token_output}
-                                      durationMs={thought.duration_ms}
-                                      provider={thought.provider}
-                                    />
-                                  </div>
                                 </div>
                               </div>
-
-                              {/* 工具结果 */}
-                              {isToolExpanded && hasTools && (
-                                <div className="ml-6 mt-2 space-y-2">
-                                  {relatedTools.map((tool, toolIdx) => (
-                                    <div key={tool.id} className="bg-neutral-900/50 rounded p-2 border-l-2 border-yellow-600">
-                                      <div className="flex items-center justify-between mb-1">
-                                        <div className="flex items-center gap-2 text-sm text-yellow-400">
-                                          <Wrench className="w-3 h-3" />
-                                          <span>工具 {toolIdx + 1}: {tool.tool_name || 'unknown'}</span>
-                                        </div>
-                                      </div>
-                                      <div className="text-xs text-neutral-400 whitespace-pre-wrap pl-5">
-                                        {tool.content}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* 最终输出 */}
-                        {parsed.finalOutput && (
-                          <div className="bg-green-900/20 rounded p-3 border-l-4 border-green-500 group">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-green-400 text-sm font-medium">
-                                    ✨ 轮次 {roundIdx + 1} Agent输出
-                                  </span>
-                                  
-                                  <button
-                                    onClick={() => openAnnotation({ 
-                                      type: 'message', 
-                                      id: parsed.finalOutput!.id, 
-                                      title: `轮次 ${roundIdx + 1} 输出`,
-                                      data: parsed.finalOutput
-                                    })}
-                                    className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
-                                  >
-                                    标注
-                                  </button>
-                                </div>
-                                
-                                <div className="text-neutral-200 text-sm pl-6 whitespace-pre-wrap">
-                                  {(() => {
-                                    try {
-                                      const raw = JSON.parse(parsed.finalOutput!.raw_content || '{}');
-                                      const textContent = raw.content?.find((c: any) => c.type === 'text')?.text;
-                                      return textContent || parsed.finalOutput!.content;
-                                    } catch {
-                                      return parsed.finalOutput!.content;
-                                    }
-                                  })()}
-                                </div>
-                              </div>
-
-                              <div className="w-40 shrink-0">
-                                <ResourceUsage
-                                  tokenInput={parsed.finalOutput.token_input}
-                                  tokenOutput={parsed.finalOutput.token_output}
-                                  durationMs={parsed.finalOutput.duration_ms}
-                                  provider={parsed.finalOutput.provider}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </TreeNode>
-                    );
-                  })}
+                            )}
+                          </TreeNode>
+                        );
+                      });
+                    })()
+                  )}
                 </TreeNode>
               );
             })}

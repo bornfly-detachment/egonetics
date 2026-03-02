@@ -54,6 +54,20 @@ CREATE TABLE IF NOT EXISTS task_versions (
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 
+-- Blocks 表：存储 Notion 风格的块内容
+CREATE TABLE IF NOT EXISTS blocks (
+    id TEXT PRIMARY KEY,                     -- 块ID
+    page_id TEXT NOT NULL,                   -- 所属页面ID (关联 tasks.id)
+    parent_id TEXT,                          -- 父块ID (支持嵌套)
+    type TEXT NOT NULL DEFAULT 'paragraph',  -- 块类型
+    content TEXT DEFAULT '{}',               -- 块内容 (JSON格式)
+    position REAL DEFAULT 1.0,               -- 排序位置 (浮点数，支持中间插入)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES blocks(id) ON DELETE CASCADE
+);
+
 -- 索引
 CREATE INDEX idx_tasks_created_at ON tasks(created_at);
 CREATE INDEX idx_tasks_updated_at ON tasks(updated_at);
@@ -61,6 +75,9 @@ CREATE INDEX idx_task_property_defs_task_id ON task_property_defs(task_id);
 CREATE INDEX idx_task_properties_task_id ON task_properties(task_id);
 CREATE INDEX idx_task_versions_task_id ON task_versions(task_id);
 CREATE INDEX idx_task_versions_content_hash ON task_versions(content_hash);
+CREATE INDEX idx_blocks_page_id ON blocks(page_id);
+CREATE INDEX idx_blocks_parent_id ON blocks(parent_id);
+CREATE INDEX idx_blocks_position ON blocks(position);
 
 -- 触发器：自动更新updated_at时间戳
 CREATE TRIGGER IF NOT EXISTS update_tasks_timestamp 
@@ -69,10 +86,16 @@ BEGIN
     UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
 
-CREATE TRIGGER IF NOT EXISTS update_task_properties_timestamp 
+CREATE TRIGGER IF NOT EXISTS update_task_properties_timestamp
 AFTER UPDATE ON task_properties
 BEGIN
     UPDATE task_properties SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_blocks_timestamp
+AFTER UPDATE ON blocks
+BEGIN
+    UPDATE blocks SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
 
 -- 初始化一些示例数据（可选）

@@ -108,4 +108,64 @@ export const tasksApi = {
   // 获取版本历史
   getVersions: (taskId: string) =>
     fetchApi<{ versions: any[] }>(`/tasks/${taskId}/versions`),
+
+  // ========== Notion Blocks API ==========
+
+  // 获取页面的所有块
+  getBlocks: (pageId: string) =>
+    fetchApi<{ blocks: any[] }>(`/notion/pages/${pageId}/blocks`),
+
+  // 获取块的子块
+  getBlockChildren: (blockId: string) =>
+    fetchApi<{ blocks: any[] }>(`/notion/blocks/${blockId}/children`),
+
+  // 创建新块
+  createBlock: (data: {
+    pageId: string;
+    parentId?: string | null;
+    type?: string;
+    content?: string;
+    position?: number;
+  }) =>
+    fetchApi<{ success: boolean; id: string }>('/notion/blocks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // 更新块
+  updateBlock: (
+    blockId: string,
+    data: {
+      type?: string;
+      content?: string;
+      position?: number;
+    }
+  ) =>
+    fetchApi<{ success: boolean }>(`/notion/blocks/${blockId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // 删除块（级联删除子块）
+  deleteBlock: (blockId: string) =>
+    fetchApi<{ success: boolean }>(`/notion/blocks/${blockId}`, {
+      method: 'DELETE',
+    }),
+
+  // 批量操作块（支持事务）
+  batchBlockOperations: (
+    operations: Array<{
+      type: 'create' | 'update' | 'delete';
+      pageId?: string;
+      blockId?: string;
+      parentId?: string | null;
+      blockType?: string;
+      content?: string;
+      position?: number;
+    }>
+  ) =>
+    fetchApi<{ success: boolean }>('/notion/blocks/operations', {
+      method: 'POST',
+      body: JSON.stringify({ operations }),
+    }),
 };

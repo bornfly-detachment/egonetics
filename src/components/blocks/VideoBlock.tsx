@@ -3,8 +3,8 @@ import { Video, Edit3, Eye } from 'lucide-react'
 import BlockWrapper from './BlockWrapper'
 
 interface VideoBlockProps {
-  content: string | { url: string; autoplay?: boolean; controls?: boolean }
-  onChange?: (content: string | { url: string; autoplay?: boolean; controls?: boolean }) => void
+  content: string | Record<string, any>
+  onChange?: (content: string | Record<string, any>) => void
 }
 
 const VideoBlock: React.FC<VideoBlockProps> = ({ content, onChange }) => {

@@ -2,15 +2,15 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'tasks.db');
-const SCHEMA_PATH = path.join(__dirname, 'tasks_schema.sql');
+const DB_PATH = path.join(__dirname, 'pages.db');
+const SCHEMA_PATH = path.join(__dirname, 'pages_schema.sql');
 
-console.log('🔄 初始化 Tasks 数据库...');
+console.log('🔄 初始化 Pages 数据库...');
 
 // 删除现有数据库文件（如果存在）
 if (fs.existsSync(DB_PATH)) {
   fs.unlinkSync(DB_PATH);
-  console.log('🗑️  删除旧的 tasks.db 文件');
+  console.log('🗑️  删除旧的 pages.db 文件');
 }
 
 const db = new sqlite3.Database(DB_PATH, (err) => {
@@ -18,7 +18,7 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
     console.error('❌ 数据库连接失败:', err);
     process.exit(1);
   }
-  console.log('✅ 已创建新的 tasks.db 数据库');
+  console.log('✅ 已创建新的 pages.db 数据库');
 });
 
 // 读取并执行schema
@@ -59,7 +59,7 @@ fs.readFile(SCHEMA_PATH, 'utf8', (err, schema) => {
           });
         }
 
-        console.log('🎉 Tasks 数据库初始化完成!');
+        console.log('🎉 Pages 数据库初始化完成!');
         console.log(`📁 数据库文件: ${DB_PATH}`);
 
         db.close();

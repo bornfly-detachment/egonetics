@@ -17,7 +17,19 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3002',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        secure: false,
+        timeout: 60000,
+        configure: (proxy, _) => {
+          proxy.on('error', (err, _) => {
+            console.log('proxy error', err)
+          })
+          proxy.on('proxyReq', (proxyReq, req, _) => {
+            console.log('Sending Request to the Target:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req, _) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url)
+          })
+        },
       },
     },
   },

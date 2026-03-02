@@ -5,17 +5,21 @@ import MemoryView from './components/MemoryView'
 import TheoryView from './components/TheoryView'
 import ChronicleView from './components/ChronicleView'
 import EgoneticsView from './components/EgoneticsView'
-import TasksView from './components/TasksView'
-import NotionPageView from './components/NotionPageView'
+import KanbanBoard from './components/taskBoard/KanbanBoard'
+import TaskDetailPage from './components/taskBoard/TaskDetailPage'
+import ChroniclePageView from './components/ChroniclePageView'
+import TheoryPageView from './components/TheoryPageView'
+import BlogEditor from './components/BlogEditor'
+import NotionStyleEditor from './components/NotionStyleEditor'
+import NewNotionStyleEditor from './components/NewNotionStyleEditor'
+import BlogPage from './components/BlogPage'
 import { useChronicleStore } from './stores/useChronicleStore'
-import { useTranslation } from '@/lib/translations'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { uiState, setUIState } = useChronicleStore()
-  const { language } = useTranslation()
 
   // URL -> Store 同步
   useEffect(() => {
@@ -37,6 +41,12 @@ const RouteSync: React.FC = () => {
     } else if (path.startsWith('/tasks/')) {
       view = 'project-detail'
       taskId = path.replace('/tasks/', '')
+    } else if (path === '/blog') {
+      view = 'blog'
+    } else if (path === '/editor1') {
+      view = 'editor1'
+    } else if (path === '/editor2') {
+      view = 'editor2'
     } else if (path === '/agents') {
       view = 'agents'
     } else if (path === '/settings') {
@@ -80,6 +90,15 @@ const RouteSync: React.FC = () => {
           targetPath = '/tasks'
         }
         break
+      case 'blog':
+        targetPath = '/blog'
+        break
+      case 'editor1':
+        targetPath = '/editor1'
+        break
+      case 'editor2':
+        targetPath = '/editor2'
+        break
       case 'agents':
         targetPath = '/agents'
         break
@@ -100,28 +119,26 @@ const RouteSync: React.FC = () => {
 
 // 页面组件
 const AgentsPage: React.FC = () => {
-  const { language } = useTranslation()
   return (
     <div className="p-8 text-center">
       <h1 className="text-3xl font-bold gradient-text mb-4">
-        {language === 'zh' ? '代理界面' : 'Agents View'}
+        代理界面
       </h1>
       <p className="text-neutral-400">
-        {language === 'zh' ? '代理管理界面即将推出...' : 'Agent management interface coming soon...'}
+        代理管理界面即将推出...
       </p>
     </div>
   )
 }
 
 const SettingsPage: React.FC = () => {
-  const { language } = useTranslation()
   return (
     <div className="p-8 text-center">
       <h1 className="text-3xl font-bold gradient-text mb-4">
-        {language === 'zh' ? '设置' : 'Settings'}
+        设置
       </h1>
       <p className="text-neutral-400">
-        {language === 'zh' ? '系统配置即将推出...' : 'System configuration coming soon...'}
+        系统配置即将推出...
       </p>
     </div>
   )
@@ -130,7 +147,6 @@ const SettingsPage: React.FC = () => {
 // 主应用内容
 const AppContent: React.FC = () => {
   const { uiState, initialize } = useChronicleStore()
-  const { language } = useTranslation()
 
   useEffect(() => {
     console.log('Egonetics App initializing...')
@@ -151,7 +167,7 @@ const AppContent: React.FC = () => {
               <div className="text-center">
                 <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-neutral-400">
-                  {language === 'zh' ? '初始化生命主体性...' : 'Initializing Life Core...'}
+                  初始化生命主体性...
                 </p>
               </div>
             </div>
@@ -159,11 +175,15 @@ const AppContent: React.FC = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/memory" replace />} />
               <Route path="/memory" element={<MemoryView />} />
-              <Route path="/theory" element={<TheoryView />} />
-              <Route path="/chronicle" element={<ChronicleView />} />
+              <Route path="/theory" element={<TheoryPageView />} />
+              <Route path="/chronicle" element={<ChroniclePageView />} />
               <Route path="/egonetics" element={<EgoneticsView />} />
-              <Route path="/tasks" element={<TasksView />} />
-              <Route path="/tasks/:taskId" element={<NotionPageView />} />
+              <Route path="/tasks" element={<KanbanBoard />} />
+              <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/old-blog" element={<BlogEditor />} />
+              <Route path="/editor1" element={<NewNotionStyleEditor />} />
+              <Route path="/editor2" element={<NotionStyleEditor />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/memory" replace />} />
@@ -179,7 +199,7 @@ const AppContent: React.FC = () => {
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
               <span className="text-neutral-300">
-                {language === 'zh' ? '生命主体性: 活跃' : 'Life Core: Active'}
+                生命主体性: 活跃
               </span>
             </div>
             <div className="text-neutral-500">|</div>
@@ -188,7 +208,7 @@ const AppContent: React.FC = () => {
             </div>
           </div>
           <div className="text-neutral-500">
-            {new Date().toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
+            {new Date().toLocaleDateString('zh-CN', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
