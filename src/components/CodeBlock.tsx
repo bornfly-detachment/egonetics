@@ -1,7 +1,7 @@
 // ============================================================
 //  CodeBlock.tsx  —  代码块组件（支持 Markdown 预览 + CodeMirror）
 // ============================================================
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -94,18 +94,30 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
 
   // Markdown 语言：点击编辑，失焦预览
   if (isMarkdown && !readOnly) {
-    // 外部编辑状态优先
-    const isEditing = externalIsEditing || viewMode === 'edit'
+    // 优先使用手动切换的 viewMode，只有当外部状态从 false → true 时才进入编辑模式
+    const [manualModeSet, setManualModeSet] = useState(false)
+
+    // 当外部状态从 false 变为 true 时，自动进入编辑模式（但仅当没有手动设置过）
+    useEffect(() => {
+      if (externalIsEditing && !manualModeSet) {
+        setViewMode('edit')
+      }
+    }, [externalIsEditing, manualModeSet])
+
+    const isEditing = viewMode === 'edit'
+
+    const handleToggleClick = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setManualModeSet(true)
+      setViewMode(viewMode === 'edit' ? 'preview' : 'edit')
+    }
 
     return (
       <div className="w-full">
         {/* 预览/编辑切换按钮 */}
         <div className="flex justify-end mb-1">
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setViewMode(viewMode === 'edit' ? 'preview' : 'edit')
-            }}
+            onClick={handleToggleClick}
             className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
           >
             {isEditing ? '预览' : '编辑'}
