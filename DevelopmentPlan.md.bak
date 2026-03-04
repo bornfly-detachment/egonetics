@@ -1,0 +1,529 @@
+# Egonetics 开发计划
+
+> 最后更新：2026-03-02
+
+---
+
+## 一、项目愿景
+
+Egonetics = Ego（自我）+ Cybernetics（控制论）
+
+**核心目标**：打造一个人与 AI 协同进化的数字生命系统。记录人和 AI 共同工作的全部过程，找到其中的因果关系，形成可量化、可调控的自我进化路径。
+
+```
+Memory  ──┐
+Task    ──┤──► Chronicle（线性过程记忆）──► Egonetics（自我控制论）
+Agent   ──┤
+Theory  ──┘
+```
+
+**Chronicle 不是一个独立模块，而是其他所有模块事件流的聚合时间轴视图。**
+找到这些记录中的因果关系，就是 Egonetics。
+Chronicle里面展示的必须是 审批过的task（确定添加到Chronicle）；标注过的 Memory（确定添加到Chronicle）；确立版本号的Theory（确定添加到Chronicle）。
+一段session 标注过了，会有一个标题和一个总结文档，这是标注过的Memory，在 Chronicle显示为 一段有标题和起止时间的Memory片段； 后续的Memory按时间线往后延伸；Memory页面里面就不显示了，转而显示到Chronicle页面里面
+task也是 失败；终止；完成的 task，会有总结，总结完也会有确定添加到 Chronicle的标记。这时 task里面就不显示了，转而现实到Chronicle里面。
+确立版本号的Theory，确定添加到Chronicle里，就意味着这个版本只能评论，不能修改了，作为不可编辑的一个片段显示在 Chronicle里面。
+
+Chronicle的设计无论是 task，Memory，theory，都只显示标题，日期，点击开后才显示内容。建立了Chronicle里程碑，过去一段时间的 task，Memory，theory就都显示为一个里程碑节点，点击再展开（后续再添加不可篡改的加密逻辑；现在先不做）；一旦发布节点，里面的标注内容就不可编辑了，但是可以二次标注，那就是新的版本号了，过去的标注是V1，现在是V2，相当于追加二次标注。
+
+基于此逻辑，重新设计个模块数据结构，看有什么缺少的
+
+
+
+
+Chronicle 是能够把 task，Agent，Memory，Theory 做归纳梳理总结的，比如：一个月里面，task有20个，3个完成，10个失败，
+5个进行中，2个排队中，Chronicle可以把完成和失败的task做复盘。
+
+
+其目的是不会让Memory和task的数据白白浪费，遵循什么Theory
+指导task，什么work什么不work。Memory是一个复盘 资源消耗与收益，以及目标的数据，故而要周期性给Memory打标，从对话中提炼得失，然后给整个对话在task中的定位做总结，如此现实到 Chronicle中。
+也就是 Chronicle 是对 task，Agent，Memory的总结，对历史可视化的盖棺定论。要体现出对task完成度，对Memory质量的评价，也就是打开前端可以看到从V1版本开始的task，Memory，Theory的过程记录，貌似现有的数据结构太简单太少了，它应该可以无限延伸，现实每个task从开始到结束的过程，像互联网评论一样看到每段时期自己的评论，标注。 看到 Theory的动态变化，我们以theory的版本作为建立 Chronicle的节点，所有 task，Agent都是以 theory为 价值观 来进行的， 
+
+---
+
+## 二、架构总览
+
+### 数据库（4库分治）
+
+| 数据库 | 职责 | 状态 |
+|---|---|---|
+| `tasks.db` | Tasks + Kanban 看板 | ✅ 已完成，不动 |
+| `pages.db` | Theory 页面 + Blocks 编辑器 | ✅ 已完成，不动 |
+| `memory.db` | 对话记录 + 标注 + 跨模块事件流 | 重写 |
+| `agents.db` | Agent 定义 + 关系图 + 消息记录 | 新建 |
+
+### 后端（路由模块化）
+
+```
+server/
+├── index.js          # 启动 + 注册路由（轻量）
+├── db.js             # 4个数据库连接统一管理
+├── lib/
+│   └── emit.js       # 写 events 表的统一工具函数
+├── routes/
+│   ├── tasks.js      # /api/tasks + /api/kanban
+│   ├── pages.js      # /api/pages + /api/blocks
+│   ├── memory.js     # /api/memory/*
+│   ├── agents.js     # /api/agents/*
+│   └── chronicle.js  # /api/chronicle/*
+└── scripts/
+    └── import-jsonl.js  # JSONL 解析逻辑（供 memory 路由调用）
+```
+
+### 前端
+
+| 模块 | 处理 |
+|---|---|
+| `KanbanBoard.tsx` + `TaskPageView.tsx` | **完全保留** |
+| `PageManager` 相关组件 | **完全保留** |
+| `App.tsx` + `Sidebar.tsx` + 路由 | 重写，清理冗余 |
+| Memory 视图 | 重写 |
+| Chronicle 视图 | 新建 |
+| Agent 视图 | 新建 |
+| Theory 视图 | 基本保留（使用 PageManager） |
+
+---
+
+## 三、数据库 Schema
+
+### 3.1 memory.db（重写）
+
+```sql
+-- 一次完整的 Agent 会话
+CREATE TABLE sessions (
+  id           TEXT PRIMARY KEY,
+  agent_name   TEXT NOT NULL,
+  agent_type   TEXT NOT NULL,    -- 'claude_code' | 'openclaw' | 'api'
+  model        TEXT,             -- 'claude-sonnet-4-6' / 'deepseek-reasoner' 等
+  source_file  TEXT,             -- 原始 jsonl 路径
+  token_input  INTEGER DEFAULT 0,
+  token_output INTEGER DEFAULT 0,
+  duration_ms  INTEGER DEFAULT 0,
+  started_at   TEXT,
+  ended_at     TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 每轮对话：一个用户输入 → 完整响应链
+CREATE TABLE rounds (
+  id           TEXT PRIMARY KEY,
+  session_id   TEXT NOT NULL,
+  round_num    INTEGER NOT NULL,
+  user_input   TEXT,
+  started_at   TEXT,
+  ended_at     TEXT,
+  duration_ms  INTEGER DEFAULT 0,
+  token_input  INTEGER DEFAULT 0,
+  token_output INTEGER DEFAULT 0,
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+-- 轮内执行步骤链（thinking → tool_call → tool_result → response）
+CREATE TABLE steps (
+  id          TEXT PRIMARY KEY,
+  round_id    TEXT NOT NULL,
+  step_num    INTEGER NOT NULL,
+  type        TEXT NOT NULL,    -- 'thinking' | 'tool_call' | 'tool_result' | 'response'
+  tool_name   TEXT,             -- tool_call/tool_result 时填写
+  content     TEXT DEFAULT '{}', -- JSON，完整内容
+  duration_ms INTEGER DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (round_id) REFERENCES rounds(id) ON DELETE CASCADE
+);
+
+-- 用户标注（打标签 / 提炼关键信息 / 标记训练数据）
+CREATE TABLE annotations (
+  id         TEXT PRIMARY KEY,
+  ref_type   TEXT NOT NULL,    -- 'round' | 'step' | 'session'
+  ref_id     TEXT NOT NULL,
+  type       TEXT NOT NULL,    -- 'tag' | 'note' | 'extract' | 'training_data'
+  content    TEXT,
+  tags       TEXT DEFAULT '[]', -- JSON 数组
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Chronicle 事件流（所有模块写入此表，构成时间轴）
+CREATE TABLE events (
+  id         TEXT PRIMARY KEY,
+  type       TEXT NOT NULL,    -- 见下方事件类型清单
+  source     TEXT NOT NULL,    -- 'memory' | 'task' | 'agent' | 'theory'
+  ref_id     TEXT,             -- 关联的 session_id / task_id / agent_id
+  title      TEXT,
+  content    TEXT DEFAULT '{}', -- JSON，记录过程细节
+  epoch_id   TEXT,             -- 所属版本（Epoch）
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Chronicle Epoch 版本（V1 → V2 → ... 用户手动触发）
+CREATE TABLE epochs (
+  id          TEXT PRIMARY KEY,
+  version     INTEGER NOT NULL,  -- 1, 2, 3...
+  title       TEXT,
+  description TEXT,
+  started_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  ended_at    TEXT               -- NULL 表示当前版本
+);
+
+-- 索引
+CREATE INDEX idx_sessions_agent_type ON sessions(agent_type);
+CREATE INDEX idx_rounds_session_id   ON rounds(session_id);
+CREATE INDEX idx_steps_round_id      ON steps(round_id);
+CREATE INDEX idx_events_source       ON events(source);
+CREATE INDEX idx_events_created_at   ON events(created_at);
+CREATE INDEX idx_events_epoch_id     ON events(epoch_id);
+CREATE INDEX idx_annotations_ref     ON annotations(ref_type, ref_id);
+```
+
+**events.type 清单：**
+```
+memory.session_imported   -- 导入了一条对话记录
+memory.annotation_added   -- 用户添加了标注
+task.created              -- 创建了任务
+task.updated              -- 任务状态/内容变更
+task.completed            -- 任务完成
+agent.started             -- Agent 开始工作
+agent.output              -- Agent 产生输出
+agent.completed           -- Agent 完成任务
+theory.page_created       -- 新建 Theory 页面
+theory.page_edited        -- 编辑了 Theory 页面
+epoch.created             -- 用户宣告进入新版本
+```
+
+### 3.2 agents.db（新建）
+
+```sql
+-- Agent 定义
+CREATE TABLE agents (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  type        TEXT NOT NULL,     -- 'claude_code' | 'openclaw' | 'api'
+  model       TEXT,
+  role        TEXT DEFAULT 'worker',  -- 'master' | 'worker'
+  description TEXT,
+  status      TEXT DEFAULT 'idle',    -- 'idle' | 'running' | 'paused' | 'done'
+  position_x  REAL DEFAULT 0,         -- 节点图 X 坐标
+  position_y  REAL DEFAULT 0,         -- 节点图 Y 坐标
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Agent 关系图（两两之间的工作关系）
+CREATE TABLE agent_relations (
+  id           TEXT PRIMARY KEY,
+  from_agent   TEXT NOT NULL,
+  to_agent     TEXT NOT NULL,
+  type         TEXT NOT NULL,    -- 'parallel' | 'sequential' | 'causal'
+  -- parallel:  两者并行工作
+  -- sequential: to_agent 在 from_agent 完成后开始
+  -- causal:    to_agent 以 from_agent 的输出为输入
+  condition    TEXT,             -- JSON，可选的触发条件
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (from_agent) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY (to_agent)   REFERENCES agents(id) ON DELETE CASCADE
+);
+
+-- Agent 消息记录（agent间通信 + agent与用户通信）
+CREATE TABLE agent_messages (
+  id         TEXT PRIMARY KEY,
+  from_id    TEXT,              -- NULL 表示来自用户
+  to_id      TEXT,              -- NULL 表示发给用户
+  content    TEXT NOT NULL,
+  type       TEXT DEFAULT 'message',  -- 'message' | 'command' | 'output'
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_agent_messages_from ON agent_messages(from_id);
+CREATE INDEX idx_agent_messages_to   ON agent_messages(to_id);
+```
+
+### 3.3 tasks.db（已完成，仅供参考）
+
+已有：`tasks`（含看板字段）、`kanban_columns`、`task_property_defs`、`task_properties`、`task_versions`、`blocks`
+
+### 3.4 pages.db（已完成，不动）
+
+已有：`pages`、`blocks`
+
+---
+
+## 四、JSONL 解析规则
+
+### 4.1 来源识别
+
+**判断为 OpenClaw：**
+- 第一条非空记录的 `type === "session"` 且 `cwd` 包含 `.openclaw`
+- 或存在 `type === "model_change"` 的记录
+- 或 `message.provider` 为 `deepseek` / `volcengine` / `moonshot` 等非 Anthropic 提供商
+
+**判断为 Claude Code：**
+- 记录包含 `isSidechain`、`gitBranch`、`sessionId`（顶层）字段
+- 或 `type` 直接为 `"user"` / `"assistant"` / `"tool"`（非 `"message"` 包裹）
+- 或 `message.model` 包含 `claude-`
+
+### 4.2 OpenClaw 格式解析
+
+**记录结构：**
+```
+每行 JSON，通过 parentId 构成链式树
+type: "session"          → 会话元信息
+type: "model_change"     → 模型切换事件（忽略，只用于识别来源）
+type: "thinking_level_change" → 忽略
+type: "custom"           → 忽略
+type: "message"          → 核心内容，message.role 区分角色
+```
+
+**message.role 类型：**
+```
+"user"        → 用户输入，content[].type === "text"
+"assistant"   → 模型响应，content 可包含：
+                  {type: "thinking", thinking: "..."} → step.type = "thinking"
+                  {type: "toolCall", name: "...", arguments: {...}} → step.type = "tool_call"
+                  {type: "text", text: "..."} → step.type = "response"
+"toolResult"  → 工具结果，对应上一个 toolCall → step.type = "tool_result"
+                  content[].type === "text"，isError 标记是否出错
+```
+
+**Round 划分规则：**
+- 每遇到 `role === "user"` → 开启新的 Round
+- 随后的 assistant/toolResult 链（直到下一个 user）属于该 Round 的 Steps
+
+**Token 统计（来自 assistant 消息）：**
+```javascript
+const usage = message.usage || {}
+token_input  = usage.input
+token_output = usage.output
+// 取所有 Round 中 assistant 消息的 usage 累加到 Session 总计
+```
+
+**Duration 计算：**
+- 相邻两条 assistant 消息之间无 user 消息时，时间差 = 该步骤耗时
+- 参考 import_v5.py 中 `calculate_durations()` 的逻辑
+
+**Session 元信息：**
+- `id`：来自 `type === "session"` 记录的 `id`，或 jsonl 文件名（去掉 .jsonl）
+- `agent_type`：`"openclaw"`
+- `model`：来自第一条 assistant 消息的 `message.model`
+- `started_at` / `ended_at`：所有 message 记录中最早/最晚的 timestamp
+
+### 4.3 Claude Code 格式解析
+
+**记录结构：**
+```
+每行 JSON，通过 parentUuid 构成链
+type: "file-history-snapshot" → 忽略
+type: "summary"               → 忽略
+type: "user"                  → 用户输入
+type: "assistant"             → 模型响应
+type: "tool"                  → 工具结果（userType: "tool"）
+```
+
+**字段映射：**
+```javascript
+// 每条记录顶层
+record.uuid          → message id
+record.parentUuid    → 父消息 id
+record.sessionId     → session id
+record.timestamp     → 时间戳
+record.durationMs    → 该次请求耗时（assistant 记录上）
+record.costUSD       → 费用
+
+// assistant 记录
+record.message.model → 模型名称
+record.message.usage → {
+  input_tokens, output_tokens,
+  cache_creation_input_tokens,
+  cache_read_input_tokens
+}
+record.message.content → 数组：
+  {type: "thinking", thinking: "...", signature: "..."} → step.type = "thinking"
+  {type: "tool_use", id: "...", name: "...", input: {...}} → step.type = "tool_call"
+  {type: "text", text: "..."}                            → step.type = "response"
+
+// tool 记录（userType: "tool"）
+record.message.content     → 工具结果文本（字符串或数组）
+record.message.tool_use_id → 对应的 tool_use id → step.type = "tool_result"
+```
+
+**Round 划分：** 同 OpenClaw，每遇到 `type === "user"` 开启新 Round。
+
+**Session 元信息：**
+- `agent_type`：`"claude_code"`
+- `model`：来自任意 assistant 记录的 `message.model`
+- `duration_ms`：所有 assistant 记录的 `durationMs` 累加
+- cwd / gitBranch 存入 session 的扩展字段（可选）
+
+### 4.4 通用导入流程
+
+```
+1. 读取 jsonl → 逐行解析为记录数组
+2. 识别来源（openclaw / claude_code）
+3. 提取 session 元信息 → 写入 sessions 表
+4. 按 user 消息划分 Rounds → 写入 rounds 表
+5. 每个 Round 内遍历 steps → 写入 steps 表
+6. 累计 token / duration 更新 sessions 表
+7. 写入 events 表：{type: "memory.session_imported", ref_id: sessionId}
+```
+
+---
+
+## 五、API 设计
+
+### Memory API
+
+```
+POST /api/memory/import          # 导入 jsonl 文件（body: {filePath} 或 multipart）
+GET  /api/memory/sessions        # 分页列表（不含 rounds，点击再加载）
+GET  /api/memory/sessions/:id    # Session 元信息
+GET  /api/memory/sessions/:id/rounds         # 该 Session 的 Rounds 列表
+GET  /api/memory/rounds/:id/steps            # 该 Round 的 Steps 链
+POST /api/memory/annotations                 # 新建标注
+GET  /api/memory/annotations?refType=&refId= # 查询标注
+```
+
+### Chronicle API
+
+```
+GET  /api/chronicle              # 事件流（支持 ?source=&epoch= 过滤）
+GET  /api/chronicle/epochs       # Epoch 版本列表
+POST /api/chronicle/epochs       # 创建新 Epoch（触发 V1→V2）
+PATCH /api/chronicle/epochs/:id  # 关闭当前 Epoch（设置 ended_at）
+```
+
+### Agents API
+
+```
+GET    /api/agents               # Agent 列表
+POST   /api/agents               # 创建 Agent
+GET    /api/agents/:id           # Agent 详情
+PATCH  /api/agents/:id           # 更新 Agent（含坐标）
+DELETE /api/agents/:id           # 删除 Agent
+
+GET    /api/agents/relations     # 所有关系
+POST   /api/agents/relations     # 创建关系
+DELETE /api/agents/relations/:id # 删除关系
+
+GET    /api/agents/:id/messages  # Agent 消息记录
+POST   /api/agents/messages      # 发送消息
+```
+
+---
+
+## 六、前端组件规划
+
+### Memory 视图（渐进加载）
+
+```
+SessionList
+  ├── 按 agent_type / 日期分组
+  ├── 显示：agent_name, model, 时间, token 总计
+  └── 点击 → 展开 RoundList（懒加载）
+
+RoundList
+  ├── 显示：用户输入摘要, 耗时, token
+  └── 点击 → 展开 StepChain（懒加载）
+
+StepChain
+  ├── thinking   → 折叠展示推理过程
+  ├── tool_call  → 工具名 + 参数
+  ├── tool_result → 结果（长文本自动折叠）
+  └── response   → 最终文本输出
+
+AnnotationPanel（侧边或悬浮）
+  └── 对任意 step/round 打标签 / 写备注 / 标记训练数据
+```
+
+### Chronicle 视图
+
+```
+EpochSelector（顶部）
+  └── V1 / V2 / ... 切换，显示时间范围
+
+Timeline（主体）
+  ├── 时间轴，按 created_at 排列
+  ├── 三个轨道：认知/价值观 | 行为能力 | 里程碑产出
+  ├── 卡片按 events.source 着色区分（memory/task/agent/theory）
+  └── 点击卡片 → 跳转到对应模块详情
+
+EpochButton（右下角）
+  └── "宣告进入 V{n+1}" → POST /api/chronicle/epochs
+```
+
+### Agent 视图（ReactFlow 节点图）
+
+```
+GraphEditor（主体，使用 ReactFlow）
+  ├── 节点：每个 Agent 一个节点，颜色区分 master/worker
+  ├── 边：箭头表示关系类型（parallel/sequential/causal）
+  ├── 拖拽节点改变位置 → PATCH /api/agents/:id {position_x, position_y}
+  ├── 连线创建关系 → POST /api/agents/relations
+  └── 双击节点 → 进入 AgentDetail
+
+AgentDetail（详情页）
+  ├── 基本信息（名称/类型/模型/状态）
+  ├── MessageFeed：发给该 Agent 的消息 + Agent 的输出记录
+  └── 关联的 Memory Sessions（同名 agent_name 的 sessions）
+```
+
+---
+
+## 七、开发阶段
+
+### Phase 0 — 后端重构（基础整理，不改功能）
+
+- [ ] 新建 `server/db.js`，统一管理 4 个数据库连接
+- [ ] 将现有 `index.js` 路由拆分到 `routes/tasks.js` 和 `routes/pages.js`
+- [ ] 新建 `server/lib/emit.js`（写 events 表的工具函数）
+- [ ] 初始化 `memory.db` 新 schema
+- [ ] 初始化 `agents.db` schema
+- [ ] 更新 `index.js` 仅保留启动逻辑和路由注册
+
+### Phase 1 — Memory 重写
+
+- [ ] `scripts/import-jsonl.js`：实现 OpenClaw + Claude Code 双格式解析
+- [ ] `routes/memory.js`：导入接口 + Sessions/Rounds/Steps 查询接口
+- [ ] 导入时自动写 `events` 表
+- [ ] 前端 Memory 视图：渐进加载 + 标注工作流
+
+### Phase 2 — Chronicle 核心
+
+- [ ] `routes/chronicle.js`：events 聚合查询 + epochs 管理
+- [ ] 前端 Chronicle 视图：时间轴 + Epoch 分界线
+
+### Phase 3 — Agents V1
+
+- [ ] `routes/agents.js`：Agent CRUD + 关系 + 消息接口
+- [ ] 前端 Agent 视图：ReactFlow 节点图 + AgentDetail
+
+### Phase 4+ — 延后
+
+- [ ] Agent 进程控制（接入真实 Claude Code / OpenClaw 进程）
+- [ ] 内容自动压缩（LLM 摘要，超过阈值自动触发）
+- [ ] 哈希链（Chronicle 防篡改）
+- [ ] `/egonetics`、`/blog` 页面
+
+---
+
+## 八、不动的代码
+
+以下代码经确认符合预期，**重构过程中严禁修改**：
+
+| 文件 | 说明 |
+|---|---|
+| `src/components/KanbanBoard.tsx` | 看板拖拽逻辑已完善 |
+| `src/components/TaskPageView.tsx` | Task 详情页 |
+| `src/components/PageManager.tsx` 及相关 | 富文本块编辑器体系 |
+| `src/components/apiClient.ts` | Pages API 客户端 |
+| `server/tasks_schema.sql` | 已统一的 tasks 数据模型 |
+| `server/pages_schema.sql` | pages 数据模型 |
+
+---
+
+## 九、技术选型备注
+
+| 技术 | 用途 | 备注 |
+|---|---|---|
+| ReactFlow | Agent 节点图编辑器 | 业界标准，支持自定义节点和边 |
+| SQLite3 (Node) | 后端数据库 | 保持现有选型 |
+| Express.js | 后端框架 | 保持现有选型 |
+| Zustand | 前端状态管理 | 保持现有选型，按模块拆 store |
+| Vite Proxy | 前后端通信 | `/api` → `localhost:3002`，不再使用硬编码端口 |
