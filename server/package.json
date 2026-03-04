@@ -6,8 +6,12 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "init-db": "node init-db.js",
-    "import-data": "python3 import_jsonl.py"
+    "init-memory": "node scripts/init-memory-db.js",
+    "init-tasks": "node scripts/init-tasks-db.js",
+    "init-pages": "node scripts/init-pages-db.js",
+    "init-agents": "node scripts/init-agents-db.js",
+    "migrate": "node scripts/migrate-chronicle.js",
+    "import": "node scripts/import-jsonl.js"
   },
   "dependencies": {
     "body-parser": "^1.20.2",

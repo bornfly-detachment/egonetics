@@ -10,7 +10,7 @@
  *   await apiClient.save(taskData)
  */
 
-const API_BASE = 'http://localhost:3003/api'
+const API_BASE = '/api'
 
 export interface PageData {
   id: string

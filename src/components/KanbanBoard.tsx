@@ -56,7 +56,7 @@ interface Column {
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:3003/api'
+const API_BASE = '/api'
 
 async function fetchKanban(): Promise<Column[] | null> {
   try {
@@ -479,7 +479,7 @@ interface ModalProps {
   onClose: () => void
 }
 
-function TaskModal({ init, defaultColId, allCols, onConfirm, onClose }: ModalProps) {
+function TaskModal({ init, defaultColId, allCols: _allCols, onConfirm, onClose }: ModalProps) {
   const [name,        setName]        = useState(init?.name ?? '')
   const [icon,        setIcon]        = useState(init?.icon ?? '📝')
   const [priority,    setPriority]    = useState<Priority>(init?.priority ?? 'medium')

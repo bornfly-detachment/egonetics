@@ -24,7 +24,7 @@ export type BlockType =
   | 'bullet' | 'numbered' | 'todo' | 'toggle'
   | 'quote' | 'callout_info' | 'callout_warning' | 'callout_success' | 'callout_tip'
   | 'code' | 'math' | 'equation_block'
-  | 'image' | 'video' | 'file' | 'bookmark'
+  | 'image' | 'video' | 'audio' | 'file' | 'bookmark'
   | 'divider' | 'table' | 'columns2' | 'columns3' | 'toc'
   | 'subpage'   // ← 子页面块，块内嵌入一个子页面的入口
 
@@ -57,6 +57,7 @@ export interface Block {
     numberStart?: number
     toggleOpen?: boolean
     fileName?: string
+    imageWidth?: number         // 图片宽度百分比 1-100，undefined = 100%
     // subpage 块专用
     subpageId?: string          // 指向的子页面 id
     subpageTitle?: string       // 冗余存一份标题，避免跨页查询

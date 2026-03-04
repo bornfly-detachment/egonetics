@@ -1,801 +1,882 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Calendar, Folder, MessageCircle, Brain, ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
+/**
+ * MemoryView.tsx — 记忆库 + 标注面板
+ *
+ * 布局：左侧 60% 标注面板（blocks） + 右侧 40% Session 库
+ * Block 类型：heading | text | session_ref
+ * 拖拽：右侧 Session 卡拖入左侧 → 生成 session_ref 块
+ */
 
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import {
+  Plus, Trash2, ChevronDown, ChevronRight,
+  Calendar, MessageCircle, Brain, Upload,
+  Search, Edit2, Check, X, BookMarked,
+} from 'lucide-react'
+import BlockEditor from './BlockEditor'
+import type { Block, BlockType, RichTextSegment } from './types'
 
-const API_BASE = '/api';
+const API = '/api'
+const apiFetch = async (path: string, opts?: RequestInit) => {
+  const r = await fetch(`${API}${path}`, opts)
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
+  return r.json()
+}
+const post  = (path: string, body: unknown) => apiFetch(path, { method: 'POST',  headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+const patch = (path: string, body: unknown) => apiFetch(path, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
-const fetchApi = async (path: string, options?: RequestInit) => {
-  const res = await fetch(`${API_BASE}${path}`, options);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-};
+// ── Types ──────────────────────────────────────────────────
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'toolResult';
-  message_type: string;
-  content: string;
-  timestamp: string;
-  parent_id?: string;
-  token_input?: number;
-  token_output?: number;
-  duration_ms?: number;
-  provider?: string;
-  tool_name?: string;
-  raw_content?: string;
+interface Board {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+}
+
+interface BoardBlock {
+  id: string
+  board_id: string
+  type: string   // BlockType for editable blocks, 'session_ref' for session refs
+  content: {
+    rich_text?: RichTextSegment[]  // BlockEditor format (preferred)
+    text?: string                  // legacy plain-text (backwards compat)
+    session_id?: string
+    session_title?: string
+    agent_type?: string
+    [key: string]: unknown         // allow all Block content fields
+  }
+  position: number
 }
 
 interface Session {
-  id: string;
-  title: string;
-  created_at: string;
-  date: string;
-  agent?: string;
-  messages: Message[];
+  id: string
+  agent_name: string
+  agent_type: string
+  model: string | null
+  started_at: string | null
+  ended_at: string | null
+  annotation_title: string | null
+  token_input: number
+  token_output: number
+  round_count: number
+  chronicle_entry_id: string | null
 }
 
-interface AnnotationTarget {
-  type: 'date' | 'session' | 'round' | 'message';
-  id: string;
-  title: string;
-  data?: any;
+interface Round {
+  id: string
+  session_id: string
+  round_num: number
+  user_input: string | null
+  step_count: number
+  token_input: number
+  token_output: number
 }
 
-// ========== 真正的富文本编辑器 ==========
-
-interface EditorProps {
-  initialContent?: string;
-  onChange?: (html: string) => void;
-  placeholder?: string;
+interface Step {
+  id: string
+  round_id: string
+  step_num: number
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'response'
+  tool_name: string | null
+  content: Record<string, unknown> | string
 }
 
-const RichTextEditor: React.FC<EditorProps> = ({ initialContent = '', onChange, placeholder = '开始输入...' }) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [activeFormats, setActiveFormats] = useState<string[]>([]);
+// ── Helpers ────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (editorRef.current && initialContent) {
-      editorRef.current.innerHTML = initialContent;
-    }
-  }, []);
+const fmtTokens = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0)
+const fmtDate   = (ts: string | null) => {
+  if (!ts) return '?'
+  return new Date(ts).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+const fmtTime   = (ts: string | null) => {
+  if (!ts) return ''
+  return new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+const agentBadge = (type: string) =>
+  type === 'openclaw' ? '🦞' : type === 'claude_code' ? '⚡' : '🤖'
 
-  const execCommand = (command: string, value: string = '') => {
-    document.execCommand(command, false, value);
-    updateActiveFormats();
-    if (editorRef.current) {
-      onChange?.(editorRef.current.innerHTML);
-    }
-  };
+function getStepText(step: Step): string {
+  if (typeof step.content === 'string') return step.content
+  const c = step.content as Record<string, unknown>
+  if (step.type === 'thinking')    return String(c.text || '')
+  if (step.type === 'response')    return String(c.text || '')
+  if (step.type === 'tool_call')   return JSON.stringify(c.arguments || c, null, 2)
+  if (step.type === 'tool_result') return String(c.output || '')
+  return JSON.stringify(step.content, null, 2)
+}
 
-  const updateActiveFormats = () => {
-    const formats = [];
-    if (document.queryCommandState('bold')) formats.push('bold');
-    if (document.queryCommandState('italic')) formats.push('italic');
-    if (document.queryCommandState('underline')) formats.push('underline');
-    if (document.queryCommandState('strikeThrough')) formats.push('strike');
-    if (document.queryCommandState('insertUnorderedList')) formats.push('ul');
-    if (document.queryCommandState('insertOrderedList')) formats.push('ol');
-    if (document.queryCommandState('blockquote')) formats.push('quote');
-    setActiveFormats(formats);
-  };
+function genId() { return `b-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
 
-  const handleInput = () => {
-    updateActiveFormats();
-    if (editorRef.current) {
-      onChange?.(editorRef.current.innerHTML);
-    }
-  };
+// ── Step Row (in session_ref expansion) ───────────────────
 
-  const ToolbarButton: React.FC<{ 
-    command: string;
-    value?: string;
-    label: string; 
-    isActive?: boolean;
-    title?: string;
-  }> = ({ command, value, label, isActive, title }) => (
-    <button
-      onClick={() => execCommand(command, value || '')}
-      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
-        isActive 
-          ? 'bg-primary-600 text-white' 
-          : 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
-      }`}
-      title={title || label}
-    >
-      {label}
-    </button>
-  );
+const STEP_STYLES = {
+  thinking:    { bg: 'bg-purple-900/20 border-purple-500/40', badge: 'bg-purple-900 text-purple-300', label: '思考' },
+  tool_call:   { bg: 'bg-amber-900/15 border-amber-500/30',   badge: 'bg-amber-900 text-amber-300',   label: '工具调用' },
+  tool_result: { bg: 'bg-slate-800/50 border-slate-600/40',   badge: 'bg-slate-700 text-slate-300',   label: '工具结果' },
+  response:    { bg: 'bg-green-900/20 border-green-500/40',   badge: 'bg-green-900 text-green-300',   label: '输出' },
+}
+
+function StepRow({ step }: { step: Step }) {
+  const [expanded, setExpanded] = useState(step.type === 'response')
+  const text    = getStepText(step)
+  const preview = text.slice(0, 200)
+  const isLong  = text.length > 200
+  const s = STEP_STYLES[step.type] || STEP_STYLES.response
 
   return (
-    <div className="border border-neutral-700 rounded-lg overflow-hidden bg-neutral-800/50">
-      {/* 工具栏 */}
-      <div className="flex flex-wrap gap-1 p-2 border-b border-neutral-700 bg-neutral-800">
-        <div className="flex gap-1">
-          <ToolbarButton command="formatBlock" value="H1" label="H1" title="大标题" />
-          <ToolbarButton command="formatBlock" value="H2" label="H2" title="小标题" />
-        </div>
-        <div className="w-px bg-neutral-700 mx-1" />
-        <div className="flex gap-1">
-          <ToolbarButton command="bold" label="B" isActive={activeFormats.includes('bold')} title="粗体" />
-          <ToolbarButton command="italic" label="I" isActive={activeFormats.includes('italic')} title="斜体" />
-          <ToolbarButton command="underline" label="U" isActive={activeFormats.includes('underline')} title="下划线" />
-          <ToolbarButton command="strikeThrough" label="S" isActive={activeFormats.includes('strike')} title="删除线" />
-        </div>
-        <div className="w-px bg-neutral-700 mx-1" />
-        <div className="flex gap-1">
-          <ToolbarButton command="insertUnorderedList" label="• 列表" isActive={activeFormats.includes('ul')} title="无序列表" />
-          <ToolbarButton command="insertOrderedList" label="1. 列表" isActive={activeFormats.includes('ol')} title="有序列表" />
-        </div>
-        <div className="w-px bg-neutral-700 mx-1" />
-        <div className="flex gap-1">
-          <ToolbarButton command="blockquote" label="引用" isActive={activeFormats.includes('quote')} title="引用" />
-          <ToolbarButton command="formatBlock" value="PRE" label="代码" title="代码块" />
-        </div>
+    <div className={`rounded border ${s.bg} mb-1`}>
+      <div className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer" onClick={() => isLong && setExpanded(e => !e)}>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${s.badge}`}>
+          {s.label}{step.tool_name ? ` · ${step.tool_name}` : ''}
+        </span>
+        {isLong && <span className="ml-auto text-neutral-600">{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>}
       </div>
-
-      {/* 编辑区 */}
-      <div
-        ref={editorRef}
-        contentEditable
-        className="p-4 min-h-[300px] outline-none text-neutral-200 prose prose-invert max-w-none"
-        onInput={handleInput}
-        onKeyUp={updateActiveFormats}
-        onMouseUp={updateActiveFormats}
-        style={{
-          lineHeight: '1.6',
-        }}
-      >
-        {!initialContent && <span className="text-neutral-500">{placeholder}</span>}
+      <div className="px-2.5 pb-2 text-xs text-neutral-300 whitespace-pre-wrap font-mono leading-relaxed">
+        {expanded || !isLong ? text : preview + '…'}
       </div>
     </div>
-  );
-};
+  )
+}
 
-// ========== 可调整宽度的侧边栏 ==========
+// ── Session Ref Content (readonly, in board) ───────────────
 
-const ResizableSidebar: React.FC<{
-  isOpen: boolean;
-  onClose?: () => void;
-  children: React.ReactNode;
-}> = ({ isOpen, children }) => {
-  const [width, setWidth] = useState(600);
-  const [isResizing, setIsResizing] = useState(false);
-
-  const startResizing = useCallback(() => setIsResizing(true), []);
-  const stopResizing = useCallback(() => setIsResizing(false), []);
-
-  const resize = useCallback((e: MouseEvent) => {
-    if (isResizing) {
-      const newWidth = window.innerWidth - e.clientX;
-      setWidth(Math.max(400, Math.min(900, newWidth)));
-    }
-  }, [isResizing]);
+function SessionRefContent({ sessionId }: { sessionId: string }) {
+  const [rounds, setRounds] = useState<Round[] | null>(null)
+  const [steps,  setSteps]  = useState<Record<string, Step[]>>({})
+  const [expanded, setExpanded]  = useState<Record<string, boolean>>({})
+  const [loadingRounds, setLoadingRounds] = useState(false)
 
   useEffect(() => {
-    if (isResizing) {
-      window.addEventListener('mousemove', resize);
-      window.addEventListener('mouseup', stopResizing);
+    setLoadingRounds(true)
+    apiFetch(`/memory/sessions/${sessionId}/rounds`)
+      .then(d => setRounds(d.rounds || []))
+      .catch(() => setRounds([]))
+      .finally(() => setLoadingRounds(false))
+  }, [sessionId])
+
+  const toggleRound = async (roundId: string) => {
+    const wasExpanded = !!expanded[roundId]
+    setExpanded(e => ({ ...e, [roundId]: !wasExpanded }))
+    if (!wasExpanded && !steps[roundId]) {
+      const d = await apiFetch(`/memory/rounds/${roundId}/steps`)
+      setSteps(prev => ({ ...prev, [roundId]: d.steps || [] }))
     }
-    return () => {
-      window.removeEventListener('mousemove', resize);
-      window.removeEventListener('mouseup', stopResizing);
-    };
-  }, [isResizing, resize, stopResizing]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div 
-      className="fixed right-0 top-0 bottom-0 bg-neutral-900 border-l border-neutral-700 shadow-2xl z-50 flex flex-col"
-      style={{ width }}
-    >
-      <div
-        className="absolute left-0 top-0 bottom-0 w-4 cursor-col-resize flex items-center justify-center hover:bg-primary-500/20 transition-colors"
-        onMouseDown={startResizing}
-      >
-        <GripVertical className="w-4 h-4 text-neutral-600" />
-      </div>
-      
-      <div className="flex-1 overflow-hidden flex flex-col pl-4">
-        {children}
-      </div>
-    </div>
-  );
-};
-
-// ========== 资源消耗组件 ==========
-
-
-// ========== 树节点组件 ==========
-
-// 可编辑的标题组件
-const EditableTitle: React.FC<{
-  title: string;
-  onUpdate: (newTitle: string) => void;
-  placeholder: string;
-}> = ({ title, onUpdate, placeholder }) => {
-  const [editing, setEditing] = useState(false);
-  const [tempTitle, setTempTitle] = useState(title);
-
-  const handleSave = () => {
-    if (tempTitle.trim()) {
-      onUpdate(tempTitle.trim());
-    } else {
-      setTempTitle(title);
-    }
-    setEditing(false);
-  };
-
-  const handleCancel = () => {
-    setTempTitle(title);
-    setEditing(false);
-  };
-
-  if (!editing) {
-    return (
-      <span
-        className="flex-1 truncate cursor-pointer hover:text-white"
-        onClick={() => setEditing(true)}
-      >
-        {title || placeholder}
-      </span>
-    );
   }
 
-  return (
-    <span className="flex-1 flex items-center gap-1">
-      <input
-        type="text"
-        value={tempTitle}
-        onChange={(e) => setTempTitle(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') handleSave();
-          if (e.key === 'Escape') handleCancel();
-        }}
-        onBlur={handleSave}
-        autoFocus
-        className="bg-transparent border-b border-neutral-500 text-neutral-200 text-sm w-full focus:outline-none focus:border-primary-500"
-        placeholder={placeholder}
-      />
-    </span>
-  );
-};
-
-const TreeNode: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  children?: React.ReactNode;
-  defaultExpanded?: boolean;
-  rightContent?: React.ReactNode;
-  onAnnotate?: () => void;
-  onExpand?: () => void;
-  isSession?: boolean;
-  sessionId?: string;
-  sessionTitle?: string;
-  onTitleUpdate?: (sessionId: string, newTitle: string) => void;
-}> = ({
-  icon, label, children, defaultExpanded = false, rightContent,
-  onAnnotate, onExpand, isSession = false,
-  sessionId, sessionTitle, onTitleUpdate
-}) => {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const hasChildren = !!children;
-
-  const handleExpandClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpanded(!expanded);
-    if (!expanded && onExpand) {
-      onExpand();
-    }
-  };
-
-  const handleToggle = () => {
-    if (!isSession && hasChildren) {
-      setExpanded(!expanded);
-      if (!expanded && onExpand) {
-        onExpand();
-      }
-    }
-  };
+  if (loadingRounds) return <div className="text-xs text-neutral-500 py-2">加载中…</div>
+  if (!rounds?.length) return <div className="text-xs text-neutral-500 py-2">无对话记录</div>
 
   return (
-    <div className="group">
-      <div
-        className="flex items-center space-x-3 py-2 px-3 hover:bg-white/5 rounded cursor-pointer border border-transparent hover:border-primary-500/30 transition-all"
-        onClick={handleToggle}
-      >
-        {hasChildren && !isSession && (
-          <span className="text-primary-400 hover:text-primary-300 transition-colors">
-            {expanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-          </span>
-        )}
-        {(!hasChildren || isSession) && <span className="w-5" />}
-        <span className="text-neutral-300">{icon}</span>
-
-        {isSession && sessionId && onTitleUpdate ? (
-          <EditableTitle
-            title={sessionTitle || ''}
-            onUpdate={(newTitle) => onTitleUpdate(sessionId, newTitle)}
-            placeholder={label}
-          />
-        ) : (
-          <span className="text-neutral-200 flex-1 truncate">{label}</span>
-        )}
-
-        {/* 会话节点的展开按钮 - 真正的按钮 */}
-        {isSession && (
-          <button
-            onClick={handleExpandClick}
-            className={`text-xs px-3 py-1 rounded font-medium shadow-sm transition-all ${
-              expanded
-                ? 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
-                : 'bg-primary-600 text-white hover:bg-primary-700'
-            }`}
+    <div className="mt-2 space-y-1">
+      {rounds.map(r => (
+        <div key={r.id} className="border border-neutral-800 rounded">
+          <div
+            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-white/5"
+            onClick={() => toggleRound(r.id)}
           >
-            {expanded ? '收起' : '展开'}
-          </button>
-        )}
+            {expanded[r.id] ? <ChevronDown size={12} className="text-neutral-500" /> : <ChevronRight size={12} className="text-neutral-500" />}
+            <MessageCircle size={11} className="text-green-400 shrink-0" />
+            <span className="text-xs text-neutral-300 flex-1">
+              <span className="text-neutral-500 mr-1">#{r.round_num}</span>
+              {r.user_input ? r.user_input.slice(0, 80) + (r.user_input.length > 80 ? '…' : '') : <em className="text-neutral-600">空</em>}
+            </span>
+            <span className="text-[10px] text-neutral-500 shrink-0">{r.step_count} 步</span>
+          </div>
+          {expanded[r.id] && (
+            <div className="px-2.5 pb-2">
+              {r.user_input && (
+                <div className="bg-blue-900/20 border border-blue-700/30 rounded p-2 mb-1.5 text-xs text-blue-200 whitespace-pre-wrap">
+                  {r.user_input}
+                </div>
+              )}
+              {(steps[r.id] || []).map(step => <StepRow key={step.id} step={step} />)}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
 
-        {/* 非会话节点的展开按钮 */}
-        {!isSession && hasChildren && (
-          <span className="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded-full">
-            {expanded ? '收起' : '展开'}
-          </span>
-        )}
+// ── Session Ref Card ────────────────────────────────────────
 
-        {/* 标注按钮 - 更明显的样式 */}
-        {onAnnotate && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onAnnotate(); }}
-            className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium shadow-sm hover:shadow-md transition-all"
-          >
-            标注
-          </button>
-        )}
+function SessionRefCard({ block, onDelete }: {
+  block: BoardBlock
+  onDelete: (id: string) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const title = block.content.session_title || (block.content.session_id as string | undefined)?.slice(0, 12) || '?'
 
-        {rightContent}
+  return (
+    <div className="group rounded-lg border border-neutral-700/50 bg-neutral-800/30 mb-2">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <span className="text-sm">{agentBadge(String(block.content.agent_type ?? ''))}</span>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="flex items-center gap-1.5 flex-1 text-left"
+        >
+          {expanded
+            ? <ChevronDown size={12} className="text-neutral-500 shrink-0" />
+            : <ChevronRight size={12} className="text-neutral-500 shrink-0" />}
+          <span className="text-sm text-neutral-200 truncate">{title}</span>
+          <span className="ml-auto text-[10px] text-neutral-500 shrink-0">📎 引用</span>
+        </button>
+        <button
+          onClick={() => onDelete(block.id)}
+          className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-neutral-600 hover:text-red-400 transition-all"
+        >
+          <Trash2 size={11} />
+        </button>
       </div>
-      {expanded && children && (
-        <div className="ml-4 pl-2 border-l border-neutral-700">
-          {children}
+      {expanded && block.content.session_id && (
+        <div className="px-3 pb-3 border-t border-neutral-700/40 mt-1 pt-2">
+          <SessionRefContent sessionId={String(block.content.session_id)} />
         </div>
       )}
     </div>
-  );
-};
-
-// ========== 解析消息链 ==========
-
-interface ParsedRound {
-  userMsg: Message;
-  thoughts: Message[];
-  finalOutput?: Message;
-  toolResults: Message[];
+  )
 }
 
-const parseRound = (messages: Message[]): ParsedRound => {
-  const result: ParsedRound = {
-    userMsg: messages[0],
-    thoughts: [],
-    toolResults: []
-  };
+// ── Board ↔ Block converters ────────────────────────────────
 
-  for (let i = 1; i < messages.length; i++) {
-    const msg = messages[i];
-    
-    if (msg.role === 'toolResult') {
-      result.toolResults.push(msg);
-    } else if (msg.role === 'assistant') {
-      // 检查消息内容类型
-      try {
-        const raw = JSON.parse(msg.raw_content || '{}');
-        const content = raw.content || [];
-        
-        // 有thinking的是思考步骤
-        const hasThinking = content.some((c: any) => c.type === 'thinking');
-        // 有text的是最终输出
-        const hasText = content.some((c: any) => c.type === 'text');
-        
-        if (hasThinking) {
-          result.thoughts.push(msg);
-        } else if (hasText && !hasThinking) {
-          // 纯text是最终输出
-          result.finalOutput = msg;
-        }
-      } catch {
-        // 解析失败，按内容判断
-        if (msg.content.includes('[思考]')) {
-          result.thoughts.push(msg);
-        } else {
-          result.finalOutput = msg;
-        }
-      }
-    }
+function boardBlockToBlock(b: BoardBlock): Block {
+  let type: BlockType = 'paragraph'
+  if (b.type === 'heading') type = 'heading2'        // legacy board heading → heading2
+  else if (b.type !== 'text') type = b.type as BlockType  // already a full BlockType
+
+  const rich_text: RichTextSegment[] = Array.isArray(b.content.rich_text)
+    ? b.content.rich_text as RichTextSegment[]
+    : [{ text: String(b.content.text ?? '') }]
+
+  return {
+    id: b.id,
+    parentId: null,
+    type,
+    content: { ...(b.content as object), rich_text } as Block['content'],
+    position: b.position,
+  }
+}
+
+function blockToBoardBlock(b: Block, boardId: string, position: number): BoardBlock {
+  return {
+    id: b.id,
+    board_id: boardId,
+    type: b.type,
+    content: b.content as unknown as BoardBlock['content'],
+    position,
+  }
+}
+
+// ── Board Panel (left side) ────────────────────────────────
+
+function BoardPanel() {
+  const [boards,          setBoards]          = useState<Board[]>([])
+  const [activeBoardId,   setActiveBoardId]   = useState<string | null>(null)
+  const [editorBlocks,    setEditorBlocks]    = useState<Block[]>([])
+  const [sessionRefs,     setSessionRefs]     = useState<BoardBlock[]>([])
+  const [loadingBoards,   setLoadingBoards]   = useState(true)
+  const [loadingBlocks,   setLoadingBlocks]   = useState(false)
+  const [dropTarget,      setDropTarget]      = useState(false)
+  const [renamingBoardId, setRenamingBoardId] = useState<string | null>(null)
+  const [renameTitle,     setRenameTitle]     = useState('')
+  const [showPublish,     setShowPublish]     = useState(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Load boards
+  useEffect(() => {
+    apiFetch('/memory/boards')
+      .then(d => {
+        const list = d.boards || []
+        setBoards(list)
+        if (list.length) setActiveBoardId(list[0].id)
+        setLoadingBoards(false)
+      })
+      .catch(() => setLoadingBoards(false))
+  }, [])
+
+  // Load blocks when board changes — split into editable vs session_ref
+  useEffect(() => {
+    if (!activeBoardId) { setEditorBlocks([]); setSessionRefs([]); return }
+    setLoadingBlocks(true)
+    apiFetch(`/memory/boards/${activeBoardId}`)
+      .then(d => {
+        const raw: BoardBlock[] = (d.blocks || []).sort((a: BoardBlock, b: BoardBlock) => a.position - b.position)
+        setEditorBlocks(raw.filter(b => b.type !== 'session_ref').map(boardBlockToBlock))
+        setSessionRefs(raw.filter(b => b.type === 'session_ref'))
+      })
+      .catch(() => { setEditorBlocks([]); setSessionRefs([]) })
+      .finally(() => setLoadingBlocks(false))
+  }, [activeBoardId])
+
+  const saveBoardBlocks = useCallback((notes: Block[], refs: BoardBlock[]) => {
+    if (!activeBoardId) return
+    const combined = [
+      ...notes.map((b, i) => blockToBoardBlock(b, activeBoardId, i + 1)),
+      ...refs.map((b, i) => ({ ...b, position: notes.length + i + 1 })),
+    ]
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      patch(`/memory/boards/${activeBoardId}`, { blocks: combined }).catch(console.error)
+    }, 800)
+  }, [activeBoardId])
+
+  const createBoard = async () => {
+    const title = prompt('面板标题', '标注面板')
+    if (!title?.trim()) return
+    const data = await post('/memory/boards', { title: title.trim() })
+    const newBoard: Board = { id: data.id, title: data.title, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    setBoards(prev => [...prev, newBoard])
+    setActiveBoardId(newBoard.id)
   }
 
-  return result;
-};
+  const renameBoard = async (boardId: string) => {
+    const t = renameTitle.trim()
+    setRenamingBoardId(null)
+    if (!t) return
+    await patch(`/memory/boards/${boardId}`, { title: t }).catch(console.error)
+    setBoards(prev => prev.map(b => b.id === boardId ? { ...b, title: t } : b))
+  }
 
-// ========== 主组件 ==========
+  const deleteBoard = async (boardId: string) => {
+    if (!window.confirm('删除此面板及所有块？')) return
+    await fetch(`${API}/memory/boards/${boardId}`, { method: 'DELETE' }).catch(console.error)
+    setBoards(prev => {
+      const next = prev.filter(b => b.id !== boardId)
+      setActiveBoardId(next.length ? next[0].id : null)
+      return next
+    })
+  }
 
-const MemoryView: React.FC = () => {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [annotationTarget, setAnnotationTarget] = useState<AnnotationTarget | null>(null);
-  const [editorContent, setEditorContent] = useState('');
+  const deleteSessionRef = (id: string) => {
+    const next = sessionRefs.filter(b => b.id !== id)
+    setSessionRefs(next)
+    saveBoardBlocks(editorBlocks, next)
+  }
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDropTarget(true) }
 
-  const loadData = async () => {
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDropTarget(false)
     try {
-      setLoading(true);
-      const data = await fetchApi('/sessions');
+      const data = JSON.parse(e.dataTransfer.getData('application/json'))
+      if (data.type === 'session_ref') {
+        const newRef: BoardBlock = {
+          id: genId(),
+          board_id: activeBoardId!,
+          type: 'session_ref',
+          content: {
+            session_id:    data.session_id,
+            session_title: data.session_title,
+            agent_type:    data.agent_type,
+          },
+          position: editorBlocks.length + sessionRefs.length + 1,
+        }
+        const next = [...sessionRefs, newRef]
+        setSessionRefs(next)
+        saveBoardBlocks(editorBlocks, next)
+      }
+    } catch { /* ignore */ }
+  }
 
-      // 只获取会话基本信息，不包含消息
-      const sessionsWithData = (data.sessions || []).map((s: any) => ({
-        ...s,
-        date: new Date(s.created_at).toLocaleDateString('zh-CN'),
-        agent: s.agent || 'main'
-      }));
+  if (loadingBoards) return (
+    <div className="flex-1 flex items-center justify-center text-neutral-500 text-sm">加载面板…</div>
+  )
 
-      // 按创建时间倒序排列（最新的在前面）
-      sessionsWithData.sort((a: any, b: any) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+  const activeBoard = boards.find(b => b.id === activeBoardId)
 
-      setSessions(sessionsWithData);
-    } catch (err) {
-      console.error('加载失败:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 更新会话标题
-  // 加载会话详细数据（包含消息）
-  const loadSessionDetails = async (sessionId: string) => {
-    try {
-      const detail = await fetchApi(`/sessions/${sessionId}`);
-      setSessions(prevSessions =>
-        prevSessions.map(session =>
-          session.id === sessionId
-            ? { ...session, messages: detail.messages || [] }
-            : session
-        )
-      );
-    } catch (err) {
-      console.error('加载会话详情失败:', err);
-    }
-  };
-
-  const updateSessionTitle = async (sessionId: string, newTitle: string) => {
-    try {
-      await fetchApi(`/sessions/${sessionId}/title`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle })
-      });
-
-      setSessions(prevSessions =>
-        prevSessions.map(session =>
-          session.id === sessionId
-            ? { ...session, title: newTitle }
-            : session
-        )
-      );
-    } catch (err) {
-      console.error('更新会话标题失败:', err);
-    }
-  };
-
-
-  const openAnnotation = (target: AnnotationTarget) => {
-    setAnnotationTarget(target);
-    setEditorContent('');
-    setSidebarOpen(true);
-  };
-
-  const saveAnnotation = () => {
-    console.log('Saving annotation for', annotationTarget?.id, editorContent);
-    setSidebarOpen(false);
-  };
-
-  const groupByDate = (sessions: Session[]) => {
-    const groups: Record<string, Session[]> = {};
-    for (const s of sessions) {
-      if (!groups[s.date]) groups[s.date] = [];
-      groups[s.date].push(s);
-    }
-    return groups;
-  };
-
-  const dateGroups = groupByDate(sessions);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+  return (
+    <div className="flex flex-col h-full">
+      {/* Board tabs */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-white/8 overflow-x-auto shrink-0">
+        {boards.map(b => (
+          <div key={b.id} className="group/tab relative shrink-0">
+            {renamingBoardId === b.id ? (
+              <input
+                autoFocus
+                value={renameTitle}
+                onChange={e => setRenameTitle(e.target.value)}
+                onBlur={() => renameBoard(b.id)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') renameBoard(b.id)
+                  if (e.key === 'Escape') setRenamingBoardId(null)
+                }}
+                className="px-2 py-0.5 rounded bg-white/10 border border-white/20 text-xs text-white outline-none w-28"
+              />
+            ) : (
+              <button
+                onClick={() => setActiveBoardId(b.id)}
+                onDoubleClick={() => { setRenameTitle(b.title); setRenamingBoardId(b.id) }}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  activeBoardId === b.id
+                    ? 'bg-white/15 text-white'
+                    : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/8'
+                }`}
+              >
+                {b.title}
+              </button>
+            )}
+            {activeBoardId === b.id && !renamingBoardId && (
+              <button
+                onClick={() => deleteBoard(b.id)}
+                className="absolute -top-1 -right-1 w-4 h-4 hidden group-hover/tab:flex items-center justify-center rounded-full bg-neutral-800 hover:bg-red-500/30 text-neutral-500 hover:text-red-400 transition-all"
+              >
+                <X size={9} />
+              </button>
+            )}
+          </div>
+        ))}
+        <button onClick={createBoard}
+          className="shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors">
+          <Plus size={12} />
+        </button>
       </div>
-    );
+
+      {/* Blocks area */}
+      {!activeBoardId ? (
+        <div className="flex-1 flex items-center justify-center text-neutral-600 text-sm">
+          <button onClick={createBoard} className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors">
+            <Plus size={16} /> 创建第一个标注面板
+          </button>
+        </div>
+      ) : (
+        <>
+          {activeBoard && (
+            <div className="px-4 pt-2 pb-0 flex items-center gap-2 shrink-0">
+              <span className="text-xs text-neutral-600">双击标签名可重命名 · / 插入任意块</span>
+              <div className="flex-1" />
+              <button
+                onClick={() => setShowPublish(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-neutral-500 hover:text-blue-400 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 transition-all"
+                title="将此面板发布到 Chronicle"
+              >
+                <BookMarked size={12} /> 发布到 Chronicle
+              </button>
+            </div>
+          )}
+
+          <div
+            className={`flex-1 overflow-auto px-2 pb-8 transition-colors ${dropTarget ? 'bg-blue-900/10 ring-1 ring-inset ring-blue-500/30' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={() => setDropTarget(false)}
+            onDrop={handleDrop}
+          >
+            {loadingBlocks ? (
+              <div className="text-neutral-500 text-sm py-4 px-2">加载中…</div>
+            ) : (
+              <>
+                {/* BlockEditor handles all heading / text / media / etc. blocks */}
+                <BlockEditor
+                  key={activeBoardId}
+                  pageId={activeBoardId}
+                  initialBlocks={editorBlocks.length ? editorBlocks : undefined}
+                  onChange={notes => {
+                    setEditorBlocks(notes)
+                    saveBoardBlocks(notes, sessionRefs)
+                  }}
+                />
+
+                {/* Session ref cards — always below editor blocks */}
+                {sessionRefs.length > 0 && (
+                  <div className="px-2 mt-1 pt-2 border-t border-white/5 space-y-2">
+                    {sessionRefs.map(block => (
+                      <SessionRefCard key={block.id} block={block} onDelete={deleteSessionRef} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {showPublish && activeBoard && (
+        <BoardPublishModal
+          board={activeBoard}
+          onDone={() => {
+            setShowPublish(false)
+            setBoards(prev => {
+              const next = prev.filter(b => b.id !== activeBoardId)
+              setActiveBoardId(next.length ? next[0].id : null)
+              return next
+            })
+          }}
+          onClose={() => setShowPublish(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Publish Board to Chronicle Modal ──────────────────────
+
+function BoardPublishModal({ board, onDone, onClose }: {
+  board: Board
+  onDone: () => void
+  onClose: () => void
+}) {
+  const [title,   setTitle]   = useState(board.title)
+  const [summary, setSummary] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
+
+  const doPublish = async () => {
+    if (!title.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await post(`/memory/boards/${board.id}/send-to-chronicle`, {
+        title: title.trim(),
+        summary: summary.trim() || null,
+      })
+      onDone()
+    } catch (e: unknown) {
+      setError((e as Error).message)
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="relative h-full flex">
-      {/* 主内容区 */}
-      <div className={`flex-1 space-y-2 transition-all ${sidebarOpen ? 'mr-[600px]' : ''}`}>
-        <h1 className="text-2xl font-bold gradient-text mb-4">Memory Tree</h1>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-[#1e1e1e] border border-white/15 rounded-xl shadow-2xl p-6 w-[520px]" onClick={e => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-1 flex items-center gap-2">
+          <BookMarked size={16} className="text-blue-400" /> 发布标注面板到 Chronicle
+        </h3>
+        <p className="text-xs text-neutral-500 mb-4">发布后此面板将从 Memory 移除，内容归入 Chronicle</p>
 
-        {Object.entries(dateGroups)
-          .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
-          .map(([date, dateSessions]) => (
-          <TreeNode
-            key={date}
-            icon={<Calendar className="w-4 h-4 text-blue-400" />}
-            label={`📅 ${date}`}
-            defaultExpanded={true}
-            onAnnotate={() => openAnnotation({ type: 'date', id: date, title: date })}
-          >
-            {dateSessions.map(session => {
-              return (
-                <TreeNode
-                  key={session.id}
-                  icon={<Folder className="w-4 h-4 text-yellow-400" />}
-                  label={session.title || session.id.slice(0, 8)}
-                  onAnnotate={() => openAnnotation({ type: 'session', id: session.id, title: session.title })}
-                  onExpand={() => loadSessionDetails(session.id)}
-                  isSession={true}
-                  sessionId={session.id}
-                  sessionTitle={session.title}
-                  onTitleUpdate={updateSessionTitle}
-                >
-                  {(session as any).messages && (session as any).messages.length > 0 && (
-                    (() => {
-                      // 按user切分轮次
-                      const rounds: Message[][] = [];
-                      let currentRound: Message[] = [];
-
-                      for (const msg of (session as any).messages || []) {
-                        if (msg.role === 'user') {
-                          if (currentRound.length > 0) {
-                            rounds.push(currentRound);
-                          }
-                          currentRound = [msg];
-                        } else if (currentRound.length > 0) {
-                          currentRound.push(msg);
-                        }
-                      }
-                      if (currentRound.length > 0) rounds.push(currentRound);
-
-                      return rounds.map((round, roundIdx) => {
-                        const parsed = parseRound(round);
-                        const toolCount = parsed.toolResults.length;
-
-                        return (
-                          <TreeNode
-                            key={round[0].id}
-                            icon={<MessageCircle className="w-4 h-4 text-green-400" />}
-                            label={`轮次 ${roundIdx + 1}`}
-                            rightContent={
-                              <span className="text-xs text-neutral-500">
-                                {parsed.thoughts.length}思考
-                                {parsed.finalOutput ? '+输出' : ''}
-                                {toolCount > 0 ? `/${toolCount}工具` : ''}
-                              </span>
-                            }
-                            onAnnotate={() => openAnnotation({
-                              type: 'round',
-                              id: round[0].id,
-                              title: `轮次 ${roundIdx + 1}`,
-                              data: round
-                            })}
-                          >
-                            {/* 用户输入 */}
-                            <div className="py-2 px-2 bg-neutral-800/30 rounded mb-2 group">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs text-blue-400">👤 用户输入</span>
-                                <button
-                                  onClick={() => openAnnotation({
-                                    type: 'message',
-                                    id: parsed.userMsg.id,
-                                    title: '用户输入',
-                                    data: parsed.userMsg
-                                  })}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
-                                >
-                                  标注
-                                </button>
-                              </div>
-                              <div className="text-sm text-neutral-300 pl-4 whitespace-pre-wrap">
-                                {parsed.userMsg.content}
-                              </div>
-                            </div>
-
-                            {/* 思考步骤 */}
-                            {parsed.thoughts.map((thought, thoughtIdx) => {
-                              const thinkingContent = thought.content
-                                .replace('[思考]', '')
-                                .split('[工具调用]')[0]
-                                .trim();
-
-
-                              return (
-                                <div key={thought.id} className="mb-2">
-                                  <div className="bg-neutral-800/50 rounded p-3 group">
-                                    <div className="flex items-start gap-4">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                          <Brain className="w-4 h-4 text-purple-400 shrink-0" />
-                                          <span className="text-purple-400 text-sm font-medium">
-                                            思考步骤 {thoughtIdx + 1}
-                                          </span>
-
-                                          <button
-                                            onClick={() => openAnnotation({
-                                              type: 'message',
-                                              id: thought.id,
-                                              title: `思考步骤 ${thoughtIdx + 1}`,
-                                              data: thought
-                                            })}
-                                            className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
-                                          >
-                                            标注
-                                          </button>
-
-                                        </div>
-
-                                        <div className="text-neutral-200 text-sm pl-6 whitespace-pre-wrap">
-                                          {thinkingContent}
-                                        </div>
-                                      </div>
-
-                                    </div>
-                                  </div>
-
-                                </div>
-                              );
-                            })}
-
-                            {/* 最终输出 */}
-                            {parsed.finalOutput && (
-                              <div className="bg-green-900/20 rounded p-3 border-l-4 border-green-500 group">
-                                <div className="flex items-start gap-4">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-green-400 text-sm font-medium">
-                                        ✨ 轮次 {roundIdx + 1} Agent输出
-                                      </span>
-
-                                      <button
-                                        onClick={() => openAnnotation({
-                                          type: 'message',
-                                          id: parsed.finalOutput!.id,
-                                          title: `轮次 ${roundIdx + 1} 输出`,
-                                          data: parsed.finalOutput
-                                        })}
-                                        className="text-xs px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
-                                      >
-                                        标注
-                                      </button>
-                                    </div>
-
-                                    <div className="text-neutral-200 text-sm pl-6 whitespace-pre-wrap">
-                                      {(() => {
-                                        try {
-                                          const raw = JSON.parse(parsed.finalOutput!.raw_content || '{}');
-                                          const textContent = raw.content?.find((c: any) => c.type === 'text')?.text;
-                                          return textContent || parsed.finalOutput!.content;
-                                        } catch {
-                                          return parsed.finalOutput!.content;
-                                        }
-                                      })()}
-                                    </div>
-                                  </div>
-
-                                </div>
-                              </div>
-                            )}
-                          </TreeNode>
-                        );
-                      });
-                    })()
-                  )}
-                </TreeNode>
-              );
-            })}
-          </TreeNode>
-        ))}
-      </div>
-
-      {/* 富文本编辑器侧边栏 */}
-      <ResizableSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)}>
-        <div className="flex items-center justify-between p-4 border-b border-neutral-700 shrink-0">
-          <div>
-            <h3 className="text-lg font-semibold">标注文档</h3>
-            {annotationTarget && (
-              <p className="text-xs text-neutral-400 mt-1">
-                {annotationTarget.type === 'date' && '📅 '}
-                {annotationTarget.type === 'session' && '📁 '}
-                {annotationTarget.type === 'round' && '💬 '}
-                {annotationTarget.type === 'message' && '📝 '}
-                {annotationTarget.title}
-              </p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={saveAnnotation}
-              className="px-4 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium"
-            >
-              保存
-            </button>
-            <button 
-              onClick={() => setSidebarOpen(false)} 
-              className="text-neutral-400 hover:text-white px-2"
-            >
-              ✕
-            </button>
-          </div>
+        <div className="mb-3">
+          <label className="text-[11px] text-neutral-500 mb-1 block">标题 *</label>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+            autoFocus
+          />
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div>
-            <h4 className="text-sm font-medium text-neutral-400 mb-2">标注内容</h4>
-            <RichTextEditor
-              initialContent=""
-              onChange={setEditorContent}
-              placeholder="开始输入标注内容..."
-            />
-          </div>
+        <div className="mb-4">
+          <label className="text-[11px] text-neutral-500 mb-1 block">摘要（可选）</label>
+          <textarea
+            value={summary}
+            onChange={e => setSummary(e.target.value)}
+            rows={3}
+            className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-blue-500 resize-none"
+            placeholder="对此标注面板的简要总结…"
+          />
+        </div>
 
-          <div>
-            <h4 className="text-sm font-medium text-neutral-400 mb-2">标签</h4>
-            <div className="flex flex-wrap gap-2">
-              <input 
-                type="text" 
-                placeholder="添加标签，回车确认..."
-                className="bg-neutral-800 rounded px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary-500 flex-1"
-              />
+        {error && <p className="mb-3 text-sm text-red-400">❌ {error}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={doPublish} disabled={loading || !title.trim()}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded font-medium text-sm">
+            {loading ? '发布中…' : '确认发布'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded text-sm">取消</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Session Library (right side) ──────────────────────────
+
+function SessionItem({ session, onTitleEdit }: {
+  session: Session
+  onTitleEdit: (id: string, title: string) => void
+}) {
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [draft,        setDraft]        = useState(session.annotation_title ?? '')
+  const [expanded,     setExpanded]     = useState(false)
+  const [rounds,       setRounds]       = useState<Round[] | null>(null)
+  const [loadingRounds, setLoadingRounds] = useState(false)
+
+  const displayTitle = session.annotation_title || session.id.slice(0, 12) + '…'
+
+  const commitTitle = async () => {
+    setEditingTitle(false)
+    const t = draft.trim()
+    if (t && t !== session.annotation_title) {
+      await patch(`/memory/sessions/${session.id}/annotate`, { annotation_title: t })
+      onTitleEdit(session.id, t)
+    }
+  }
+
+  const toggleExpand = async () => {
+    const opening = !expanded
+    setExpanded(opening)
+    if (opening && rounds === null) {
+      setLoadingRounds(true)
+      apiFetch(`/memory/sessions/${session.id}/rounds`)
+        .then(d => setRounds(d.rounds || []))
+        .catch(() => setRounds([]))
+        .finally(() => setLoadingRounds(false))
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      type:          'session_ref',
+      session_id:    session.id,
+      session_title: session.annotation_title || session.id.slice(0, 12),
+      agent_type:    session.agent_type,
+    }))
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+
+  return (
+    <>
+      <div className="group rounded-lg border border-transparent hover:border-white/10 bg-white/[0.02] hover:bg-white/[0.04] mb-1.5 transition-colors"
+        draggable
+        onDragStart={handleDragStart}
+      >
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <button onClick={toggleExpand} className="text-neutral-600 hover:text-neutral-400 shrink-0">
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+
+          <span className="text-base shrink-0">{agentBadge(session.agent_type)}</span>
+
+          <div className="flex-1 min-w-0">
+            {editingTitle ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  onBlur={commitTitle}
+                  onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
+                  className="flex-1 text-xs bg-neutral-800 border border-white/20 rounded px-2 py-0.5 text-white outline-none"
+                />
+                <button onClick={commitTitle} className="text-green-400 hover:text-green-300"><Check size={12} /></button>
+                <button onClick={() => setEditingTitle(false)} className="text-neutral-500 hover:text-neutral-300"><X size={12} /></button>
+              </div>
+            ) : (
+              <span
+                className="text-sm text-neutral-200 truncate block cursor-text"
+                onDoubleClick={() => { setDraft(session.annotation_title ?? ''); setEditingTitle(true) }}
+                title="双击编辑标题"
+              >
+                {displayTitle}
+              </span>
+            )}
+            <div className="flex items-center gap-2 text-[10px] text-neutral-500 mt-0.5">
+              <span>{session.round_count} 轮</span>
+              {(session.token_input + session.token_output) > 0 && (
+                <span>{fmtTokens(session.token_input + session.token_output)} tok</span>
+              )}
+              <span>{fmtTime(session.started_at)}</span>
             </div>
           </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => { setDraft(session.annotation_title ?? ''); setEditingTitle(true) }}
+              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-all"
+              title="编辑标题"
+            >
+              <Edit2 size={11} />
+            </button>
+            <span className="opacity-0 group-hover:opacity-100 text-[10px] text-neutral-600 cursor-grab" title="拖入面板">拖→</span>
+          </div>
         </div>
-      </ResizableSidebar>
 
-      {/* 编辑器样式 */}
-      <style>{`
-        .prose h1 { font-size: 1.5em; font-weight: bold; margin: 0.5em 0; }
-        .prose h2 { font-size: 1.25em; font-weight: bold; margin: 0.5em 0; }
-        .prose blockquote { 
-          border-left: 4px solid #4b5563; 
-          padding-left: 1em; 
-          margin: 0.5em 0;
-          font-style: italic;
-          color: #9ca3af;
-        }
-        .prose ul { list-style-type: disc; padding-left: 1.5em; margin: 0.5em 0; }
-        .prose ol { list-style-type: decimal; padding-left: 1.5em; margin: 0.5em 0; }
-        .prose pre { 
-          background: #1f2937; 
-          padding: 0.75em; 
-          border-radius: 0.375em; 
-          overflow-x: auto;
-          font-family: monospace;
-        }
-        .prose code { 
-          background: #1f2937; 
-          padding: 0.125em 0.25em; 
-          border-radius: 0.25em;
-          font-family: monospace;
-        }
-        .prose b, .prose strong { font-weight: bold; }
-        .prose i, .prose em { font-style: italic; }
-        .prose u { text-decoration: underline; }
-        .prose s, .prose strike { text-decoration: line-through; }
-      `}</style>
+        {expanded && (
+          <div className="px-3 pb-3 border-t border-neutral-800/60 pt-2">
+            {loadingRounds && <div className="text-xs text-neutral-500">加载轮次…</div>}
+            {rounds?.map(r => (
+              <div key={r.id} className="mb-1">
+                <div className="text-xs text-neutral-400 mb-0.5">
+                  <span className="text-neutral-600">#{r.round_num}</span>{' '}
+                  {r.user_input?.slice(0, 100) || <em className="text-neutral-600">空</em>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+    </>
+  )
+}
+
+function SessionLibrary() {
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [total,    setTotal]    = useState(0)
+  const [search,   setSearch]   = useState('')
+  const [offset,   setOffset]   = useState(0)
+  const [loading,  setLoading]  = useState(false)
+  const [showImport, setShowImport] = useState(false)
+
+  const LIMIT = 30
+
+  const loadSessions = useCallback(async (o: number) => {
+    setLoading(true)
+    try {
+      const d = await apiFetch(`/memory/sessions?limit=${LIMIT}&offset=${o}`)
+      if (o === 0) setSessions(d.sessions || [])
+      else setSessions(prev => [...prev, ...(d.sessions || [])])
+      setTotal(d.total || 0)
+      setOffset(o)
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { loadSessions(0) }, [loadSessions])
+
+  const handleTitleEdit = (id: string, title: string) => {
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, annotation_title: title } : s))
+  }
+
+  const filtered = search
+    ? sessions.filter(s =>
+        (s.annotation_title ?? s.id).toLowerCase().includes(search.toLowerCase()) ||
+        s.agent_type.toLowerCase().includes(search.toLowerCase())
+      )
+    : sessions
+
+  // Group by date
+  const grouped: { date: string; sessions: Session[] }[] = []
+  let lastDate = ''
+  for (const s of filtered) {
+    const d = fmtDate(s.started_at)
+    if (d !== lastDate) { grouped.push({ date: d, sessions: [] }); lastDate = d }
+    grouped[grouped.length - 1].sessions.push(s)
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/8 shrink-0">
+        <div className="flex-1 flex items-center gap-2 bg-white/5 border border-white/8 rounded-lg px-2 py-1">
+          <Search size={12} className="text-neutral-500 shrink-0" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="搜索…"
+            className="flex-1 bg-transparent text-sm text-white outline-none placeholder-neutral-600" />
+        </div>
+        <button onClick={() => setShowImport(true)}
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-neutral-500 hover:text-white transition-colors"
+          title="导入 JSONL">
+          <Upload size={14} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-auto px-3 py-2">
+        {loading && offset === 0 && (
+          <div className="text-center py-8 text-neutral-500 text-sm">加载中…</div>
+        )}
+
+        {grouped.map(group => (
+          <div key={group.date}>
+            <div className="flex items-center gap-2 py-1.5 mb-1">
+              <div className="h-px flex-1 bg-neutral-800" />
+              <span className="text-[10px] text-neutral-600 font-medium shrink-0 flex items-center gap-1">
+                <Calendar size={9} /> {group.date}
+              </span>
+              <div className="h-px flex-1 bg-neutral-800" />
+            </div>
+            {group.sessions.map(s => (
+              <SessionItem
+                key={s.id}
+                session={s}
+                onTitleEdit={handleTitleEdit}
+              />
+            ))}
+          </div>
+        ))}
+
+        {filtered.length === 0 && !loading && (
+          <div className="text-center py-8 text-neutral-600 text-sm">
+            {search ? '无匹配结果' : '暂无 Session'}
+          </div>
+        )}
+
+        {!search && sessions.length < total && (
+          <button
+            onClick={() => loadSessions(offset + LIMIT)}
+            disabled={loading}
+            className="w-full py-2 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-40"
+          >
+            {loading ? '加载中…' : `加载更多 (${sessions.length} / ${total})`}
+          </button>
+        )}
+      </div>
+
+      {showImport && <ImportModal onDone={() => { setShowImport(false); loadSessions(0) }} onClose={() => setShowImport(false)} />}
     </div>
-  );
-};
+  )
+}
 
-export default MemoryView;
+// ── Import Modal ───────────────────────────────────────────
+
+function ImportModal({ onDone, onClose }: { onDone: () => void; onClose: () => void }) {
+  const [filePath, setFilePath] = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [result,   setResult]   = useState<string | null>(null)
+  const [error,    setError]    = useState<string | null>(null)
+
+  const doImport = async () => {
+    if (!filePath.trim()) return
+    setLoading(true); setResult(null); setError(null)
+    try {
+      const data = await post('/memory/import', { filePath: filePath.trim() })
+      setResult(`✅ 导入成功：${data.rounds_count} 轮 / ${data.steps_count} 步 (${data.format})`)
+      setTimeout(onDone, 1500)
+    } catch (e: unknown) { setError((e as Error).message) }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-[#1e1e1e] border border-white/15 rounded-xl shadow-2xl p-6 w-[560px]" onClick={e => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+          <Upload size={16} className="text-blue-400" /> 导入 JSONL 对话记录
+        </h3>
+        <p className="text-sm text-neutral-400 mb-3">支持 OpenClaw 和 Claude Code 格式：</p>
+        <input type="text" value={filePath} onChange={e => setFilePath(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && doImport()}
+          placeholder="/Users/xxx/path/to/session.jsonl"
+          className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-sm outline-none focus:border-blue-500 font-mono"
+          autoFocus />
+        {result && <p className="mt-2 text-sm text-green-400">{result}</p>}
+        {error  && <p className="mt-2 text-sm text-red-400">❌ {error}</p>}
+        <div className="flex gap-2 mt-4">
+          <button onClick={doImport} disabled={loading || !filePath.trim()}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded font-medium text-sm">
+            {loading ? '导入中…' : '导入'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded text-sm">取消</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main View ──────────────────────────────────────────────
+
+export default function MemoryView() {
+  return (
+    <div className="h-full flex flex-col bg-[#0d0d0f]"
+      style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}>
+
+      {/* Header */}
+      <div className="shrink-0 px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Brain size={20} className="text-blue-400" />
+          <h1 className="text-base font-semibold text-white">Memory</h1>
+        </div>
+        <div className="text-[11px] text-neutral-600">左侧标注面板 · 右侧 Session 库 · 拖 Session 入面板后可发布到 Chronicle</div>
+      </div>
+
+      {/* Main split layout */}
+      <div className="flex-1 overflow-hidden flex">
+        {/* Left: Board panel (60%) */}
+        <div className="flex-[3] border-r border-white/[0.06] overflow-hidden flex flex-col">
+          <BoardPanel />
+        </div>
+
+        {/* Right: Session library (40%) */}
+        <div className="flex-[2] overflow-hidden flex flex-col">
+          <SessionLibrary />
+        </div>
+      </div>
+    </div>
+  )
+}

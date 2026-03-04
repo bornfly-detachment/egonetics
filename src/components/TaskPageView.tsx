@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
-import type { ApiClient, PageMeta, Block } from './types'
+import type { ApiClient, PageMeta } from './types'
 
-const KANBAN_API_BASE = 'http://localhost:3003/api'
+const KANBAN_API_BASE = '/api'
 
 // 创建 Task 专属的 API 客户端
 function createTaskPageApiClient(taskId: string): ApiClient {

@@ -1,28 +1,16 @@
 /**
- * KanbanBoard.tsx
+ * KanbanBoard.tsx  — 极简看板
  *
- * 拖拽方案：全部用原生 Pointer Events，彻底去掉 react-dnd
- *  - 同列排序 ✅  跨列移动 ✅  触摸屏 ✅  无 HTML5 drag 冲突 ✅
- *  - ghost 元素跟随鼠标，有视觉反馈
- *  - 蓝色 InsertLine 实时显示插入位置
- *
- * 数据：后端 REST API，无 localStorage，无硬编码默认数据
- *  BASE_URL = 'http://localhost:3003/api'（可修改）
- *
- * 依赖：react, react-router-dom, lucide-react（无 react-dnd）
- *
- * 后端接口：
- *   GET  /kanban           → { columns: Column[], tasks: Task[] }
- *   PUT  /kanban/columns   body: Column[]  → 204
- *   PUT  /kanban/tasks     body: Task[]    → 204
+ * 设计原则：
+ *  - 拖拽：只做同列垂直排序（Pointer Events），跨列改状态在详情页
+ *  - 卡片：点击 → /tasks/:id，hover → 右上角删除按钮，无弹窗/内联编辑
+ *  - 持久化：drag 落定 → PATCH /api/kanban/tasks/:id { sortOrder }，失败回滚
+ *  - 列管理：新增/重命名/删除，PUT /api/kanban/columns
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Plus, MoreHorizontal, Trash2, GripVertical,
-  Search, Palette, Calendar, User, Edit2,
-} from 'lucide-react'
+import { Plus, Trash2, GripVertical, Search, Palette, Calendar, MoreHorizontal } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,17 +21,17 @@ interface Task {
   name: string
   icon: string
   assignee?: string
-  startDate: string
+  startDate?: string
   dueDate?: string
   project?: string
   projectIcon?: string
-  status: string        // equals the column id
+  status: string
   priority: Priority
-  sortOrder: number     // descending: higher = top of column
+  sortOrder: number
   created_at: string
   updated_at: string
   tags?: string[]
-  columnId?: string     // for API compat
+  columnId?: string
 }
 
 interface Column {
@@ -57,11 +45,11 @@ interface Column {
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:3003/api'
+const API = '/api'
 
 async function fetchKanban(): Promise<Column[] | null> {
   try {
-    const res = await fetch(`${API_BASE}/kanban`)
+    const res = await fetch(`${API}/kanban`)
     if (!res.ok) return null
     const data = await res.json()
     return data.columns.map((col: Column) => ({
@@ -71,32 +59,46 @@ async function fetchKanban(): Promise<Column[] | null> {
   } catch { return null }
 }
 
-let saveTimer: ReturnType<typeof setTimeout> | null = null
-function scheduleSave(columns: Column[]) {
-  if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(async () => {
-    const colsData  = columns.map(({ tasks: _t, ...c }) => c)
-    const tasksData = columns.flatMap(col =>
-      col.tasks.map(t => ({ ...t, columnId: col.id, status: col.id }))
-    )
-    try {
-      await Promise.all([
-        fetch(`${API_BASE}/kanban/columns`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(colsData),
-        }),
-        fetch(`${API_BASE}/kanban/tasks`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(tasksData),
-        }),
-      ])
-    } catch (e) { console.error('save failed:', e) }
-  }, 600)
+async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/kanban/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    })
+    return res.ok
+  } catch { return false }
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────
+async function deleteTask(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/kanban/tasks/${id}`, { method: 'DELETE' })
+    return res.ok
+  } catch { return false }
+}
+
+async function createTask(task: Partial<Task>): Promise<Task | null> {
+  try {
+    const res = await fetch(`${API}/kanban/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(task),
+    })
+    if (!res.ok) return null
+    return await res.json()
+  } catch { return null }
+}
+
+async function saveColumns(columns: Column[]): Promise<void> {
+  const colsData = columns.map(({ tasks: _t, ...c }) => c)
+  await fetch(`${API}/kanban/columns`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(colsData),
+  })
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const THEMES = [
   { headerBg: 'bg-[#7B5EA7]', cardBg: 'bg-[#1e1530]', accent: '#9B72CF' },
@@ -155,39 +157,24 @@ const InsertLine = () => (
 interface CardProps {
   task: Task
   col: Column
-  allCols: Column[]
   dragging: boolean
   lineAbove: boolean
   lineBelow: boolean
-  onCardClick:  (taskId: string) => void  // 点击卡片导航到详情页
-  onEditClick:  (t: Task) => void         // 编辑按钮弹出编辑弹窗
-  onDelete:     (taskId: string, colId: string) => void
-  onMenuMove:   (taskId: string, fromColId: string, toColId: string) => void
+  onCardClick: (taskId: string) => void
+  onDelete: (taskId: string) => void
   setHandleRef: (el: HTMLElement | null) => void
-  setCardRef:   (el: HTMLDivElement | null) => void
+  setCardRef: (el: HTMLDivElement | null) => void
 }
 
 const TaskCard = React.memo(function TaskCard({
-  task, col, allCols, dragging, lineAbove, lineBelow,
-  onCardClick, onEditClick, onDelete, onMenuMove, setHandleRef, setCardRef,
+  task, col, dragging, lineAbove, lineBelow,
+  onCardClick, onDelete, setHandleRef, setCardRef,
 }: CardProps) {
-  const [showMenu, setShowMenu] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
   const p = PRI[task.priority]
-
-  useEffect(() => {
-    if (!showMenu) return
-    const h = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) setShowMenu(false)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [showMenu])
 
   return (
     <>
       {lineAbove && <InsertLine />}
-
       <div
         ref={setCardRef}
         data-task-id={task.id}
@@ -198,7 +185,7 @@ const TaskCard = React.memo(function TaskCard({
           'border-white/[0.06] hover:border-white/[0.14]',
           dragging ? 'opacity-25 scale-[0.97]' : 'cursor-pointer',
         ].join(' ')}
-        onClick={() => !showMenu && onCardClick(task.id)}
+        onClick={() => onCardClick(task.id)}
       >
         {/* accent bar */}
         <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
@@ -206,11 +193,12 @@ const TaskCard = React.memo(function TaskCard({
 
         <div className="px-4 py-3 pl-5">
           <div className="flex items-start gap-2 mb-1.5">
-            {/* drag handle — board-level pointerdown listener picks this up */}
+            {/* drag handle */}
             <div
               ref={setHandleRef}
               data-handle-task={task.id}
               className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mt-0.5 shrink-0 touch-none"
+              onClick={e => e.stopPropagation()}
             >
               <GripVertical size={12} className="text-white/30 hover:text-white/60" />
             </div>
@@ -220,51 +208,14 @@ const TaskCard = React.memo(function TaskCard({
               {task.name}
             </span>
 
-            {/* edit button - top right */}
+            {/* delete button on hover */}
             <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onEditClick(task)
-              }}
-              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-white/30 hover:text-white/70 transition-all shrink-0"
+              onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-all shrink-0"
+              title="删除任务"
             >
-              <Edit2 size={12} />
+              <Trash2 size={11} />
             </button>
-
-            {/* context menu */}
-            <div ref={menuRef} className="relative shrink-0" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => setShowMenu(v => !v)}
-                className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-white/30 hover:text-white/70 transition-all"
-              >
-                <MoreHorizontal size={12} />
-              </button>
-              {showMenu && (
-                <div className="absolute right-0 top-6 z-50 w-44 bg-[#1a1a1c] border border-white/10 rounded-xl shadow-2xl py-1.5 text-[13px]">
-                  <div className="px-3 pb-1">
-                    <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1.5">移动到</p>
-                    {allCols.filter(c => c.id !== col.id).map(c => (
-                      <button key={c.id}
-                        onClick={() => { onMenuMove(task.id, col.id, c.id); setShowMenu(false) }}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-colors"
-                      >
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.accent }} />
-                        <span className="truncate">{c.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="border-t border-white/5 my-1" />
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`删除「${task.name}」？`)) { onDelete(task.id, col.id); setShowMenu(false) }
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-1.5 text-red-400/80 hover:text-red-400 hover:bg-red-500/8 transition-colors"
-                  >
-                    <Trash2 size={11} /> 删除任务
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* meta */}
@@ -277,9 +228,11 @@ const TaskCard = React.memo(function TaskCard({
                 <span>{task.assignee}</span>
               </div>
             )}
-            <span className="flex items-center gap-0.5">
-              <Calendar size={9} className="shrink-0" /> 开始 {fmtDate(task.startDate)}
-            </span>
+            {task.startDate && (
+              <span className="flex items-center gap-0.5">
+                <Calendar size={9} className="shrink-0" /> {fmtDate(task.startDate)}
+              </span>
+            )}
             {task.dueDate && (
               <span className="flex items-center gap-0.5 text-white/20">
                 <Calendar size={9} className="shrink-0" /> 截止 {fmtDate(task.dueDate)}
@@ -312,7 +265,6 @@ const TaskCard = React.memo(function TaskCard({
           )}
         </div>
       </div>
-
       {lineBelow && <InsertLine />}
     </>
   )
@@ -322,32 +274,26 @@ const TaskCard = React.memo(function TaskCard({
 
 interface ColProps {
   col: Column
-  allCols: Column[]
   draggingId: string | null
-  hoverColId: string | null
   insertLine: { colId: string; idx: number } | null
-  onAddTask:   (colId: string) => void
-  onCardClick: (taskId: string) => void  // 导航到详情页
-  onEditTask:  (task: Task, colId: string) => void
-  onDelete:    (taskId: string, colId: string) => void
-  onMenuMove:  (taskId: string, fromColId: string, toColId: string) => void
+  onAddTask: (colId: string) => void
+  onCardClick: (taskId: string) => void
+  onDelete: (taskId: string) => void
   onDeleteCol: (colId: string) => void
   onRenameCol: (colId: string, label: string) => void
   registerHandle: (taskId: string, el: HTMLElement | null) => void
-  registerCard:   (taskId: string, el: HTMLDivElement | null) => void
+  registerCard: (taskId: string, el: HTMLDivElement | null) => void
 }
 
 function KanbanCol({
-  col, allCols, draggingId, hoverColId, insertLine,
-  onAddTask, onCardClick, onEditTask, onDelete, onMenuMove, onDeleteCol, onRenameCol,
+  col, draggingId, insertLine,
+  onAddTask, onCardClick, onDelete, onDeleteCol, onRenameCol,
   registerHandle, registerCard,
 }: ColProps) {
-  const sorted    = sortDesc(col.tasks)
-  const isHovered = hoverColId === col.id
-
-  const [showMenu,  setShowMenu]  = useState(false)
+  const sorted = sortDesc(col.tasks)
+  const [showMenu, setShowMenu] = useState(false)
   const [editTitle, setEditTitle] = useState(false)
-  const [draft,     setDraft]     = useState(col.label)
+  const [draft, setDraft] = useState(col.label)
   const menuRef  = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -370,7 +316,6 @@ function KanbanCol({
     setEditTitle(false)
   }
 
-  // visible list = sorted minus currently-dragged card (for line index mapping)
   const sortedVisible = sorted.filter(t => t.id !== draggingId)
   const lineIdx = insertLine?.colId === col.id ? insertLine.idx : null
 
@@ -429,10 +374,7 @@ function KanbanCol({
       {/* task list */}
       <div
         data-col-drop={col.id}
-        className={[
-          'flex-1 flex flex-col gap-2 min-h-[80px] rounded-xl px-0.5 pb-2 transition-colors duration-100',
-          isHovered ? 'bg-white/[0.025] ring-1 ring-inset ring-white/8' : '',
-        ].join(' ')}
+        className="flex-1 flex flex-col gap-2 min-h-[80px] rounded-xl px-0.5 pb-2"
       >
         {sorted.map((task) => {
           const visIdx   = sortedVisible.findIndex(t => t.id === task.id)
@@ -446,31 +388,24 @@ function KanbanCol({
               key={task.id}
               task={task}
               col={col}
-              allCols={allCols}
               dragging={draggingId === task.id}
               lineAbove={showAbove}
               lineBelow={showBelow}
               onCardClick={onCardClick}
-              onEditClick={t => onEditTask(t, col.id)}
               onDelete={onDelete}
-              onMenuMove={onMenuMove}
               setHandleRef={el => registerHandle(task.id, el)}
               setCardRef={el   => registerCard(task.id, el)}
             />
           )
         })}
 
-        {/* insert line after all cards */}
         {lineIdx !== null && lineIdx >= sortedVisible.length && sortedVisible.length > 0 && (
           <InsertLine />
         )}
 
         {col.tasks.length === 0 && (
-          <div className={[
-            'flex-1 min-h-[80px] rounded-lg border-2 border-dashed flex items-center justify-center text-xs transition-colors',
-            isHovered ? 'border-white/20 text-white/35' : 'border-white/5 text-white/15',
-          ].join(' ')}>
-            {isHovered ? '放到这里' : '暂无任务'}
+          <div className="flex-1 min-h-[80px] rounded-lg border-2 border-dashed border-white/5 flex items-center justify-center text-xs text-white/15">
+            暂无任务
           </div>
         )}
 
@@ -484,52 +419,38 @@ function KanbanCol({
   )
 }
 
-// ─── Task Modal ───────────────────────────────────────────────────────────────
+// ─── New Task Modal ────────────────────────────────────────────────────────────
 
-interface ModalProps {
-  init?: Task
+interface NewTaskModalProps {
   defaultColId: string
   allCols: Column[]
   onConfirm: (fields: Partial<Task>, colId: string) => void
   onClose: () => void
 }
 
-function TaskModal({ init, defaultColId, allCols, onConfirm, onClose }: ModalProps) {
-  const [name,        setName]        = useState(init?.name ?? '')
-  const [icon,        setIcon]        = useState(init?.icon ?? '📝')
-  const [priority,    setPriority]    = useState<Priority>(init?.priority ?? 'medium')
-  const [assignee,    setAssignee]    = useState(init?.assignee ?? '')
-  const [startDate,   setStartDate]   = useState(init?.startDate ?? todayISO())
-  const [dueDate,     setDueDate]     = useState(init?.dueDate ?? '')
-  const [project,     setProject]     = useState(init?.project ?? '')
-  const [projectIcon, setProjectIcon] = useState(init?.projectIcon ?? '')
-  const [tagsRaw,     setTagsRaw]     = useState((init?.tags ?? []).join(', '))
-  const [showEmoji,   setShowEmoji]   = useState(false)
+function NewTaskModal({ defaultColId, allCols, onConfirm, onClose }: NewTaskModalProps) {
+  const [name,     setName]     = useState('')
+  const [icon,     setIcon]     = useState('📝')
+  const [priority, setPriority] = useState<Priority>('medium')
+  const [colId,    setColId]    = useState(defaultColId)
+  const [showEmoji, setShowEmoji] = useState(false)
 
   const submit = () => {
     if (!name.trim()) return
-    onConfirm({
-      name: name.trim(), icon, priority,
-      assignee:    assignee.trim()     || undefined,
-      startDate:   startDate          || todayISO(),
-      dueDate:     dueDate.trim()     || undefined,
-      project:     project.trim()     || undefined,
-      projectIcon: projectIcon.trim() || undefined,
-      tags:        tagsRaw.split(',').map(t => t.trim()).filter(Boolean),
-    }, defaultColId)
+    onConfirm({ name: name.trim(), icon, priority }, colId)
   }
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200]"
       onClick={onClose}>
-      <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 w-[400px] shadow-2xl max-h-[92vh] overflow-y-auto"
+      <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 w-[360px] shadow-2xl"
         onClick={e => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-white mb-5">{init ? '编辑任务' : '新建任务'}</h3>
+        <h3 className="text-sm font-semibold text-white mb-4">新建任务</h3>
 
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
             <button onClick={() => setShowEmoji(v => !v)}
-              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-xl flex items-center justify-center hover:bg-white/10 transition-colors">
+              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-xl flex items-center justify-center hover:bg-white/10">
               {icon}
             </button>
             {showEmoji && (
@@ -551,6 +472,14 @@ function TaskModal({ init, defaultColId, allCols, onConfirm, onClose }: ModalPro
         </div>
 
         <div className="mb-4">
+          <label className="text-[11px] text-white/40 mb-1.5 block">所在列</label>
+          <select value={colId} onChange={e => setColId(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark]">
+            {allCols.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </div>
+
+        <div className="mb-5">
           <label className="text-[11px] text-white/40 mb-1.5 block">优先级</label>
           <div className="flex gap-1.5">
             {(Object.keys(PRI) as Priority[]).map(p => (
@@ -563,59 +492,11 @@ function TaskModal({ init, defaultColId, allCols, onConfirm, onClose }: ModalPro
           </div>
         </div>
 
-        <div className="mb-4">
-          <label className="text-[11px] text-white/40 mb-1.5 flex items-center gap-1 block">
-            <User size={9} /> 负责人
-          </label>
-          <input value={assignee} onChange={e => setAssignee(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 placeholder-white/20"
-            placeholder="用户名（可选）" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="text-[11px] text-white/40 mb-1.5 flex items-center gap-1 block">
-              <Calendar size={9} /> 开始日期
-            </label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark]" />
-          </div>
-          <div>
-            <label className="text-[11px] text-white/40 mb-1.5 flex items-center gap-1 block">
-              <Calendar size={9} /> 截止日期
-            </label>
-            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark]" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-[44px_1fr] gap-2 mb-4">
-          <div>
-            <label className="text-[11px] text-white/40 mb-1.5 block">图标</label>
-            <input value={projectIcon} onChange={e => setProjectIcon(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-sm text-white outline-none focus:border-white/25 text-center"
-              placeholder="🚀" maxLength={2} />
-          </div>
-          <div>
-            <label className="text-[11px] text-white/40 mb-1.5 block">所属项目</label>
-            <input value={project} onChange={e => setProject(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 placeholder-white/20"
-              placeholder="可选" />
-          </div>
-        </div>
-
-        <div className="mb-5">
-          <label className="text-[11px] text-white/40 mb-1.5 block">标签（逗号分隔）</label>
-          <input value={tagsRaw} onChange={e => setTagsRaw(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 placeholder-white/20"
-            placeholder="AI, Research, Finance" />
-        </div>
-
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-1.5 text-sm text-white/40 hover:text-white/70 transition-colors">取消</button>
+          <button onClick={onClose} className="px-4 py-1.5 text-sm text-white/40 hover:text-white/70">取消</button>
           <button onClick={submit} disabled={!name.trim()}
-            className="px-4 py-1.5 text-sm bg-white text-black rounded-xl font-medium hover:bg-white/90 disabled:opacity-25 transition-colors">
-            {init ? '保存' : '创建'}
+            className="px-4 py-1.5 text-sm bg-white text-black rounded-xl font-medium hover:bg-white/90 disabled:opacity-25">
+            创建
           </button>
         </div>
       </div>
@@ -658,9 +539,9 @@ function AddColModal({ usedIdx, onConfirm, onClose }: {
           </div>
         </div>
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-1.5 text-sm text-white/40 hover:text-white/70 transition-colors">取消</button>
+          <button onClick={onClose} className="px-4 py-1.5 text-sm text-white/40 hover:text-white/70">取消</button>
           <button onClick={() => { if (label.trim()) onConfirm(label, ti) }} disabled={!label.trim()}
-            className="px-4 py-1.5 text-sm bg-white text-black rounded-xl font-medium hover:bg-white/90 disabled:opacity-25 transition-colors">
+            className="px-4 py-1.5 text-sm bg-white text-black rounded-xl font-medium hover:bg-white/90 disabled:opacity-25">
             创建
           </button>
         </div>
@@ -676,16 +557,15 @@ export default function KanbanBoard() {
   const [columns,     setColumns]     = useState<Column[]>([])
   const [loading,     setLoading]     = useState(true)
   const [addingToCol, setAddingToCol] = useState<string | null>(null)
-  const [editingTask, setEditingTask] = useState<{ task: Task; colId: string } | null>(null)
   const [showAddCol,  setShowAddCol]  = useState(false)
   const [search,      setSearch]      = useState('')
+  const [toast,       setToast]       = useState<string | null>(null)
 
-  // drag visual state (drives renders in child components)
-  const [draggingId,  setDraggingId]  = useState<string | null>(null)
-  const [hoverColId,  setHoverColId]  = useState<string | null>(null)
-  const [insertLine,  setInsertLine]  = useState<{ colId: string; idx: number } | null>(null)
+  // drag visual state
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [insertLine, setInsertLine] = useState<{ colId: string; idx: number } | null>(null)
 
-  // ── DOM ref maps: taskId → element ──
+  // DOM ref maps: taskId → element
   const handleMap = useRef(new Map<string, HTMLElement>())
   const cardMap   = useRef(new Map<string, HTMLDivElement>())
   const registerHandle = useCallback((id: string, el: HTMLElement | null) => {
@@ -695,13 +575,11 @@ export default function KanbanBoard() {
     if (el) cardMap.current.set(id, el); else cardMap.current.delete(id)
   }, [])
 
-  // ── IMPORTANT: colsRef declared BEFORE the drag useEffect ──
-  // This ref always holds the latest columns state so the drag handler
-  // (which has a stale closure) can still read current data.
+  // colsRef: always current (avoids stale closure in drag handler)
   const colsRef = useRef<Column[]>([])
   useEffect(() => { colsRef.current = columns }, [columns])
 
-  // ── Load ──
+  // Load
   useEffect(() => {
     fetchKanban().then(data => {
       if (data) setColumns(data)
@@ -709,29 +587,22 @@ export default function KanbanBoard() {
     })
   }, [])
 
-  // ── Auto-save (debounced, skip initial load) ──
-  const initialized = useRef(false)
-  useEffect(() => {
-    if (loading) return
-    if (!initialized.current) { initialized.current = true; return }
-    scheduleSave(columns)
-  }, [columns, loading])
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2500)
+  }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  UNIFIED POINTER-EVENTS DRAG SYSTEM
-  //  Single set of listeners on `document`. No react-dnd needed.
-  //  Handles both same-column reorder AND cross-column move.
-  // ══════════════════════════════════════════════════════════════════════════
+  // ─── Pointer-Events Drag (same-column only) ────────────────────────────────
   useEffect(() => {
-    let active       = false
-    let dragTaskId   = ''
-    let startX       = 0
-    let startY       = 0
+    let active     = false
+    let dragTaskId = ''
+    let startX     = 0
+    let startY     = 0
     let ghost: HTMLDivElement | null = null
-    let ghostOffX    = 0
-    let ghostOffY    = 0
+    let ghostOffX  = 0
+    let ghostOffY  = 0
+    let fromColId  = ''
 
-    // Find column drop-zone element at (x, y)
     const getColEl = (x: number, y: number): HTMLElement | null => {
       for (const el of document.querySelectorAll('[data-col-drop]')) {
         const r = el.getBoundingClientRect()
@@ -741,11 +612,10 @@ export default function KanbanBoard() {
       return null
     }
 
-    // Find insert position within a column (ignoring the dragged task's card)
-    const getInsertIdx = (colEl: HTMLElement, curY: number): number => {
+    const getInsertIdx = (colEl: HTMLElement, curY: number, excludeId: string): number => {
       const cards = Array.from(
         colEl.querySelectorAll('[data-task-id]')
-      ).filter(c => (c as HTMLElement).dataset.taskId !== dragTaskId) as HTMLElement[]
+      ).filter(c => (c as HTMLElement).dataset.taskId !== excludeId) as HTMLElement[]
 
       for (let i = 0; i < cards.length; i++) {
         const r = cards[i].getBoundingClientRect()
@@ -754,25 +624,25 @@ export default function KanbanBoard() {
       return cards.length
     }
 
-    // ── pointerdown: only activate when coming from a drag handle ──
     const onDown = (e: PointerEvent) => {
       const handle = (e.target as HTMLElement).closest('[data-handle-task]') as HTMLElement | null
       if (!handle) return
       const taskId = handle.dataset.handleTask
       if (!taskId) return
-      // confirm task exists (prevents stale handles)
-      if (!colsRef.current.some(c => c.tasks.some(t => t.id === taskId))) return
+      // find which column this task belongs to
+      const cols = colsRef.current
+      const col  = cols.find(c => c.tasks.some(t => t.id === taskId))
+      if (!col) return
 
       dragTaskId = taskId
+      fromColId  = col.id
       startX     = e.clientX
       startY     = e.clientY
       active     = false
-      // capture pointer on the handle so we get all move/up events even if cursor leaves
       handle.setPointerCapture(e.pointerId)
       e.preventDefault()
     }
 
-    // ── pointermove: create ghost after threshold, then track ──
     const onMove = (e: PointerEvent) => {
       if (!dragTaskId) return
 
@@ -787,16 +657,16 @@ export default function KanbanBoard() {
           ghostOffY  = e.clientY - rect.top
           ghost      = cardEl.cloneNode(true) as HTMLDivElement
           Object.assign(ghost.style, {
-            position:     'fixed',
-            width:        `${rect.width}px`,
-            left:         `${e.clientX - ghostOffX}px`,
-            top:          `${e.clientY - ghostOffY}px`,
-            opacity:      '0.88',
-            pointerEvents:'none',
-            zIndex:       '9999',
-            transform:    'rotate(1.5deg) scale(1.03)',
-            boxShadow:    '0 24px 48px rgba(0,0,0,0.65)',
-            borderRadius: '12px',
+            position:      'fixed',
+            width:         `${rect.width}px`,
+            left:          `${e.clientX - ghostOffX}px`,
+            top:           `${e.clientY - ghostOffY}px`,
+            opacity:       '0.88',
+            pointerEvents: 'none',
+            zIndex:        '9999',
+            transform:     'rotate(1.5deg) scale(1.03)',
+            boxShadow:     '0 24px 48px rgba(0,0,0,0.65)',
+            borderRadius:  '12px',
           })
           document.body.appendChild(ghost)
         }
@@ -807,67 +677,64 @@ export default function KanbanBoard() {
       ghost.style.left = `${e.clientX - ghostOffX}px`
       ghost.style.top  = `${e.clientY - ghostOffY}px`
 
+      // Only show insert line if hovering over the SAME column
       const colEl = getColEl(e.clientX, e.clientY)
       const colId = colEl?.dataset.colDrop ?? null
-      setHoverColId(colId)
-      if (colEl && colId) {
-        setInsertLine({ colId, idx: getInsertIdx(colEl, e.clientY) })
+      if (colEl && colId && colId === fromColId) {
+        setInsertLine({ colId, idx: getInsertIdx(colEl, e.clientY, dragTaskId) })
       } else {
         setInsertLine(null)
       }
     }
 
-    // ── pointerup: commit drop ──
-    const onUp = (e: PointerEvent) => {
+    const onUp = async (e: PointerEvent) => {
       if (!dragTaskId) return
 
-      const wasActive  = active
-      const taskId     = dragTaskId
-      const colEl      = getColEl(e.clientX, e.clientY)
-      const toColId    = colEl?.dataset.colDrop ?? null
-      const insertIdx  = colEl && toColId ? getInsertIdx(colEl, e.clientY) : null
+      const wasActive      = active
+      const taskId         = dragTaskId
+      const savedFromColId = fromColId   // capture before reset
+      const colEl          = getColEl(e.clientX, e.clientY)
+      const toColId        = colEl?.dataset.colDrop ?? null
+      const insertIdx      = (colEl && toColId && toColId === savedFromColId)
+        ? getInsertIdx(colEl, e.clientY, taskId)
+        : null
 
-      // reset session
       dragTaskId = ''
+      fromColId  = ''
       active     = false
       if (ghost) { document.body.removeChild(ghost); ghost = null }
       setDraggingId(null)
-      setHoverColId(null)
       setInsertLine(null)
 
+      // Only update if dragged within same column
       if (!wasActive || !toColId || insertIdx === null) return
 
-      const cols    = colsRef.current
-      const fromCol = cols.find(c => c.tasks.some(t => t.id === taskId))
-      if (!fromCol) return
-      const toCol = cols.find(c => c.id === toColId)
-      if (!toCol) return
+      const cols  = colsRef.current
+      const col   = cols.find(c => c.id === savedFromColId)
+      if (!col) return
 
-      const toSorted = sortDesc(toCol.tasks)
-      const newOrder = calcInsertSortOrder(toSorted, insertIdx, taskId)
+      const sorted   = sortDesc(col.tasks)
+      const newOrder = calcInsertSortOrder(sorted, insertIdx, taskId)
 
-      setColumns(prev => {
-        const next = prev.map(c => ({ ...c, tasks: [...c.tasks] }))
-        const src  = next.find(c => c.id === fromCol.id)!
-        const ti   = src.tasks.findIndex(t => t.id === taskId)
-        if (ti < 0) return prev
-        const [task] = src.tasks.splice(ti, 1)
-        const dst = next.find(c => c.id === toColId)!
-        dst.tasks.push({
-          ...task,
-          status:     toColId,
-          columnId:   toColId,
-          sortOrder:  newOrder,
-          updated_at: new Date().toISOString(),
-        })
-        return next
-      })
+      // Optimistic update
+      const prevCols = colsRef.current
+      setColumns(prev => prev.map(c => c.id !== savedFromColId ? c : {
+        ...c,
+        tasks: c.tasks.map(t => t.id === taskId ? { ...t, sortOrder: newOrder } : t),
+      }))
+
+      // Persist
+      const ok = await patchTask(taskId, { sortOrder: newOrder })
+      if (!ok) {
+        setColumns(prevCols)
+        showToast('排序保存失败，已回滚')
+      }
     }
 
-    document.addEventListener('pointerdown',  onDown,  { passive: false })
-    document.addEventListener('pointermove',  onMove,  { passive: true  })
-    document.addEventListener('pointerup',    onUp)
-    document.addEventListener('pointercancel',onUp)
+    document.addEventListener('pointerdown',   onDown,  { passive: false })
+    document.addEventListener('pointermove',   onMove,  { passive: true  })
+    document.addEventListener('pointerup',     onUp)
+    document.addEventListener('pointercancel', onUp)
 
     return () => {
       document.removeEventListener('pointerdown',   onDown)
@@ -876,81 +743,60 @@ export default function KanbanBoard() {
       document.removeEventListener('pointercancel', onUp)
       if (ghost) document.body.removeChild(ghost)
     }
-  }, []) // empty deps intentional — uses colsRef for live data
+  }, []) // empty deps, uses colsRef
 
-  // ─── Board mutations ───────────────────────────────────────────────────────
+  // ─── Board mutations ────────────────────────────────────────────────────────
 
   const handleCardClick = useCallback((taskId: string) => {
     navigate(`/tasks/${taskId}`)
   }, [navigate])
 
-  const handleMenuMove = useCallback((taskId: string, fromColId: string, toColId: string) => {
-    setColumns(prev => {
-      const next = prev.map(c => ({ ...c, tasks: [...c.tasks] }))
-      const from = next.find(c => c.id === fromColId)
-      const to   = next.find(c => c.id === toColId)
-      if (!from || !to) return prev
-      const i = from.tasks.findIndex(t => t.id === taskId)
-      if (i < 0) return prev
-      const [task] = from.tasks.splice(i, 1)
-      const maxOrder = to.tasks.length ? Math.max(...to.tasks.map(t => t.sortOrder)) : 0
-      to.tasks.push({ ...task, status: toColId, columnId: toColId, sortOrder: maxOrder + 100, updated_at: new Date().toISOString() })
-      return next
-    })
-  }, [])
-
-  const handleDelete = useCallback((taskId: string, colId: string) => {
-    setColumns(prev => prev.map(c =>
-      c.id === colId ? { ...c, tasks: c.tasks.filter(t => t.id !== taskId) } : c
-    ))
-  }, [])
-
-  const handleAddTask = (fields: Partial<Task>, colId: string) => {
-    const col      = colsRef.current.find(c => c.id === colId)
-    const s        = sortDesc(col?.tasks ?? [])
-    const newOrder = s.length ? Math.max(1, s[s.length - 1].sortOrder - 100) : 1000
-    const task: Task = {
-      id: uid(), name: fields.name!, icon: fields.icon ?? '📝',
-      priority:    fields.priority ?? 'medium',
-      assignee:    fields.assignee,
-      startDate:   fields.startDate ?? todayISO(),
-      dueDate:     fields.dueDate,
-      project:     fields.project,
-      projectIcon: fields.projectIcon,
-      tags:        fields.tags,
-      status:      colId,
-      columnId:    colId,
-      sortOrder:   newOrder,
-      created_at:  new Date().toISOString(),
-      updated_at:  new Date().toISOString(),
+  const handleDelete = useCallback(async (taskId: string) => {
+    if (!window.confirm('确定删除此任务？')) return
+    setColumns(prev => prev.map(c => ({ ...c, tasks: c.tasks.filter(t => t.id !== taskId) })))
+    const ok = await deleteTask(taskId)
+    if (!ok) {
+      // Reload to restore
+      fetchKanban().then(data => { if (data) setColumns(data) })
+      showToast('删除失败')
     }
-    setColumns(prev => prev.map(c => c.id === colId ? { ...c, tasks: [...c.tasks, task] } : c))
+  }, [])
+
+  const handleAddTask = async (fields: Partial<Task>, colId: string) => {
+    const col      = colsRef.current.find(c => c.id === colId)
+    const sorted   = sortDesc(col?.tasks ?? [])
+    const newOrder = sorted.length ? sorted[sorted.length - 1].sortOrder - 100 : 1000
+    const payload  = { ...fields, columnId: colId, status: colId, sortOrder: newOrder, startDate: todayISO() }
+
     setAddingToCol(null)
+    const created = await createTask(payload)
+    if (created) {
+      setColumns(prev => prev.map(c => c.id === colId ? { ...c, tasks: [...c.tasks, created] } : c))
+    } else {
+      showToast('创建任务失败')
+    }
   }
 
-  const handleEditTask = (fields: Partial<Task>, colId: string) => {
-    setColumns(prev => prev.map(c => c.id !== colId ? c : {
-      ...c,
-      tasks: c.tasks.map(t =>
-        t.id === editingTask?.task.id ? { ...t, ...fields, updated_at: new Date().toISOString() } : t
-      ),
-    }))
-    setEditingTask(null)
-  }
-
-  const handleAddCol = (label: string, ti: number) => {
-    setColumns(prev => [...prev, { id: uid(), label, ...THEMES[ti], tasks: [] }])
+  const handleAddCol = async (label: string, ti: number) => {
+    const newCol: Column = { id: uid(), label, ...THEMES[ti], tasks: [] }
+    const next = [...columns, newCol]
+    setColumns(next)
     setShowAddCol(false)
+    await saveColumns(next)
   }
 
-  const handleDeleteCol = useCallback((colId: string) => {
+  const handleDeleteCol = useCallback(async (colId: string) => {
     if (!window.confirm('删除此列及所有任务？不可撤销。')) return
-    setColumns(prev => prev.filter(c => c.id !== colId))
-  }, [])
+    const next = columns.filter(c => c.id !== colId)
+    setColumns(next)
+    await saveColumns(next)
+  }, [columns])
 
-  const handleRenameCol = useCallback((colId: string, label: string) => {
-    setColumns(prev => prev.map(c => c.id === colId ? { ...c, label } : c))
-  }, [])
+  const handleRenameCol = useCallback(async (colId: string, label: string) => {
+    const next = columns.map(c => c.id === colId ? { ...c, label } : c)
+    setColumns(next)
+    await saveColumns(next)
+  }, [columns])
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -959,8 +805,7 @@ export default function KanbanBoard() {
         ...c,
         tasks: c.tasks.filter(t =>
           t.name.toLowerCase().includes(search.toLowerCase()) ||
-          (t.assignee ?? '').toLowerCase().includes(search.toLowerCase()) ||
-          (t.project  ?? '').toLowerCase().includes(search.toLowerCase())
+          (t.assignee ?? '').toLowerCase().includes(search.toLowerCase())
         ),
       }))
     : columns
@@ -973,7 +818,7 @@ export default function KanbanBoard() {
       style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}>
       <div className="flex items-center gap-3 text-white/40">
         <div className="w-5 h-5 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
-        <span className="text-sm">加载看板数据…</span>
+        <span className="text-sm">加载看板…</span>
       </div>
     </div>
   )
@@ -988,8 +833,8 @@ export default function KanbanBoard() {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-base">☑️</div>
             <div>
-              <h1 className="text-base font-bold text-white leading-tight">任务管理</h1>
-              <p className="text-[11px] text-white/25 mt-0.5">{totalTasks} 个任务 · 拖拽排序 · 自动保存</p>
+              <h1 className="text-base font-bold text-white leading-tight">任务看板</h1>
+              <p className="text-[11px] text-white/25 mt-0.5">{totalTasks} 个任务 · 拖拽排序 · 点击查看详情</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1017,15 +862,11 @@ export default function KanbanBoard() {
             <KanbanCol
               key={col.id}
               col={col}
-              allCols={displayCols}
               draggingId={draggingId}
-              hoverColId={hoverColId}
               insertLine={insertLine}
               onAddTask={colId => setAddingToCol(colId)}
               onCardClick={handleCardClick}
-              onEditTask={(task, colId) => setEditingTask({ task, colId })}
               onDelete={handleDelete}
-              onMenuMove={handleMenuMove}
               onDeleteCol={handleDeleteCol}
               onRenameCol={handleRenameCol}
               registerHandle={registerHandle}
@@ -1043,15 +884,18 @@ export default function KanbanBoard() {
 
       {/* Modals */}
       {addingToCol && (
-        <TaskModal defaultColId={addingToCol} allCols={columns}
+        <NewTaskModal defaultColId={addingToCol} allCols={columns}
           onConfirm={handleAddTask} onClose={() => setAddingToCol(null)} />
-      )}
-      {editingTask && (
-        <TaskModal init={editingTask.task} defaultColId={editingTask.colId} allCols={columns}
-          onConfirm={handleEditTask} onClose={() => setEditingTask(null)} />
       )}
       {showAddCol && (
         <AddColModal usedIdx={usedIdx} onConfirm={handleAddCol} onClose={() => setShowAddCol(false)} />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-red-900/90 text-red-200 text-sm px-4 py-2 rounded-xl border border-red-700/50 shadow-xl">
+          {toast}
+        </div>
       )}
     </div>
   )

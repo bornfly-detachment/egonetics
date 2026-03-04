@@ -5,7 +5,7 @@ import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
 import type { ApiClient, PageMeta, Block, CreatePageInput } from './types'
 
-const KANBAN_API_BASE = 'http://localhost:3003/api'
+const KANBAN_API_BASE = '/api'
 
 // Task 类型定义
 interface Task {

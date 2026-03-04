@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import MemoryView from './components/MemoryView'
 import EgoneticsView from './components/EgoneticsView'
 import KanbanBoard from './components/taskBoard/KanbanBoard'
 import TaskDetailPage from './components/taskBoard/TaskDetailPage'
-import ChroniclePageView from './components/ChroniclePageView'
+import ChronicleView from './components/ChronicleView'
+import AgentsView from './components/AgentsView'
 import TheoryPageView from './components/TheoryPageView'
 import BlogPage from './components/BlogPage'
 import { useChronicleStore } from './stores/useChronicleStore'
@@ -15,9 +16,13 @@ const RouteSync: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { uiState, setUIState } = useChronicleStore()
+  // Tracks whether the URL just changed externally (navigate() call or back button).
+  // Prevents Effect 2 (Store→URL) from navigating back with stale store state.
+  const urlJustChangedRef = useRef(false)
 
   // URL -> Store 同步
   useEffect(() => {
+    urlJustChangedRef.current = true
     const path = location.pathname
     
     let view: string
@@ -58,6 +63,12 @@ const RouteSync: React.FC = () => {
 
   // Store -> URL 同步（当 store 变化时导航）
   useEffect(() => {
+    // If the URL just changed (Effect 1 just ran), skip — the store update is stale.
+    // Effect 1's setUIState will trigger another render where this runs with fresh state.
+    if (urlJustChangedRef.current) {
+      urlJustChangedRef.current = false
+      return
+    }
     if (!uiState) return
 
     let targetPath = '/'
@@ -105,6 +116,10 @@ const RouteSync: React.FC = () => {
     }
 
     if (location.pathname !== targetPath) {
+      // Guard: don't navigate back when current URL is a valid sub-route of the target.
+      // e.g. uiState still says 'tasks' (stale) while URL is already '/tasks/xxx' —
+      // Effect 1 (URL→Store) will update the store in the same cycle, so skip.
+      if (location.pathname.startsWith(targetPath + '/')) return
       navigate(targetPath, { replace: true })
     }
   }, [uiState, location.pathname, navigate])
@@ -113,19 +128,6 @@ const RouteSync: React.FC = () => {
 }
 
 // 页面组件
-const AgentsPage: React.FC = () => {
-  return (
-    <div className="p-8 text-center">
-      <h1 className="text-3xl font-bold gradient-text mb-4">
-        代理界面
-      </h1>
-      <p className="text-neutral-400">
-        代理管理界面即将推出...
-      </p>
-    </div>
-  )
-}
-
 const SettingsPage: React.FC = () => {
   return (
     <div className="p-8 text-center">
@@ -171,7 +173,7 @@ const AppContent: React.FC = () => {
               <Route path="/" element={<Navigate to="/memory" replace />} />
               <Route path="/memory" element={<MemoryView />} />
               <Route path="/theory" element={<TheoryPageView />} />
-              <Route path="/chronicle" element={<ChroniclePageView />} />
+              <Route path="/chronicle" element={<ChronicleView />} />
               <Route path="/egonetics" element={<EgoneticsView />} />
               <Route path="/tasks" element={<KanbanBoard />} />
               <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
@@ -179,7 +181,7 @@ const AppContent: React.FC = () => {
               {/* <Route path="/old-blog" element={<BlogEditor />} /> */}
               {/* <Route path="/editor1" element={<NewNotionStyleEditor />} /> */}
               {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
-              <Route path="/agents" element={<AgentsPage />} />
+              <Route path="/agents" element={<AgentsView />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/memory" replace />} />
             </Routes>

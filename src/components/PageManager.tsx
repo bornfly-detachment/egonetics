@@ -15,25 +15,24 @@
 // ============================================================
 import React, {
   useState, useEffect, useCallback, useRef,
-  createContext, useContext,
 } from 'react'
 import {
   ChevronRight, ChevronDown, Plus, Trash2, GripVertical,
-  FileEdit, Home, MoreHorizontal, Check, X, Loader2,
+  FileEdit, MoreHorizontal, Check, Loader2,
 } from 'lucide-react'
 import { useDrag, useDrop, DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import BlockEditor, { generateBlockId, positionBetween, defaultBlockContent } from './BlockEditor'
-import type { Block, BlockType, PageMeta, ApiClient, MovePageInput } from './types'
+import BlockEditor, { positionBetween } from './BlockEditor'
+import type { Block, PageMeta, ApiClient } from './types'
 
 // ─── Mock API（开发期间使用，对接真实后端时删除） ───────────────────────────────
 
 let _mockPages: PageMeta[] = [
-  { id: 'root', parentId: null, title: '我的工作区', icon: '🏠', position: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'p1',   parentId: 'root', title: '产品文档',  icon: '📦', position: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'p2',   parentId: 'root', title: '设计稿',    icon: '🎨', position: 2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'p1-1', parentId: 'p1',   title: '需求文档',  icon: '📋', position: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: 'p1-2', parentId: 'p1',   title: 'API 接口',  icon: '🔌', position: 2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'root', parentId: null, title: '我的工作区', icon: '🏠', position: 1, pageType: 'page', refId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'p1',   parentId: 'root', title: '产品文档',  icon: '📦', position: 1, pageType: 'page', refId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'p2',   parentId: 'root', title: '设计稿',    icon: '🎨', position: 2, pageType: 'page', refId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'p1-1', parentId: 'p1',   title: '需求文档',  icon: '📋', position: 1, pageType: 'page', refId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: 'p1-2', parentId: 'p1',   title: 'API 接口',  icon: '🔌', position: 2, pageType: 'page', refId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ]
 
 const _mockBlocks: Record<string, Block[]> = {
@@ -49,7 +48,7 @@ export function createMockApiClient(): ApiClient {
     async createPage(input) {
       await delay()
       const p: PageMeta = { id: `page-${Date.now()}`, parentId: input.parentId, title: input.title ?? '新页面',
-        icon: input.icon ?? '📄', position: input.position ?? 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+        icon: input.icon ?? '📄', position: input.position ?? 1, pageType: input.pageType ?? 'page', refId: input.refId ?? null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
       _mockPages.push(p); return p
     },
     async updatePage(id, patch) {
@@ -100,12 +99,14 @@ interface SidebarNodeProps {
   onAddChild: (parentId: string) => void
   onMovePage: (dragId: string, targetId: string, zone: 'before' | 'after' | 'inside') => void
   level: number
+  archivedPages?: Record<string, { version_tag: string; entry_id: string }>
 }
 
 function SidebarNode({
   page, allPages, activePageId, expandedIds,
-  onToggleExpand, onActivate, onRename, onDelete, onAddChild, onMovePage, level,
+  onToggleExpand, onActivate, onRename, onDelete, onAddChild, onMovePage, level, archivedPages,
 }: SidebarNodeProps) {
+  const isArchived = archivedPages ? !!archivedPages[page.id] : false
   const children = getPageChildren(allPages, page.id)
   const hasChildren = children.length > 0
   const isExpanded = expandedIds.has(page.id)
@@ -190,7 +191,10 @@ function SidebarNode({
             className="flex-1 min-w-0 bg-neutral-700 rounded px-1 text-sm text-white outline-none border border-blue-500/50"
           />
         ) : (
-          <span className="flex-1 min-w-0 text-sm truncate">{page.title || '无标题'}</span>
+          <span className="flex-1 min-w-0 text-sm truncate">
+            {isArchived && <span className="mr-1 text-[10px] opacity-50">🔒</span>}
+            {page.title || '无标题'}
+          </span>
         )}
 
         {/* 操作按钮 */}
@@ -229,7 +233,7 @@ function SidebarNode({
         <SidebarNode key={child.id} page={child} allPages={allPages} activePageId={activePageId}
           expandedIds={expandedIds} onToggleExpand={onToggleExpand} onActivate={onActivate}
           onRename={onRename} onDelete={onDelete} onAddChild={onAddChild} onMovePage={onMovePage}
-          level={level + 1} />
+          level={level + 1} archivedPages={archivedPages} />
       ))}
     </div>
   )
@@ -278,9 +282,11 @@ function Breadcrumb({ pages, activePageId, onActivate }: {
 interface PageManagerProps {
   api?: ApiClient   // 不传则使用 Mock
   defaultPageId?: string
+  archivedPages?: Record<string, { version_tag: string; entry_id: string }>
+  onArchivePage?: (page: PageMeta, blocks: Block[]) => void
 }
 
-export default function PageManager({ api: apiProp, defaultPageId }: PageManagerProps) {
+export default function PageManager({ api: apiProp, defaultPageId, archivedPages, onArchivePage }: PageManagerProps) {
   const api = apiProp ?? createMockApiClient()
 
   const [pages, setPages] = useState<PageMeta[]>([])
@@ -313,7 +319,7 @@ export default function PageManager({ api: apiProp, defaultPageId }: PageManager
     })()
   }, [])
 
-  const loadBlocks = async (pageId: string, ps = pages) => {
+  const loadBlocks = async (pageId: string, _ps = pages) => {
     if (pageBlocks[pageId]) return
     setBlockLoading(true)
     try {
@@ -470,7 +476,7 @@ export default function PageManager({ api: apiProp, defaultPageId }: PageManager
   const currentBlocks = pageBlocks[activePageId] ?? []
 
   if (loading) return (
-    <div className="min-h-screen bg-[#191919] flex items-center justify-center">
+    <div className="h-full bg-[#191919] flex items-center justify-center">
       <div className="flex items-center gap-3 text-neutral-500">
         <Loader2 size={18} className="animate-spin" />
         <span className="text-sm">加载中…</span>
@@ -480,7 +486,7 @@ export default function PageManager({ api: apiProp, defaultPageId }: PageManager
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-[#191919] flex text-neutral-200 overflow-hidden"
+      <div className="h-full bg-[#191919] flex text-neutral-200 overflow-hidden"
         style={{ fontFamily: "'PingFang SC','Noto Serif SC','Microsoft YaHei',serif" }}>
 
         {/* ── 侧边栏 ── */}
@@ -509,7 +515,7 @@ export default function PageManager({ api: apiProp, defaultPageId }: PageManager
                       onToggleExpand={toggleExpand} onActivate={activatePage}
                       onRename={renamePage} onDelete={deletePage}
                       onAddChild={createPage} onMovePage={movePage}
-                      level={0} />
+                      level={0} archivedPages={archivedPages} />
                   ))
                 )}
               </div>
@@ -550,6 +556,21 @@ export default function PageManager({ api: apiProp, defaultPageId }: PageManager
               )}
             </div>
 
+            {/* Chronicle 入库 / 锁定 badge */}
+            {activePage && onArchivePage && (
+              archivedPages?.[activePageId] ? (
+                <span className="shrink-0 flex items-center gap-1 text-[11px] text-amber-500/70 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  🔒 {archivedPages[activePageId].version_tag}
+                </span>
+              ) : (
+                <button
+                  onClick={() => onArchivePage(activePage, currentBlocks)}
+                  className="shrink-0 text-[11px] text-neutral-400 hover:text-neutral-200 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-colors border border-white/5">
+                  入库 Chronicle
+                </button>
+              )
+            )}
+
             {/* 快捷键提示 */}
             <div className="shrink-0 hidden lg:flex items-center gap-3 text-[10px] text-neutral-700">
               {[['Tab','缩进'],['Shift+Tab','反缩进'],['/','插入块']].map(([k,v]) => (
@@ -565,7 +586,7 @@ export default function PageManager({ api: apiProp, defaultPageId }: PageManager
                 <Loader2 size={16} className="animate-spin text-neutral-600" />
               </div>
             ) : activePageId ? (
-              <div className="max-w-[740px] mx-auto px-12 py-16">
+              <div className="max-w-[740px] mx-auto px-12 pt-16 pb-52">
                 {/* 页面标题编辑 */}
                 <div className="flex items-center gap-3 mb-10 group">
                   <span className="text-5xl cursor-default select-none">{activePage?.icon ?? '📄'}</span>

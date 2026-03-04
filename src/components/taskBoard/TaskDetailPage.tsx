@@ -1,23 +1,20 @@
 /**
  * TaskDetailPage.tsx
  *
- * 任务详情页
+ * 任务详情页 — 头部属性栏（状态/优先级/负责人/日期）内联编辑
+ * + 发布到 Chronicle 按钮
+ * + 正文编辑器（复用 BlockEditor）
  * 路由: /tasks/:taskId
- *
- * 功能:
- *   - 显示任务详情
- *   - 右上角编辑按钮弹出编辑弹窗
- *   - 使用 createApiClient('task') 获取数据
- *   - 支持返回看板
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { createApiClient } from './apiClient'
 import {
-  ArrowLeft, Edit2, Trash2, Calendar, User, Tag,
-  AlertCircle, Loader,
+  ArrowLeft, Trash2, Calendar, User,
+  AlertCircle, Loader, Tag, BookMarked,
 } from 'lucide-react'
+import BlockEditor from '../BlockEditor'
+import type { Block } from '../BlockEditor'
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low'
 
@@ -26,7 +23,7 @@ interface Task {
   name: string
   icon: string
   assignee?: string
-  startDate: string
+  startDate?: string
   dueDate?: string
   project?: string
   projectIcon?: string
@@ -37,169 +34,182 @@ interface Task {
   updated_at: string
   tags?: string[]
   columnId?: string
-  description?: string  // 详情页额外字段
+  description?: string
+  chronicle_entry_id?: string | null
 }
+
+interface Column { id: string; label: string }
 
 const PRI: Record<Priority, { label: string; cls: string; dot: string }> = {
-  urgent: { label: '紧急', cls: 'text-red-400 bg-red-500/10 border-red-500/25', dot: '#ef4444' },
-  high: { label: '高', cls: 'text-orange-400 bg-orange-500/10 border-orange-500/25', dot: '#f97316' },
-  medium: { label: '中', cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25', dot: '#eab308' },
-  low: { label: '低', cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25', dot: '#10b981' },
+  urgent: { label: '紧急', cls: 'text-red-400 bg-red-500/10 border-red-500/25',            dot: '#ef4444' },
+  high:   { label: '高',   cls: 'text-orange-400 bg-orange-500/10 border-orange-500/25',   dot: '#f97316' },
+  medium: { label: '中',   cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25',   dot: '#eab308' },
+  low:    { label: '低',   cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25', dot: '#10b981' },
 }
 
-const fmtDate = (s?: string) => {
+const fmtDateTime = (s?: string) => {
   if (!s) return ''
+  try { return new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) }
+  catch { return s }
+}
+
+async function loadTask(id: string): Promise<Task | null> {
   try {
-    return new Date(s).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    const res = await fetch(`/api/kanban/tasks/${id}`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch { return null }
+}
+
+async function loadColumns(): Promise<Column[]> {
+  try {
+    const res = await fetch('/api/kanban')
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.columns ?? []
+  } catch { return [] }
+}
+
+async function loadBlocks(taskId: string): Promise<Block[]> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/blocks`)
+    if (!res.ok) return []
+    return await res.json()
+  } catch { return [] }
+}
+
+async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/kanban/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
     })
-  } catch {
-    return s
-  }
+    return res.ok
+  } catch { return false }
 }
 
-// ─── Edit Modal ───────────────────────────────────────────────────────────
+// ─── Inline editable field ────────────────────────────────────────────────────
 
-interface EditModalProps {
+function InlineText({ value, placeholder, onSave, className }: {
+  value: string
+  placeholder: string
+  onSave: (v: string) => void
+  className?: string
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState(value)
+
+  useEffect(() => { if (!editing) setDraft(value) }, [value, editing])
+
+  if (editing) return (
+    <input
+      autoFocus
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={() => { setEditing(false); if (draft !== value) onSave(draft) }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { setEditing(false); if (draft !== value) onSave(draft) }
+        if (e.key === 'Escape') { setEditing(false); setDraft(value) }
+      }}
+      className={`bg-white/5 border border-white/20 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/40 placeholder-white/30 ${className ?? ''}`}
+      placeholder={placeholder}
+    />
+  )
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      className={`cursor-text hover:bg-white/5 rounded px-1 py-0.5 transition-colors ${value ? 'text-white/80' : 'text-white/25'} text-sm ${className ?? ''}`}
+    >
+      {value || placeholder}
+    </span>
+  )
+}
+
+// ─── Publish to Chronicle Modal ───────────────────────────────────────────────
+
+const OUTCOMES = [
+  { value: '完成', label: '✅ 完成' },
+  { value: '失败', label: '❌ 失败' },
+  { value: '终止', label: '⛔ 终止' },
+]
+
+function PublishModal({ task, onDone, onClose }: {
   task: Task
-  onConfirm: (updated: Partial<Task>) => Promise<void>
+  onDone: () => void
   onClose: () => void
-}
-
-function EditModal({ task, onConfirm, onClose }: EditModalProps) {
-  const [name, setName] = useState(task.name)
-  const [icon, setIcon] = useState(task.icon)
-  const [priority, setPriority] = useState<Priority>(task.priority)
-  const [assignee, setAssignee] = useState(task.assignee ?? '')
-  const [startDate, setStartDate] = useState(task.startDate)
-  const [dueDate, setDueDate] = useState(task.dueDate ?? '')
-  const [description, setDescription] = useState(task.description ?? '')
+}) {
+  const [outcome, setOutcome] = useState('完成')
+  const [summary, setSummary] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
 
-  const submit = async () => {
-    if (!name.trim()) return
-    setLoading(true)
+  const doPublish = async () => {
+    setLoading(true); setError(null)
     try {
-      await onConfirm({
-        name: name.trim(),
-        icon,
-        priority,
-        assignee: assignee.trim() || undefined,
-        startDate,
-        dueDate: dueDate.trim() || undefined,
-        description: description.trim() || undefined,
+      const res = await fetch(`/api/tasks/${task.id}/send-to-chronicle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_outcome: outcome, task_summary: summary.trim() || null }),
       })
-    } finally {
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: '请求失败' }))
+        throw new Error(d.error || '请求失败')
+      }
+      onDone()
+    } catch (e: unknown) {
+      setError((e as Error).message)
       setLoading(false)
     }
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200]"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[#18181b] border border-white/10 rounded-2xl p-6 w-[400px] shadow-2xl max-h-[92vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-sm font-semibold text-white mb-5">编辑任务</h3>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-[#1e1e1e] border border-white/15 rounded-xl shadow-2xl p-6 w-[480px]" onClick={e => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-1 flex items-center gap-2">
+          <BookMarked size={16} className="text-blue-400" /> 发布任务到 Chronicle
+        </h3>
+        <p className="text-xs text-neutral-500 mb-4">发布后此任务将从看板移除</p>
 
-        <div className="mb-4">
-          <label className="text-[11px] text-white/40 mb-1.5 block">任务名称</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 placeholder-white/20"
-            placeholder="任务名称"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="text-[11px] text-white/40 mb-1.5 block">优先级</label>
-          <div className="flex gap-1.5">
-            {(Object.keys(PRI) as Priority[]).map((p) => (
+        <div className="mb-3">
+          <label className="text-[11px] text-neutral-500 mb-2 block">结果 *</label>
+          <div className="flex gap-2">
+            {OUTCOMES.map(o => (
               <button
-                key={p}
-                onClick={() => setPriority(p)}
-                className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium border transition-all
-                  ${
-                    priority === p
-                      ? PRI[p].cls
-                      : 'bg-white/5 border-white/5 text-white/30 hover:text-white/60'
-                  }`}
+                key={o.value}
+                onClick={() => setOutcome(o.value)}
+                className={`flex-1 py-2 rounded-lg text-sm border transition-all ${
+                  outcome === o.value
+                    ? 'bg-blue-600/20 border-blue-500/60 text-white'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:border-white/20'
+                }`}
               >
-                {PRI[p].label}
+                {o.label}
               </button>
             ))}
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="text-[11px] text-white/40 mb-1.5 flex items-center gap-1 block">
-            <User size={9} /> 负责人
-          </label>
-          <input
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 placeholder-white/20"
-            placeholder="用户名（可选）"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="text-[11px] text-white/40 mb-1.5 flex items-center gap-1 block">
-              <Calendar size={9} /> 开始日期
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark]"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] text-white/40 mb-1.5 flex items-center gap-1 block">
-              <Calendar size={9} /> 截止日期
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark]"
-            />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="text-[11px] text-white/40 mb-1.5 block">描述</label>
+          <label className="text-[11px] text-neutral-500 mb-1 block">总结（可选）</label>
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-white/25 placeholder-white/20 resize-none h-20"
-            placeholder="添加任务描述..."
+            value={summary}
+            onChange={e => setSummary(e.target.value)}
+            rows={3}
+            autoFocus
+            className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-sm text-white outline-none focus:border-blue-500 resize-none"
+            placeholder="对此任务的简要总结…"
           />
         </div>
 
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="px-4 py-1.5 text-sm text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
-          >
-            取消
+        {error && <p className="mb-3 text-sm text-red-400">❌ {error}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={doPublish} disabled={loading}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded font-medium text-sm">
+            {loading ? '发布中…' : '确认发布'}
           </button>
-          <button
-            onClick={submit}
-            disabled={!name.trim() || loading}
-            className="px-4 py-1.5 text-sm bg-white text-black rounded-xl font-medium hover:bg-white/90 disabled:opacity-25 transition-colors flex items-center gap-1"
-          >
-            {loading ? <Loader size={12} className="animate-spin" /> : null}
-            保存
-          </button>
+          <button onClick={onClose} className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded text-sm">取消</button>
         </div>
       </div>
     </div>
@@ -210,131 +220,113 @@ function EditModal({ task, onConfirm, onClose }: EditModalProps) {
 
 export default function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
-  const navigate = useNavigate()
+  const navigate   = useNavigate()
 
-  // 创建带类型过滤的 API 客户端
-  const apiClient = useMemo(() => createApiClient('task'), [])
+  const [task,           setTask]          = useState<Task | null>(null)
+  const [columns,        setColumns]       = useState<Column[]>([])
+  const [initialBlocks,  setInitialBlocks] = useState<Block[]>([])
+  const [loading,        setLoading]       = useState(true)
+  const [error,          setError]         = useState<string | null>(null)
+  const [saving,         setSaving]        = useState(false)
+  const [showPublish,    setShowPublish]   = useState(false)
+  const saveBlocksTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [task, setTask] = useState<Task | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showEdit, setShowEdit] = useState(false)
-
-  // 加载任务数据
+  // Load task + columns + blocks in parallel
   useEffect(() => {
-    if (!taskId) {
-      setError('未找到任务 ID')
+    if (!taskId) { setError('未找到任务 ID'); setLoading(false); return }
+    Promise.all([loadTask(taskId), loadColumns(), loadBlocks(taskId)]).then(([t, cols, blks]) => {
+      if (!t) setError('任务不存在或已删除')
+      else setTask(t)
+      setColumns(cols)
+      setInitialBlocks(blks)
       setLoading(false)
-      return
-    }
+    })
+  }, [taskId])
 
-    const fetchTask = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await apiClient.fetchOne(taskId)
-        if (!data) {
-          setError('任务不存在或已删除')
-          setTask(null)
-        } else {
-          setTask(data as Task)
-        }
-      } catch (err) {
-        setError('加载任务失败')
-        console.error('Fetch error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTask()
-  }, [taskId, apiClient])
-
-  const handleEdit = async (updated: Partial<Task>) => {
+  const save = useCallback(async (fields: Partial<Task>) => {
     if (!task) return
-    try {
-      const result = await apiClient.save({ ...task, ...updated })
-      setTask(result as Task)
-      setShowEdit(false)
-    } catch (err) {
-      console.error('Save error:', err)
-      alert('保存失败')
-    }
-  }
+    setSaving(true)
+    const ok = await patchTask(task.id, fields)
+    if (ok) setTask(prev => prev ? { ...prev, ...fields } : prev)
+    setSaving(false)
+  }, [task])
+
+  // Debounced block save (BlockEditor's onChange fires on every keystroke)
+  const handleBlocksChange = useCallback((blocks: Block[]) => {
+    if (!taskId) return
+    if (saveBlocksTimer.current) clearTimeout(saveBlocksTimer.current)
+    saveBlocksTimer.current = setTimeout(async () => {
+      await fetch(`/api/tasks/${taskId}/blocks`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(blocks),
+      }).catch(console.error)
+    }, 800)
+  }, [taskId])
 
   const handleDelete = async () => {
     if (!task || !window.confirm(`确定要删除「${task.name}」？`)) return
-    try {
-      await apiClient.delete(task.id)
-      navigate('/tasks') // 返回看板
-    } catch (err) {
-      console.error('Delete error:', err)
-      alert('删除失败')
-    }
+    const res = await fetch(`/api/kanban/tasks/${task.id}`, { method: 'DELETE' })
+    if (res.ok) navigate('/tasks')
+    else alert('删除失败')
   }
 
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen bg-[#0d0d0d] flex items-center justify-center"
-        style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}
-      >
-        <div className="flex items-center gap-3 text-white/40">
-          <Loader size={20} className="animate-spin" />
-          <span className="text-sm">加载任务数据…</span>
-        </div>
+  if (loading) return (
+    <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center"
+      style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}>
+      <div className="flex items-center gap-3 text-white/40">
+        <Loader size={20} className="animate-spin" />
+        <span className="text-sm">加载任务…</span>
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (error || !task) {
-    return (
-      <div
-        className="min-h-screen bg-[#0d0d0d] flex items-center justify-center"
-        style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}
-      >
-        <div className="text-center">
-          <AlertCircle size={32} className="mx-auto mb-3 text-red-400" />
-          <p className="text-white/60 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/tasks')}
-            className="px-4 py-2 bg-white text-black rounded-xl font-medium hover:bg-white/90 transition-colors"
-          >
-            返回看板
-          </button>
-        </div>
+  if (error || !task) return (
+    <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center"
+      style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}>
+      <div className="text-center">
+        <AlertCircle size={32} className="mx-auto mb-3 text-red-400" />
+        <p className="text-white/60 mb-6">{error}</p>
+        <button onClick={() => navigate('/tasks')}
+          className="px-4 py-2 bg-white text-black rounded-xl font-medium hover:bg-white/90">
+          返回看板
+        </button>
       </div>
-    )
-  }
+    </div>
+  )
 
   const p = PRI[task.priority]
+  const colLabel = columns.find(c => c.id === (task.columnId ?? task.status))?.label ?? task.status
+  const isArchived = !!task.chronicle_entry_id
 
   return (
-    <div
-      className="min-h-screen bg-[#0d0d0d] flex flex-col"
-      style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}
-    >
+    <div className="min-h-screen bg-[#0d0d0d] flex flex-col"
+      style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}>
+
       {/* Header */}
       <div className="shrink-0 h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-6 justify-between">
-        <button
-          onClick={() => navigate('/tasks')}
-          className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-        >
+        <button onClick={() => navigate('/tasks')}
+          className="flex items-center gap-2 text-white/60 hover:text-white transition-colors">
           <ArrowLeft size={16} />
           <span className="text-sm">返回看板</span>
         </button>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowEdit(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black rounded-lg text-sm font-medium hover:bg-white/90 transition-colors"
-          >
-            <Edit2 size={14} />
-            编辑
-          </button>
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-          >
+          {saving && <Loader size={14} className="animate-spin text-white/30" />}
+          {isArchived ? (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 border border-white/10 rounded-lg">
+              <BookMarked size={12} /> 已归档
+            </span>
+          ) : (
+            <button
+              onClick={() => setShowPublish(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg border border-blue-500/30 hover:border-blue-500/50 transition-colors"
+            >
+              <BookMarked size={14} />
+              <span>发布到 Chronicle</span>
+            </button>
+          )}
+          <button onClick={handleDelete}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
             <Trash2 size={14} />
           </button>
         </div>
@@ -343,86 +335,120 @@ export default function TaskDetailPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto px-6 py-8">
         <div className="max-w-2xl mx-auto">
-          {/* Title */}
-          <div className="flex items-start gap-4 mb-8">
-            <span className="text-5xl mt-2">{task.icon}</span>
+
+          {/* Icon + Title */}
+          <div className="flex items-start gap-4 mb-6">
+            <span className="text-5xl mt-1">{task.icon}</span>
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-white break-words mb-3">{task.name}</h1>
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className={`inline-flex items-center gap-1 text-[12px] px-2.5 py-1 rounded-full border font-medium ${p.cls}`}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.dot }} />
-                  {p.label}
-                </span>
-                {task.status && (
-                  <span className="text-[12px] px-2.5 py-1 rounded-full bg-white/5 text-white/40 border border-white/10">
-                    {task.status}
-                  </span>
-                )}
-              </div>
+              <h1
+                className="text-3xl font-bold text-white break-words mb-1 cursor-text hover:bg-white/5 rounded px-1 -mx-1 transition-colors"
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={e => {
+                  const v = e.currentTarget.textContent?.trim() ?? ''
+                  if (v && v !== task.name) save({ name: v })
+                  else e.currentTarget.textContent = task.name
+                }}
+              >
+                {task.name}
+              </h1>
             </div>
           </div>
 
-          {/* Meta Info */}
-          <div className="space-y-6 mb-8">
-            {task.assignee && (
-              <div>
-                <label className="text-[11px] text-white/40 mb-2 flex items-center gap-1 block">
-                  <User size={11} /> 负责人
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-[10px] font-bold text-white">
-                    {task.assignee[0].toUpperCase()}
-                  </div>
-                  <span className="text-white/80 text-sm">{task.assignee}</span>
-                </div>
-              </div>
-            )}
+          {/* Property Bar */}
+          <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-4 mb-8 space-y-3">
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="text-[11px] text-white/40 mb-2 flex items-center gap-1 block">
-                  <Calendar size={11} /> 开始日期
-                </label>
-                <p className="text-white/80 text-sm">{fmtDate(task.startDate)}</p>
-              </div>
-              {task.dueDate && (
-                <div>
-                  <label className="text-[11px] text-white/40 mb-2 flex items-center gap-1 block">
-                    <Calendar size={11} /> 截止日期
-                  </label>
-                  <p className="text-white/80 text-sm">{fmtDate(task.dueDate)}</p>
-                </div>
-              )}
+            {/* Status */}
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-white/35 w-16 shrink-0">状态</span>
+              <select
+                value={task.columnId ?? task.status}
+                onChange={e => save({ columnId: e.target.value, status: e.target.value })}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20 transition-colors"
+              >
+                {columns.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {!columns.find(c => c.id === (task.columnId ?? task.status)) && (
+                  <option value={task.columnId ?? task.status}>{colLabel}</option>
+                )}
+              </select>
             </div>
 
+            {/* Priority */}
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-white/35 w-16 shrink-0">优先级</span>
+              <select
+                value={task.priority}
+                onChange={e => save({ priority: e.target.value as Priority })}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20 transition-colors"
+              >
+                {(Object.entries(PRI) as [Priority, typeof PRI[Priority]][]).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+              <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${p.cls}`}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.dot }} />
+                {p.label}
+              </span>
+            </div>
+
+            {/* Assignee */}
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
+                <User size={10} /> 负责人
+              </span>
+              <InlineText
+                value={task.assignee ?? ''}
+                placeholder="添加负责人…"
+                onSave={v => save({ assignee: v || undefined })}
+              />
+            </div>
+
+            {/* Start Date */}
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
+                <Calendar size={10} /> 开始
+              </span>
+              <input
+                type="date"
+                value={task.startDate ?? ''}
+                onChange={e => save({ startDate: e.target.value || undefined })}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20"
+              />
+            </div>
+
+            {/* Due Date */}
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
+                <Calendar size={10} /> 截止
+              </span>
+              <input
+                type="date"
+                value={task.dueDate ?? ''}
+                onChange={e => save({ dueDate: e.target.value || undefined })}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20"
+              />
+            </div>
+
+            {/* Project */}
             {task.project && (
-              <div>
-                <label className="text-[11px] text-white/40 mb-2 block">所属项目</label>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-white/35 w-16 shrink-0">项目</span>
                 <div className="flex items-center gap-2">
-                  {task.projectIcon && <span className="text-xl">{task.projectIcon}</span>}
-                  <span className="text-white/80 text-sm">{task.project}</span>
+                  {task.projectIcon && <span>{task.projectIcon}</span>}
+                  <span className="text-sm text-white/70">{task.project}</span>
                 </div>
               </div>
             )}
 
-            {task.description && (
-              <div>
-                <label className="text-[11px] text-white/40 mb-2 block">描述</label>
-                <p className="text-white/70 text-sm whitespace-pre-wrap">{task.description}</p>
-              </div>
-            )}
-
+            {/* Tags */}
             {task.tags && task.tags.length > 0 && (
-              <div>
-                <label className="text-[11px] text-white/40 mb-2 flex items-center gap-1 block">
-                  <Tag size={11} /> 标签
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {task.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[11px] px-2 py-1 rounded-full bg-white/5 text-white/40 border border-white/8"
-                    >
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
+                  <Tag size={10} /> 标签
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {task.tags.map(tag => (
+                    <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/8">
                       {tag}
                     </span>
                   ))}
@@ -432,18 +458,31 @@ export default function TaskDetailPage() {
           </div>
 
           {/* Timestamps */}
-          <div className="pt-6 border-t border-white/10">
+          <div className="mb-6">
             <div className="text-[11px] text-white/25 space-y-1">
-              <p>创建于 {fmtDate(task.created_at)}</p>
-              <p>更新于 {fmtDate(task.updated_at)}</p>
+              <p>创建于 {fmtDateTime(task.created_at)}</p>
+              <p>更新于 {fmtDateTime(task.updated_at)}</p>
             </div>
           </div>
+
+          {/* Body — BlockEditor */}
+          <div className="border-t border-white/8 pt-6">
+            <BlockEditor
+              pageId={task.id}
+              initialBlocks={initialBlocks}
+              onChange={handleBlocksChange}
+            />
+          </div>
+
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {showEdit && (
-        <EditModal task={task} onConfirm={handleEdit} onClose={() => setShowEdit(false)} />
+      {showPublish && (
+        <PublishModal
+          task={task}
+          onDone={() => { setShowPublish(false); navigate('/tasks') }}
+          onClose={() => setShowPublish(false)}
+        />
       )}
     </div>
   )
