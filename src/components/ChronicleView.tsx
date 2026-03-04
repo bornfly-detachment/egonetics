@@ -9,7 +9,7 @@
  * P5 Workflow SVG (占位)
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Plus, Lock, ChevronDown, ChevronRight, X,
   BookOpen, CheckSquare, Brain, Package,
@@ -115,6 +115,92 @@ const ENTRY_ICONS: Record<string, React.ReactNode> = {
   theory: <BookOpen size={12} className="text-orange-400 shrink-0" />,
 }
 const ENTRY_LABELS: Record<string, string> = { task: 'task', memory: 'memory', theory: 'theory' }
+
+// 预设颜色列表
+const PRESET_COLORS = [
+  '#6366f1', // indigo
+  '#8b5cf6', // violet
+  '#a855f7', // purple
+  '#d946ef', // fuchsia
+  '#ec4899', // pink
+  '#f43f5e', // rose
+  '#ef4444', // red
+  '#f97316', // orange
+  '#f59e0b', // amber
+  '#eab308', // yellow
+  '#84cc16', // lime
+  '#22c55e', // green
+  '#10b981', // emerald
+  '#14b8a6', // teal
+  '#06b6d4', // cyan
+  '#0ea5e9', // sky
+  '#3b82f6', // blue
+]
+
+// 颜色选择器组件
+function ColorPicker({ value, onChange, disabled }: { value: string | null, onChange: (c: string) => void, disabled?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const currentColor = value || '#6366f1'
+
+  if (disabled) {
+    return (
+      <div
+        className="w-4 h-4 rounded-full shrink-0 border border-white/10"
+        style={{ backgroundColor: currentColor }}
+      />
+    )
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-4 h-4 rounded-full shrink-0 border border-white/20 hover:border-white/40 transition-colors"
+        style={{ backgroundColor: currentColor }}
+      />
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 bg-[#1e1e1e] border border-white/15 rounded-xl p-2 shadow-2xl">
+            <div className="grid grid-cols-6 gap-1.5">
+              {PRESET_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => { onChange(c); setOpen(false) }}
+                  className={`w-5 h-5 rounded-full border transition-all ${c === currentColor ? 'ring-2 ring-white scale-110' : 'border-white/10 hover:border-white/30'}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// 从 blocks 中提取标题（第一个 heading 或 paragraph）
+function getCollectionTitleFromBlocks(content: string | null): string {
+  if (!content) return ''
+  try {
+    const blocks = JSON.parse(content)
+    if (!Array.isArray(blocks) || blocks.length === 0) return ''
+    const firstBlock = blocks[0]
+    if (firstBlock.type?.startsWith('heading')) {
+      const richText = firstBlock.content?.rich_text
+      if (Array.isArray(richText)) {
+        return richText.map((s: any) => s.text || '').join('')
+      }
+    }
+    if (firstBlock.type === 'paragraph') {
+      const richText = firstBlock.content?.rich_text
+      if (Array.isArray(richText)) {
+        return richText.map((s: any) => s.text || '').join('')
+      }
+    }
+  } catch { /* ignore */ }
+  return ''
+}
 
 function fmtDate(ts: string | null) {
   if (!ts) return ''
@@ -396,16 +482,48 @@ function CollectionCard({ col, allEntries, allCollections, collectionItems, onEn
   const [isDragOver, setIsDragOver] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(col.name)
+  const [contentExpanded, setContentExpanded] = useState(false)
+  const [localBlocks, setLocalBlocks] = useState<Block[] | undefined>(undefined)
+  const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isLocked = !!col.is_locked
   const borderColor = col.color || '#6366f1'
   const items = collectionItems[col.id] || []
   const children = allCollections.filter(c => c.parent_id === col.id).sort((a, b) => a.sort_order - b.sort_order)
 
+  // 解析 content blocks
+  useEffect(() => {
+    if (col.content) {
+      try {
+        const parsed = JSON.parse(col.content)
+        if (Array.isArray(parsed)) {
+          setLocalBlocks(parsed)
+        }
+      } catch {
+        setLocalBlocks(undefined)
+      }
+    }
+  }, [col.content])
+
+  // 获取第一行作为预览标题
+  const contentPreview = useMemo(() => getCollectionTitleFromBlocks(col.content), [col.content])
+
   const commitName = async () => {
     setEditingName(false)
     const t = nameDraft.trim()
     if (t && t !== col.name) await patch(`/chronicle/collections/${col.id}`, { name: t }).catch(console.error)
+  }
+
+  const updateColor = async (color: string) => {
+    await patch(`/chronicle/collections/${col.id}`, { color }).catch(console.error)
+  }
+
+  const handleContentChange = (blocks: Block[]) => {
+    setLocalBlocks(blocks)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      patch(`/chronicle/collections/${col.id}`, { content: JSON.stringify(blocks) }).catch(console.error)
+    }, 800)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -427,7 +545,7 @@ function CollectionCard({ col, allEntries, allCollections, collectionItems, onEn
       onDrop={!isLocked ? handleDrop : undefined}
     >
       {/* Collection header */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex items-center gap-2 px-3 py-2.5 group">
         <button onClick={() => setCollapsed(c => !c)} className="text-neutral-600 hover:text-neutral-400 shrink-0">
           {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
         </button>
@@ -449,6 +567,8 @@ function CollectionCard({ col, allEntries, allCollections, collectionItems, onEn
             {col.name}
           </span>
         )}
+        {/* 颜色选择器 */}
+        <ColorPicker value={col.color} onChange={updateColor} disabled={isLocked} />
         {isLocked && <Lock size={11} className="text-neutral-600 shrink-0" />}
         {!isLocked && (
           <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100">
@@ -471,6 +591,46 @@ function CollectionCard({ col, allEntries, allCollections, collectionItems, onEn
       {/* Content */}
       {!collapsed && (
         <div className="px-3 pb-3">
+          {/* 集合内容预览/编辑区 */}
+          {(col.content || !isLocked) && (
+            <div className="mb-3">
+              {!contentExpanded ? (
+                <button
+                  onClick={() => !isLocked && setContentExpanded(true)}
+                  className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-left transition-colors ${
+                    isLocked ? 'opacity-60 cursor-default' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <BookOpen size={11} className="text-neutral-500 shrink-0" />
+                  <span className="text-xs text-neutral-400 flex-1 truncate">
+                    {contentPreview || (isLocked ? '无内容' : '点击编辑内容...')}
+                  </span>
+                  {!isLocked && <span className="text-[10px] text-neutral-600">编辑</span>}
+                </button>
+              ) : (
+                <div className="border border-white/10 rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-neutral-600 uppercase tracking-widest">内容</span>
+                    <button
+                      onClick={() => setContentExpanded(false)}
+                      className="text-[10px] text-neutral-500 hover:text-neutral-300"
+                    >
+                      收起
+                    </button>
+                  </div>
+                  <div className={isLocked ? 'pointer-events-none opacity-70' : ''}>
+                    <BlockEditor
+                      pageId={`col-${col.id}`}
+                      initialBlocks={localBlocks}
+                      onChange={isLocked ? undefined : handleContentChange}
+                      permissions={isLocked ? { canEdit: false, canDelete: false, canAdd: false, canReorder: false } : undefined}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Entry chips */}
           {items.map(item => {
             const fullEntry = allEntries.find(e => e.id === item.entry_id)

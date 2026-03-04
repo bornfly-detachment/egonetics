@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""
+OpenClaw JSONL 导入脚本 v5
+正确计算Token消耗和时间差（相邻assistant之间）
+"""
+
+import json
+import sqlite3
+import argparse
+import os
+from datetime import datetime
+from typing import Dict, List, Any
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('jsonl_file')
+    parser.add_argument('--db', default='memory.db')
+    return parser.parse_args()
+
+def init_db(db_path: str):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    cursor.executescript("""
+        
+        CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            title TEXT,
+            summary TEXT,
+            source_file TEXT
+        );
+        
+        CREATE TABLE IF NOT EXISTS messages (
+            id TEXT PRIMARY KEY,
+            session_id TEXT,
+            parent_id TEXT,
+            timestamp TIMESTAMP,
+            role TEXT,
+            message_type TEXT,
+            content TEXT,
+            tool_name TEXT,  -- 工具名称（exec/read/memory_search等）
+            token_input INTEGER,
+            token_output INTEGER,
+            token_total INTEGER,
+            duration_ms INTEGER,  -- 到下一个assistant的时间差（毫秒）
+            provider TEXT,
+            model TEXT,
+            raw_content TEXT,
+            FOREIGN KEY (session_id) REFERENCES sessions(id)
+        );
+        
+        CREATE TABLE IF NOT EXISTS annotations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT,
+            suggested_revision TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (message_id) REFERENCES messages(id)
+        );
+        
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE TABLE IF NOT EXISTS message_categories (
+            message_id TEXT,
+            category_id INTEGER,
+            PRIMARY KEY (message_id, category_id)
+        );
+    """)
+    
+    conn.commit()
+    return conn
+
+def parse_timestamp(ts: str) -> datetime:
+    """解析ISO时间戳"""
+    # 处理带Z的UTC时间
+    if ts.endswith('Z'):
+        ts = ts[:-1] + '+00:00'
+    return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+
+def parse_jsonl(file_path: str) -> List[Dict]:
+    records = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    records.append(json.loads(line))
+                except:
+                    pass
+    return records
+
+def calculate_durations(messages: List[Dict]) -> Dict[str, int]:
+    """
+    计算每条assistant消息到下一个assistant的时间差（毫秒）
+    如果下一个是user，则不计算（返回None）
+    """
+    durations = {}
+    
+    # 按时间排序
+    sorted_msgs = sorted(messages, key=lambda x: x.get('timestamp', ''))
+    
+    # 找到所有assistant消息的索引
+    assistant_indices = []
+    for i, msg in enumerate(sorted_msgs):
+        if msg.get('message', {}).get('role') == 'assistant':
+            assistant_indices.append(i)
+    
+    # 计算相邻assistant之间的时间差
+    for i, idx in enumerate(assistant_indices):
+        msg_id = sorted_msgs[idx].get('id')
+        
+        # 找下一个assistant
+        if i + 1 < len(assistant_indices):
+            next_idx = assistant_indices[i + 1]
+            next_msg = sorted_msgs[next_idx]
+            
+            # 检查中间是否有user消息
+            has_user_between = False
+            for j in range(idx + 1, next_idx):
+                if sorted_msgs[j].get('message', {}).get('role') == 'user':
+                    has_user_between = True
+                    break
+            
+            # 如果没有user在中间（即连续assistant），计算时间差
+            if not has_user_between:
+                curr_time = parse_timestamp(sorted_msgs[idx].get('timestamp'))
+                next_time = parse_timestamp(next_msg.get('timestamp'))
+                duration_ms = int((next_time - curr_time).total_seconds() * 1000)
+                durations[msg_id] = duration_ms
+            else:
+                durations[msg_id] = None
+        else:
+            # 最后一条assistant，没有下一个
+            durations[msg_id] = None
+    
+    return durations
+
+def import_messages(conn, records: List[Dict], session_id: str, source_file: str):
+    """导入消息，计算时间差"""
+    cursor = conn.cursor()
+    
+    # 过滤出message类型的记录
+    message_records = [r for r in records if r.get('type') == 'message']
+    
+    # 计算时间差
+    durations = calculate_durations(message_records)
+    
+    # 插入会话
+    timestamps = [r.get('timestamp') for r in message_records if r.get('timestamp')]
+    cursor.execute('''
+        INSERT OR REPLACE INTO sessions (id, created_at, updated_at, title, summary, source_file)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (session_id, min(timestamps) if timestamps else datetime.now().isoformat(),
+          max(timestamps) if timestamps else datetime.now().isoformat(),
+          f'会话 {session_id[:8]}', f'{len(message_records)} 条消息', source_file))
+    
+    # 插入消息
+    for record in message_records:
+        msg_data = record.get('message', {})
+        role = msg_data.get('role')
+        content_parts = msg_data.get('content', [])
+        
+        # 提取文本内容
+        text_content = ''
+        for part in content_parts:
+            if part.get('type') == 'text':
+                text_content = part.get('text', '')
+            elif part.get('type') == 'thinking':
+                text_content = f"[思考] {part.get('thinking', '')}"
+        
+        # 确定消息类型和提取tool_name
+        message_type = 'message'
+        tool_name = None
+        if role == 'assistant':
+            has_thinking = any(p.get('type') == 'thinking' for p in content_parts)
+            has_tool = any(p.get('type') == 'toolCall' for p in content_parts)
+            if has_thinking:
+                message_type = 'thinking'
+            elif has_tool:
+                message_type = 'tool_call'
+                # 提取第一个工具调用的名称
+                tool_part = next((p for p in content_parts if p.get('type') == 'toolCall'), None)
+                if tool_part:
+                    tool_name = tool_part.get('name')
+        elif role == 'toolResult':
+            message_type = 'tool_result'
+            tool_name = msg_data.get('toolName') or msg_data.get('tool_name')
+        
+        # 提取usage
+        usage = msg_data.get('usage', {}) or {}
+        token_input = usage.get('input') or usage.get('prompt_tokens')
+        token_output = usage.get('output') or usage.get('completion_tokens')
+        token_total = usage.get('totalTokens') or (token_input + token_output if token_input and token_output else None)
+        
+        # 获取时间差
+        duration_ms = durations.get(record.get('id'))
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO messages 
+            (id, session_id, parent_id, timestamp, role, message_type, content, tool_name,
+             token_input, token_output, token_total, duration_ms, provider, model, raw_content)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            record.get('id'),
+            session_id,
+            record.get('parentId'),
+            record.get('timestamp'),
+            role,
+            message_type,
+            text_content,
+            tool_name,
+            token_input,
+            token_output,
+            token_total,
+            duration_ms,
+            msg_data.get('provider'),
+            msg_data.get('model'),
+            json.dumps(msg_data, ensure_ascii=False)
+        ))
+    
+    conn.commit()
+    
+    # 统计
+    assistant_count = len([r for r in message_records if r.get('message', {}).get('role') == 'assistant'])
+    with_duration = len([d for d in durations.values() if d is not None])
+    print(f"✅ 已导入 {len(message_records)} 条消息")
+    print(f"   Assistant消息: {assistant_count}")
+    print(f"   计算了时间差: {with_duration}")
+
+def main():
+    args = parse_args()
+    
+    print(f"🔧 初始化数据库...")
+    conn = init_db(args.db)
+    
+    print(f"📂 解析 {args.jsonl_file}...")
+    records = parse_jsonl(args.jsonl_file)
+    
+    # 获取会话ID
+    session_id = None
+    for r in records:
+        if r.get('type') == 'session':
+            session_id = r.get('id')
+            break
+    if not session_id:
+        session_id = os.path.basename(args.jsonl_file).replace('.jsonl', '')
+    
+    import_messages(conn, records, session_id, args.jsonl_file)
+    conn.close()
+    print(f"\n🎉 导入完成!")
+
+if __name__ == '__main__':
+    main()

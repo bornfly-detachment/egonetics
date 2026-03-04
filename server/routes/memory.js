@@ -150,6 +150,15 @@ router.get('/memory/sessions', (req, res) => {
   );
 });
 
+// DELETE /api/memory/sessions/:id
+router.delete('/memory/sessions/:id', (req, res) => {
+  memoryDb.run('DELETE FROM sessions WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '会话不存在' });
+    res.json({ success: true });
+  });
+});
+
 // GET /api/memory/sessions/:id
 router.get('/memory/sessions/:id', (req, res) => {
   memoryDb.get('SELECT * FROM sessions WHERE id = ?', [req.params.id], (err, session) => {

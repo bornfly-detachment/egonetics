@@ -11,7 +11,10 @@
     "init-pages": "node scripts/init-pages-db.js",
     "init-agents": "node scripts/init-agents-db.js",
     "migrate": "node scripts/migrate-chronicle.js",
-    "import": "node scripts/import-jsonl.js"
+    "import": "node scripts/import-jsonl.js",
+    "backup": "node ../scripts/backup-claude-projects.js",
+    "backup:daemon": "node ../scripts/backup-claude-projects.js --daemon",
+    "backup:dry": "node ../scripts/backup-claude-projects.js --dry-run"
   },
   "dependencies": {
     "body-parser": "^1.20.2",

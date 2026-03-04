@@ -579,14 +579,17 @@ function BoardPublishModal({ board, onDone, onClose }: {
 
 // ── Session Library (right side) ──────────────────────────
 
-function SessionItem({ session, onTitleEdit }: {
+function SessionItem({ session, onTitleEdit, onDelete }: {
   session: Session
   onTitleEdit: (id: string, title: string) => void
+  onDelete?: (id: string) => void
 }) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [draft,        setDraft]        = useState(session.annotation_title ?? '')
   const [expanded,     setExpanded]     = useState(false)
   const [rounds,       setRounds]       = useState<Round[] | null>(null)
+  const [steps,        setSteps]        = useState<Record<string, Step[]>>({})
+  const [expandedRounds, setExpandedRounds] = useState<Record<string, boolean>>({})
   const [loadingRounds, setLoadingRounds] = useState(false)
 
   const displayTitle = session.annotation_title || session.id.slice(0, 12) + '…'
@@ -609,6 +612,21 @@ function SessionItem({ session, onTitleEdit }: {
         .then(d => setRounds(d.rounds || []))
         .catch(() => setRounds([]))
         .finally(() => setLoadingRounds(false))
+    }
+  }
+
+  const toggleRound = async (roundId: string) => {
+    const wasExpanded = !!expandedRounds[roundId]
+    setExpandedRounds(e => ({ ...e, [roundId]: !wasExpanded }))
+    if (!wasExpanded && !steps[roundId]) {
+      const d = await apiFetch(`/memory/rounds/${roundId}/steps`)
+      setSteps(prev => ({ ...prev, [roundId]: d.steps || [] }))
+    }
+  }
+
+  const handleDelete = () => {
+    if (window.confirm('确定要删除这个会话吗？此操作不可撤销。')) {
+      onDelete?.(session.id)
     }
   }
 
@@ -675,19 +693,55 @@ function SessionItem({ session, onTitleEdit }: {
             >
               <Edit2 size={11} />
             </button>
+            {onDelete && (
+              <button
+                onClick={handleDelete}
+                className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-neutral-600 hover:text-red-400 transition-all"
+                title="删除会话"
+              >
+                <Trash2 size={11} />
+              </button>
+            )}
             <span className="opacity-0 group-hover:opacity-100 text-[10px] text-neutral-600 cursor-grab" title="拖入面板">拖→</span>
           </div>
         </div>
 
         {expanded && (
-          <div className="px-3 pb-3 border-t border-neutral-800/60 pt-2">
+          <div className="px-3 pb-3 border-t border-neutral-800/60 pt-2 space-y-1">
             {loadingRounds && <div className="text-xs text-neutral-500">加载轮次…</div>}
+            {!loadingRounds && (!rounds?.length) && <div className="text-xs text-neutral-500">无对话记录</div>}
             {rounds?.map(r => (
-              <div key={r.id} className="mb-1">
-                <div className="text-xs text-neutral-400 mb-0.5">
-                  <span className="text-neutral-600">#{r.round_num}</span>{' '}
-                  {r.user_input?.slice(0, 100) || <em className="text-neutral-600">空</em>}
+              <div key={r.id} className="border border-neutral-800 rounded">
+                <div
+                  className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer hover:bg-white/5"
+                  onClick={() => toggleRound(r.id)}
+                >
+                  {expandedRounds[r.id] ? <ChevronDown size={12} className="text-neutral-500" /> : <ChevronRight size={12} className="text-neutral-500" />}
+                  <MessageCircle size={11} className="text-green-400 shrink-0" />
+                  <span className="text-xs text-neutral-300 flex-1">
+                    <span className="text-neutral-500 mr-1">#{r.round_num}</span>
+                    {r.user_input ? r.user_input.slice(0, 80) + (r.user_input.length > 80 ? '…' : '') : <em className="text-neutral-600">空</em>}
+                  </span>
+                  <span className="text-[10px] text-neutral-500 shrink-0 flex items-center gap-2">
+                    {r.step_count} 步
+                    {(r.token_input + r.token_output) > 0 && (
+                      <span>{fmtTokens(r.token_input + r.token_output)} tok</span>
+                    )}
+                    {r.duration_ms > 0 && (
+                      <span>{(r.duration_ms / 1000).toFixed(1)}s</span>
+                    )}
+                  </span>
                 </div>
+                {expandedRounds[r.id] && (
+                  <div className="px-2.5 pb-2">
+                    {r.user_input && (
+                      <div className="bg-blue-900/20 border border-blue-700/30 rounded p-2 mb-1.5 text-xs text-blue-200 whitespace-pre-wrap">
+                        {r.user_input}
+                      </div>
+                    )}
+                    {(steps[r.id] || []).map(step => <StepRow key={step.id} step={step} />)}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -724,6 +778,16 @@ function SessionLibrary() {
 
   const handleTitleEdit = (id: string, title: string) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, annotation_title: title } : s))
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`${API}/memory/sessions/${id}`, { method: 'DELETE' })
+      setSessions(prev => prev.filter(s => s.id !== id))
+      setTotal(prev => prev - 1)
+    } catch (e) {
+      console.error('删除失败:', e)
+    }
   }
 
   const filtered = search
@@ -777,6 +841,7 @@ function SessionLibrary() {
                 key={s.id}
                 session={s}
                 onTitleEdit={handleTitleEdit}
+                onDelete={handleDelete}
               />
             ))}
           </div>

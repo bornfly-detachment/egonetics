@@ -155,7 +155,7 @@ router.get('/chronicle/entries/:id/annotations', (req, res) => {
   memoryDb.get('SELECT id FROM chronicle_entries WHERE id = ?', [req.params.id], (err, entry) => {
     if (err || !entry) return res.status(404).json({ error: '条目不存在' });
     memoryDb.all(
-      'SELECT * FROM chronicle_annotations WHERE entry_id = ? ORDER BY version',
+      'SELECT * FROM chronicle_annotations WHERE entry_id = ? ORDER BY version ASC, created_at ASC',
       [req.params.id], (err, annotations) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ annotations: annotations || [] });

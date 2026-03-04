@@ -228,19 +228,115 @@ function parseClaudeCode(records, sourceFile) {
     return ta - tb;
   });
 
-  // 过滤掉旁链（isSidechain === true）
-  const mainRecords = sorted.filter(r => !r.isSidechain);
+  // 过滤记录：只保留有效的对话记录
+  const mainRecords = sorted.filter(r => {
+    // 跳过旁链
+    if (r.isSidechain) return false;
+    // 跳过文件快照记录
+    if (r.type === 'file-history-snapshot') return false;
+    // 跳过进度记录
+    if (r.type === 'progress') return false;
+    // 跳过队列操作记录
+    if (r.type === 'queue-operation') return false;
+    // 跳过系统错误记录
+    if (r.type === 'system' && r.subtype === 'api_error') return false;
+    // 跳过元消息
+    if (r.isMeta) return false;
+    // 必须有 type 字段
+    if (!r.type) return false;
+    return true;
+  });
 
-  const model = mainRecords.find(r => r.type === 'assistant')?.message?.model || null;
-  const timestamps = mainRecords.map(r => r.timestamp).filter(Boolean);
+  // 预处理：合并连续的 assistant 消息（Claude Code 会把 thinking/tool_use/text 分成多条记录）
+  const mergedRecords = [];
+  for (let i = 0; i < mainRecords.length; i++) {
+    const r = mainRecords[i];
+
+    if (r.type === 'assistant') {
+      // 找到所有连续的 assistant 消息
+      let j = i + 1;
+      const contents = [...(r.message?.content || [])];
+      let lastTimestamp = r.timestamp;
+      let totalUsage = { ...(r.message?.usage || {}) };
+
+      while (j < mainRecords.length && mainRecords[j].type === 'assistant') {
+        const nextRec = mainRecords[j];
+        const nextContent = nextRec.message?.content || [];
+        contents.push(...nextContent);
+        lastTimestamp = nextRec.timestamp;
+        // 累加 usage
+        const nextUsage = nextRec.message?.usage || {};
+        totalUsage.input_tokens = (totalUsage.input_tokens || 0) + (nextUsage.input_tokens || 0);
+        totalUsage.output_tokens = (totalUsage.output_tokens || 0) + (nextUsage.output_tokens || 0);
+        totalUsage.cache_read_input_tokens = (totalUsage.cache_read_input_tokens || 0) + (nextUsage.cache_read_input_tokens || 0);
+        j++;
+      }
+
+      // 创建合并后的记录
+      mergedRecords.push({
+        ...r,
+        timestamp: lastTimestamp,
+        message: {
+          ...r.message,
+          content: contents,
+          usage: totalUsage,
+        },
+      });
+
+      i = j - 1; // 跳过已合并的记录
+    } else {
+      mergedRecords.push(r);
+    }
+  }
+
+  // 再过滤：处理 user 消息
+  const filteredRecords = [];
+  for (let i = 0; i < mergedRecords.length; i++) {
+    const r = mergedRecords[i];
+    if (r.type === 'user') {
+      const content = r.message?.content;
+      let text = '';
+      if (Array.isArray(content)) {
+        // 过滤掉 <ide_opened_file> 这类消息，只保留真正的用户输入
+        const textParts = content.filter(c => c.type === 'text' && c.text);
+        const realUserParts = textParts.filter(c =>
+          !c.text.startsWith('<ide_opened_file>') &&
+          !c.text.includes('<local-command-caveat>') &&
+          !c.text.includes('<command-name>') &&
+          !c.text.includes('<local-command-stdout>')
+        );
+        if (realUserParts.length === 0) {
+          // 没有真正的用户输入，但如果有 tool_result，保留作为 tool_result
+          const hasToolResult = content.some(c => c.type === 'tool_result');
+          if (!hasToolResult) continue;
+        }
+        text = realUserParts.map(c => c.text || '').join('\n');
+      } else if (typeof content === 'string') {
+        text = content;
+      }
+      // 跳过空消息（但保留有 tool_result 的）
+      const hasToolResult = Array.isArray(content) && content.some(c => c.type === 'tool_result');
+      if (!text.trim() && !hasToolResult) {
+        continue;
+      }
+    }
+    filteredRecords.push(r);
+  }
+
+  if (filteredRecords.length === 0) {
+    return { session: null, rounds: [], steps: [] };
+  }
+
+  const model = filteredRecords.find(r => r.type === 'assistant')?.message?.model || null;
+  const timestamps = filteredRecords.map(r => r.timestamp).filter(Boolean);
   const startedAt = timestamps[0] || null;
   const endedAt   = timestamps[timestamps.length - 1] || null;
 
   let totalInput = 0, totalOutput = 0;
-  for (const r of mainRecords) {
+  for (const r of filteredRecords) {
     if (r.type === 'assistant') {
       const u = r.message?.usage || {};
-      totalInput  += (u.input_tokens  || u.input  || 0);
+      totalInput  += (u.input_tokens  || u.input  || u.cache_read_input_tokens || 0);
       totalOutput += (u.output_tokens || u.output || 0);
     }
   }
@@ -264,15 +360,39 @@ function parseClaudeCode(records, sourceFile) {
   let roundNum = 0;
   let stepNum  = 0;
 
-  for (const r of mainRecords) {
-    if (r.type === 'user') {
+  for (const r of filteredRecords) {
+    // 检查是否是真正的 user 消息（有 text 内容，非 tool_result）
+    const isRealUserMessage = r.type === 'user' && (() => {
+      const content = r.message?.content;
+      if (Array.isArray(content)) {
+        const hasRealText = content.some(c =>
+          c.type === 'text' && c.text &&
+          !c.text.startsWith('<ide_opened_file>') &&
+          !c.text.includes('<local-command-caveat>')
+        );
+        return hasRealText;
+      }
+      return typeof content === 'string' && content.trim();
+    })();
+
+    // 检查是否是 tool_result
+    const isToolResult = r.type === 'tool' ||
+      (r.type === 'user' && r.message?.content && Array.isArray(r.message.content) &&
+       r.message.content.some(c => c.type === 'tool_result'));
+
+    if (isRealUserMessage) {
       // 新轮次
       roundNum++;
       stepNum = 0;
       const content = r.message?.content;
       const userText = Array.isArray(content)
-        ? content.filter(c => c.type === 'text').map(c => c.text || '').join('\n')
+        ? content.filter(c => c.type === 'text' && c.text &&
+            !c.text.startsWith('<ide_opened_file>') &&
+            !c.text.includes('<local-command-caveat>')
+          ).map(c => c.text || '').join('\n')
         : (typeof content === 'string' ? content : '');
+
+      if (!userText.trim()) continue; // 跳过空用户消息
 
       curRound = {
         id: genId('rnd'),
@@ -294,11 +414,15 @@ function parseClaudeCode(records, sourceFile) {
     if (r.type === 'assistant') {
       const content = r.message?.content || [];
       const usage   = r.message?.usage   || {};
-      curRound.token_input  += (usage.input_tokens  || 0);
+      curRound.token_input  += (usage.input_tokens  || usage.cache_read_input_tokens || 0);
       curRound.token_output += (usage.output_tokens || 0);
       const durationMs = r.durationMs || 0;
 
-      for (const part of content) {
+      // 处理 content 可能是字符串的情况（虽然少见）
+      const parts = Array.isArray(content) ? content : [];
+
+      for (const part of parts) {
+        if (!part) continue;
         stepNum++;
         if (part.type === 'thinking') {
           steps.push({
@@ -335,8 +459,7 @@ function parseClaudeCode(records, sourceFile) {
       curRound.ended_at = r.timestamp || curRound.ended_at;
     }
 
-    // tool result: top-level type=="tool", or type=="user" with userType=="tool_result"
-    if (r.type === 'tool' || (r.type === 'user' && r.message?.role === 'tool')) {
+    if (isToolResult) {
       stepNum++;
       const content = r.message?.content || [];
       const outputText = Array.isArray(content)
@@ -357,7 +480,7 @@ function parseClaudeCode(records, sourceFile) {
         round_id: curRound.id,
         step_num: stepNum,
         type: 'tool_result',
-        tool_name: r.message?.tool_use_id ? null : null, // tool name not always available
+        tool_name: null,
         content: JSON.stringify({ output: outputText }),
         duration_ms: 0,
       });
@@ -365,15 +488,37 @@ function parseClaudeCode(records, sourceFile) {
     }
   }
 
-  // round duration
+  // 过滤掉没有 steps 的 round
+  const validRounds = [];
   for (const round of rounds) {
+    const roundSteps = steps.filter(s => s.round_id === round.id);
+    if (roundSteps.length > 0) {
+      validRounds.push(round);
+    }
+  }
+
+  // 重新编号 round_num
+  validRounds.forEach((round, idx) => {
+    round.round_num = idx + 1;
+  });
+
+  // round duration
+  for (const round of validRounds) {
     if (round.started_at && round.ended_at) {
       round.duration_ms = Math.max(0, toMs(round.ended_at) - toMs(round.started_at));
     }
   }
-  session.duration_ms = rounds.reduce((s, r) => s + r.duration_ms, 0);
+  session.duration_ms = validRounds.reduce((s, r) => s + r.duration_ms, 0);
 
-  return { session, rounds, steps };
+  // 只保留有效 round 的 steps
+  const validStepRoundIds = new Set(validRounds.map(r => r.id));
+  const validSteps = steps.filter(s => validStepRoundIds.has(s.round_id));
+
+  if (validRounds.length === 0) {
+    return { session: null, rounds: [], steps: [] };
+  }
+
+  return { session, rounds: validRounds, steps: validSteps };
 }
 
 // ── DB 写入 ────────────────────────────────────────────────
