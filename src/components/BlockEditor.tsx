@@ -1039,6 +1039,7 @@ function InlineEditor({
         onChange={(val) => setDraft(val)}
         onBlur={commit}
         placeholder="// 输入代码…"
+        isEditing={isEditing} // 传递编辑状态
       />
     )
   }
