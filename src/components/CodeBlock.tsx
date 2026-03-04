@@ -75,16 +75,7 @@ interface CodeBlockProps {
   onBlur?: () => void
   readOnly?: boolean
   placeholder?: string
-}
-
-interface CodeBlockProps {
-  language: string
-  value: string
-  onChange?: (value: string) => void
-  onBlur?: () => void
-  readOnly?: boolean
-  placeholder?: string
-  isEditing?: boolean // 新增：接受父组件的编辑状态
+  isEditing?: boolean // 接受父组件的编辑状态
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = ({
