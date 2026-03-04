@@ -1,7 +1,7 @@
 // ============================================================
 //  CodeBlock.tsx  —  代码块组件（支持 Markdown 预览 + CodeMirror）
 // ============================================================
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -76,6 +76,7 @@ interface CodeBlockProps {
   readOnly?: boolean
   placeholder?: string
   isEditing?: boolean // 接受父组件的编辑状态
+  onClickEdit?: () => void // 新增：点击预览模式时进入编辑模式
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = ({
@@ -85,19 +86,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
   onBlur,
   readOnly = false,
   placeholder = '',
-  isEditing: externalIsEditing = false,
+  isEditing = false,
+  onClickEdit,
 }) => {
-  const [isEditing, setIsEditing] = useState(false)
   const isMarkdown = language === 'markdown' || language === 'md'
-
-  // 同步外部编辑状态
-  useEffect(() => {
-    if (externalIsEditing && !isEditing) {
-      setIsEditing(true)
-    } else if (!externalIsEditing && isEditing) {
-      setIsEditing(false)
-    }
-  }, [externalIsEditing])
 
   // Markdown 语言：点击编辑，失焦预览
   if (isMarkdown && !readOnly) {
@@ -116,7 +108,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
             ]}
             onChange={(val: string) => onChange?.(val)}
             onBlur={() => {
-              setIsEditing(false)
               onBlur?.()
             }}
             autoFocus
@@ -129,7 +120,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
     return (
       <div
         className="w-full cursor-text prose prose-invert prose-sm max-w-none"
-        onClick={() => setIsEditing(true)}
+        onClick={onClickEdit}
       >
         {value ? (
           <ReactMarkdown
@@ -163,9 +154,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
               table({ children }: any) {
                 return (
                   <div className="my-4 overflow-x-auto">
-                    <table className="border-collapse border border-neutral-700 w-full">
-                      {children}
-                    </table>
+                    <table className="border-collapse border border-neutral-700 w-full">{children}</table>
                   </div>
                 )
               },
