@@ -20,13 +20,33 @@
 
 export type BlockType =
   | 'paragraph'
-  | 'heading1' | 'heading2' | 'heading3' | 'heading4'
-  | 'bullet' | 'numbered' | 'todo' | 'toggle'
-  | 'quote' | 'callout_info' | 'callout_warning' | 'callout_success' | 'callout_tip'
-  | 'code' | 'math' | 'equation_block'
-  | 'image' | 'video' | 'audio' | 'file' | 'bookmark'
-  | 'divider' | 'table' | 'columns2' | 'columns3' | 'toc'
-  | 'subpage'   // ← 子页面块，块内嵌入一个子页面的入口
+  | 'heading1'
+  | 'heading2'
+  | 'heading3'
+  | 'heading4'
+  | 'bullet'
+  | 'numbered'
+  | 'todo'
+  | 'toggle'
+  | 'quote'
+  | 'callout_info'
+  | 'callout_warning'
+  | 'callout_success'
+  | 'callout_tip'
+  | 'code'
+  | 'math'
+  | 'equation_block'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'file'
+  | 'bookmark'
+  | 'divider'
+  | 'table'
+  | 'columns2'
+  | 'columns3'
+  | 'toc'
+  | 'subpage' // ← 子页面块，块内嵌入一个子页面的入口
 
 export interface RichTextSegment {
   text: string
@@ -43,9 +63,77 @@ export interface TableCell {
   rich_text: RichTextSegment[]
 }
 
+// ── 级联标签系统 ─────────────────────────────────────────────────
+
+// 标签节点（支持无限层级）
+export interface BlockTagNode {
+  id: string
+  name: string
+  color?: string
+  children?: BlockTagNode[]
+}
+
+// 块上的标签引用（存储在 metadata.tags 中）
+export interface BlockTagRef {
+  tagId: string // 引用的标签节点 ID
+  path: string[] // 完整路径，如 ['角色', '前端']
+  name: string // 冗余存储标签名
+  color?: string // 冗余存储颜色
+}
+
+// 预设的级联标签树
+export const DEFAULT_TAG_TREE: BlockTagNode[] = [
+  {
+    id: 'tag-role',
+    name: '角色',
+    color: '#8b5cf6',
+    children: [
+      { id: 'tag-role-frontend', name: '前端', color: '#3b82f6' },
+      { id: 'tag-role-backend', name: '后端', color: '#10b981' },
+      { id: 'tag-role-product', name: '产品', color: '#f59e0b' },
+      { id: 'tag-role-ops', name: '运维', color: '#6b7280' },
+      { id: 'tag-role-content', name: '内容创造', color: '#ec4899' },
+      { id: 'tag-role-subject', name: '主体性', color: '#14b8a6' },
+    ],
+  },
+  {
+    id: 'tag-tech',
+    name: '技术栈',
+    color: '#06b6d4',
+    children: [
+      { id: 'tag-tech-react', name: 'React', color: '#61dafb' },
+      { id: 'tag-tech-typescript', name: 'TypeScript', color: '#3178c6' },
+      { id: 'tag-tech-nodejs', name: 'Node.js', color: '#339933' },
+      { id: 'tag-tech-python', name: 'Python', color: '#3776ab' },
+      { id: 'tag-tech-sqlite', name: 'SQLite', color: '#003b57' },
+    ],
+  },
+  {
+    id: 'tag-status',
+    name: '状态',
+    color: '#f97316',
+    children: [
+      { id: 'tag-status-todo', name: '待办', color: '#ef4444' },
+      { id: 'tag-status-doing', name: '进行中', color: '#eab308' },
+      { id: 'tag-status-done', name: '已完成', color: '#22c55e' },
+      { id: 'tag-status-blocked', name: '阻塞', color: '#a855f7' },
+    ],
+  },
+  {
+    id: 'tag-priority',
+    name: '优先级',
+    color: '#dc2626',
+    children: [
+      { id: 'tag-priority-high', name: '高', color: '#dc2626' },
+      { id: 'tag-priority-medium', name: '中', color: '#ea580c' },
+      { id: 'tag-priority-low', name: '低', color: '#16a34a' },
+    ],
+  },
+]
+
 export interface Block {
   id: string
-  parentId: string | null       // 父块 id，null 表示顶层
+  parentId: string | null // 父块 id，null 表示顶层
   type: BlockType
   content: {
     rich_text: RichTextSegment[]
@@ -57,14 +145,17 @@ export interface Block {
     numberStart?: number
     toggleOpen?: boolean
     fileName?: string
-    imageWidth?: number         // 图片宽度百分比 1-100，undefined = 100%
+    imageWidth?: number // 图片宽度百分比 1-100，undefined = 100%
     // subpage 块专用
-    subpageId?: string          // 指向的子页面 id
-    subpageTitle?: string       // 冗余存一份标题，避免跨页查询
+    subpageId?: string // 指向的子页面 id
+    subpageTitle?: string // 冗余存一份标题，避免跨页查询
     subpageIcon?: string
   }
   position: number
-  metadata?: Record<string, any>
+  metadata?: {
+    tags?: BlockTagRef[] // 块级标签
+    [key: string]: any
+  }
   collapsed?: boolean
 }
 
@@ -74,13 +165,13 @@ export type PageType = 'page' | 'task' | 'chronicle' | 'theory'
 // 页面元信息（不含块内容）
 export interface PageMeta {
   id: string
-  parentId: string | null       // 父页面 id，null 表示根页面
-  pageType: PageType            // 页面类型
-  refId: string | null          // 关联ID（如 task_id）
+  parentId: string | null // 父页面 id，null 表示根页面
+  pageType: PageType // 页面类型
+  refId: string | null // 关联ID（如 task_id）
   title: string
-  icon: string                  // emoji，如 "📄"
-  position: number              // 同级排序浮点数
-  createdAt: string             // ISO 8601
+  icon: string // emoji，如 "📄"
+  position: number // 同级排序浮点数
+  createdAt: string // ISO 8601
   updatedAt: string
 }
 
@@ -93,8 +184,8 @@ export interface Page extends PageMeta {
 
 export interface CreatePageInput {
   parentId: string | null
-  pageType?: PageType         // 页面类型，默认 'page'
-  refId?: string | null       // 关联ID
+  pageType?: PageType // 页面类型，默认 'page'
+  refId?: string | null // 关联ID
   title?: string
   icon?: string
   position?: number

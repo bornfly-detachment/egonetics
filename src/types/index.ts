@@ -47,7 +47,18 @@ export interface Agent {
 
 export interface UIState {
   sidebarOpen: boolean
-  currentView: 'memory' | 'theory' | 'chronicle' | 'egonetics' | 'tasks' | 'agents' | 'settings' | 'project-detail' | 'blog' | 'editor1' | 'editor2'
+  currentView:
+    | 'memory'
+    | 'theory'
+    | 'chronicle'
+    | 'egonetics'
+    | 'tasks'
+    | 'agents'
+    | 'settings'
+    | 'project-detail'
+    | 'blog'
+    | 'editor1'
+    | 'editor2'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'
@@ -58,13 +69,20 @@ export interface UIState {
 // Projects System (Notion-style)
 // ============================================
 
-export type PropertyType = 'text' | 'number' | 'select' | 'multi-select' | 'date' | 'checkbox' | 'url'
+export type PropertyType =
+  | 'text'
+  | 'number'
+  | 'select'
+  | 'multi-select'
+  | 'date'
+  | 'checkbox'
+  | 'url'
 
 export interface PropertyDef {
   id: string
   name: string
   type: PropertyType
-  options?: string[]  // for select/multi-select
+  options?: string[] // for select/multi-select
 }
 
 export interface Project {

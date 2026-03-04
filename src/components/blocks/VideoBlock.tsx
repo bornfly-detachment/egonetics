@@ -9,9 +9,7 @@ interface VideoBlockProps {
 
 const VideoBlock: React.FC<VideoBlockProps> = ({ content, onChange }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const [editUrl, setEditUrl] = useState(
-    typeof content === 'string' ? content : content.url
-  )
+  const [editUrl, setEditUrl] = useState(typeof content === 'string' ? content : content.url)
   const [editAutoplay, setEditAutoplay] = useState(
     typeof content === 'string' ? false : content.autoplay || false
   )
@@ -70,10 +68,7 @@ const VideoBlock: React.FC<VideoBlockProps> = ({ content, onChange }) => {
             </label>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              className="btn-primary text-sm px-3 py-1"
-            >
+            <button onClick={handleSave} className="btn-primary text-sm px-3 py-1">
               保存
             </button>
             <button

@@ -9,9 +9,7 @@ interface AudioBlockProps {
 
 const AudioBlock: React.FC<AudioBlockProps> = ({ content, onChange }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const [editUrl, setEditUrl] = useState(
-    typeof content === 'string' ? content : content.url
-  )
+  const [editUrl, setEditUrl] = useState(typeof content === 'string' ? content : content.url)
   const [editAutoplay, setEditAutoplay] = useState(
     typeof content === 'string' ? false : content.autoplay || false
   )
@@ -70,10 +68,7 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ content, onChange }) => {
             </label>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              className="btn-primary text-sm px-3 py-1"
-            >
+            <button onClick={handleSave} className="btn-primary text-sm px-3 py-1">
               保存
             </button>
             <button
@@ -92,12 +87,7 @@ const AudioBlock: React.FC<AudioBlockProps> = ({ content, onChange }) => {
       ) : (
         <div className="relative group">
           {url ? (
-            <audio
-              src={url}
-              autoPlay={autoplay}
-              controls={controls}
-              className="w-full"
-            />
+            <audio src={url} autoPlay={autoplay} controls={controls} className="w-full" />
           ) : (
             <div className="flex flex-col items-center justify-center py-8 bg-neutral-900/50 border border-neutral-700 rounded-lg border-dashed">
               <Mic className="w-12 h-12 text-neutral-500 mb-3" />

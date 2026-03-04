@@ -10,27 +10,31 @@ interface ChronicleStore {
   tasks: Task[]
   agents: Agent[]
   uiState: UIState
-  
+
   // Actions
-  addEntry: (content: string, type?: EntryType, metadata?: Record<string, any>) => Promise<ChronicleEntry>
+  addEntry: (
+    content: string,
+    type?: EntryType,
+    metadata?: Record<string, any>
+  ) => Promise<ChronicleEntry>
   verifyChain: () => { valid: boolean; brokenAt?: number; error?: string }
   getChain: () => ChronicleEntry[]
   getLatestEntry: () => ChronicleEntry
   getEntryCount: () => number
-  
+
   // Task management
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Task
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
-  
+
   // Agent management
   addAgent: (agent: Omit<Agent, 'id'>) => Agent
   updateAgent: (id: string, updates: Partial<Agent>) => void
-  
+
   // UI state
   setUIState: (updates: Partial<UIState>) => void
   toggleSidebar: () => void
-  
+
   // Initialize
   initialize: () => void
 }
@@ -48,13 +52,13 @@ export const useChronicleStore = create<ChronicleStore>()(
         currentTaskId: null,
         theme: 'dark',
         fontSize: 'md',
-        language: 'zh'
+        language: 'zh',
       },
 
       initialize: () => {
         const chronicle = new BornflyChronicle()
         const loaded = chronicle.loadFromStorage()
-        
+
         set({
           chronicle,
           entries: chronicle.getChain(),
@@ -66,7 +70,7 @@ export const useChronicleStore = create<ChronicleStore>()(
               role: 'Orchestrator',
               status: 'active',
               capabilities: ['decision', 'memory', 'coordination'],
-              currentTask: undefined
+              currentTask: undefined,
             },
             {
               id: 'agent-2',
@@ -74,26 +78,29 @@ export const useChronicleStore = create<ChronicleStore>()(
               role: 'Worker',
               status: 'idle',
               capabilities: ['execution', 'monitoring'],
-              currentTask: undefined
-            }
-          ]
+              currentTask: undefined,
+            },
+          ],
         })
 
         if (!loaded) {
           // Add initial entries
           chronicle.addEntry('Egonetics system initialized. Life Core activated.', 'evolution')
-          chronicle.addEntry('Bornfly Theory principles loaded. Ready for self-evolution.', 'principle')
+          chronicle.addEntry(
+            'Bornfly Theory principles loaded. Ready for self-evolution.',
+            'principle'
+          )
         }
       },
 
       addEntry: async (content, type = 'memory', metadata) => {
         const { chronicle } = get()
         const entry = await chronicle.addEntry(content, type, metadata)
-        
+
         set((state) => ({
-          entries: [...state.entries, entry]
+          entries: [...state.entries, entry],
         }))
-        
+
         return entry
       },
 
@@ -122,11 +129,11 @@ export const useChronicleStore = create<ChronicleStore>()(
           ...taskData,
           id: `task-${Date.now()}`,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         }
 
         set((state) => ({
-          tasks: [...state.tasks, task]
+          tasks: [...state.tasks, task],
         }))
 
         return task
@@ -134,28 +141,26 @@ export const useChronicleStore = create<ChronicleStore>()(
 
       updateTask: (id, updates) => {
         set((state) => ({
-          tasks: state.tasks.map(task =>
-            task.id === id
-              ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-              : task
-          )
+          tasks: state.tasks.map((task) =>
+            task.id === id ? { ...task, ...updates, updatedAt: new Date().toISOString() } : task
+          ),
         }))
       },
 
       deleteTask: (id) => {
         set((state) => ({
-          tasks: state.tasks.filter(task => task.id !== id)
+          tasks: state.tasks.filter((task) => task.id !== id),
         }))
       },
 
       addAgent: (agentData) => {
         const agent: Agent = {
           ...agentData,
-          id: `agent-${Date.now()}`
+          id: `agent-${Date.now()}`,
         }
 
         set((state) => ({
-          agents: [...state.agents, agent]
+          agents: [...state.agents, agent],
         }))
 
         return agent
@@ -163,23 +168,21 @@ export const useChronicleStore = create<ChronicleStore>()(
 
       updateAgent: (id, updates) => {
         set((state) => ({
-          agents: state.agents.map(agent =>
-            agent.id === id ? { ...agent, ...updates } : agent
-          )
+          agents: state.agents.map((agent) => (agent.id === id ? { ...agent, ...updates } : agent)),
         }))
       },
 
       setUIState: (updates) => {
         set((state) => ({
-          uiState: { ...state.uiState, ...updates }
+          uiState: { ...state.uiState, ...updates },
         }))
       },
 
       toggleSidebar: () => {
         set((state) => ({
-          uiState: { ...state.uiState, sidebarOpen: !state.uiState.sidebarOpen }
+          uiState: { ...state.uiState, sidebarOpen: !state.uiState.sidebarOpen },
         }))
-      }
+      },
     }),
     {
       name: 'egonetics-store',
@@ -187,8 +190,8 @@ export const useChronicleStore = create<ChronicleStore>()(
         entries: state.entries,
         tasks: state.tasks,
         agents: state.agents,
-        uiState: state.uiState
-      })
+        uiState: state.uiState,
+      }),
     }
   )
 )

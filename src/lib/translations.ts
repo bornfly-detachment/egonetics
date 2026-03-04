@@ -24,7 +24,7 @@ export interface Translation {
   theoryDesc: string
   chronicleDesc: string
   egoneticsDesc: string
-  
+
   // Memory View
   memoryTitle: string
   memorySubtitle: string
@@ -37,7 +37,7 @@ export interface Translation {
   sortByTime: string
   noMemory: string
   selectDateToStart: string
-  
+
   // Theory View
   theoryTitle: string
   theorySubtitle: string
@@ -56,7 +56,7 @@ export interface Translation {
   currentHash: string
   previousHash: string
   chainVerified: string
-  
+
   // Chronicle View
   chronicleTitle: string
   chronicleSubtitle: string
@@ -72,7 +72,7 @@ export interface Translation {
     principle: string
     task: string
   }
-  
+
   // Egonetics View
   egoneticsTitle: string
   egoneticsSubtitle: string
@@ -83,7 +83,7 @@ export interface Translation {
   status: string
   active: string
   archived: string
-  
+
   // Tasks View
   tasksTitle: string
   tasksSubtitle: string
@@ -102,7 +102,7 @@ export interface Translation {
   addTask: string
   noTasks: string
   createFirstTask: string
-  
+
   // Common
   save: string
   delete: string
@@ -139,7 +139,7 @@ export const translations: Record<Language, Translation> = {
     theoryDesc: '核心价值判断框架',
     chronicleDesc: '自我迭代的时间线证据',
     egoneticsDesc: '不可僭越的用户原则',
-    
+
     // Memory View
     memoryTitle: '记忆',
     memorySubtitle: '按日期存储的交互历史。每一天都是独特的记忆卡片。',
@@ -152,7 +152,7 @@ export const translations: Record<Language, Translation> = {
     sortByTime: '按时间排序',
     noMemory: '暂无记忆',
     selectDateToStart: '选择日期开始记录你的记忆。',
-    
+
     // Theory View
     theoryTitle: '生变论 (Bornfly Theory)',
     theorySubtitle: '核心价值判断框架。线性不可更改的hash链，每次修改都有完整记录。',
@@ -171,7 +171,7 @@ export const translations: Record<Language, Translation> = {
     currentHash: '当前Hash',
     previousHash: '上一Hash',
     chainVerified: '✓ 链上验证通过',
-    
+
     // Chronicle View
     chronicleTitle: '生变录 (Chronicle)',
     chronicleSubtitle: '自我迭代的时间线证据。记录每个重要的决策和演化节点。',
@@ -185,9 +185,9 @@ export const translations: Record<Language, Translation> = {
       decision: '决策',
       evolution: '演化',
       principle: '原则',
-      task: '任务'
+      task: '任务',
     },
-    
+
     // Egonetics View
     egoneticsTitle: '自我控制论 (Egonetics)',
     egoneticsSubtitle: '不可僭越的用户原则。定义系统的行为边界和核心价值观。',
@@ -198,7 +198,7 @@ export const translations: Record<Language, Translation> = {
     status: '状态',
     active: '活跃',
     archived: '已归档',
-    
+
     // Tasks View
     tasksTitle: '任务 (Tasks)',
     tasksSubtitle: 'Notion 风格的任务卡片。自由书写，灵活配置属性。',
@@ -217,7 +217,7 @@ export const translations: Record<Language, Translation> = {
     addTask: '添加任务',
     noTasks: '暂无任务',
     createFirstTask: '创建第一个任务',
-    
+
     // Common
     save: '保存',
     delete: '删除',
@@ -227,9 +227,9 @@ export const translations: Record<Language, Translation> = {
     success: '成功',
     error: '错误',
     warningAlert: '警告',
-    info: '信息'
+    info: '信息',
   },
-  
+
   en: {
     // Sidebar
     memory: 'Memory',
@@ -253,26 +253,28 @@ export const translations: Record<Language, Translation> = {
     theoryDesc: 'Core value judgment framework',
     chronicleDesc: 'Timeline evidence of self-iteration',
     egoneticsDesc: 'Non-transgressible user principles',
-    
+
     // Memory View
     memoryTitle: 'Memory',
     memorySubtitle: 'Date-based interaction history. Each day is a unique memory card.',
     addMemory: 'Add Memory',
     searchMemory: 'Search Memory',
     memoryCalendar: 'Memory Calendar',
-    todayMemory: 'Today\'s Memory',
-    thisMonthMemory: 'This Month\'s Memory',
+    todayMemory: "Today's Memory",
+    thisMonthMemory: "This Month's Memory",
     recentMemory: 'Recent Memories',
     sortByTime: 'Sort by time',
     noMemory: 'No memory yet',
     selectDateToStart: 'Select a date to start recording your memories.',
-    
+
     // Theory View
     theoryTitle: 'Bornfly Theory',
-    theorySubtitle: 'Core value judgment framework. Linear immutable hash chain with complete modification records.',
+    theorySubtitle:
+      'Core value judgment framework. Linear immutable hash chain with complete modification records.',
     chainLength: 'Chain Length',
     warning: 'Warning: Theory Modification Rules',
-    warningDesc: 'Each modification creates a new version, old versions are permanently preserved. Submit changes carefully.',
+    warningDesc:
+      'Each modification creates a new version, old versions are permanently preserved. Submit changes carefully.',
     inputPlaceholder: 'Enter new theory principle or modification description...',
     thisEditWillCreate: 'This edit will create version',
     cancel: 'Cancel',
@@ -285,10 +287,11 @@ export const translations: Record<Language, Translation> = {
     currentHash: 'Current Hash',
     previousHash: 'Previous Hash',
     chainVerified: '✓ Chain verified',
-    
+
     // Chronicle View
     chronicleTitle: 'Chronicle',
-    chronicleSubtitle: 'Timeline evidence of self-iteration. Records each important decision and evolution node.',
+    chronicleSubtitle:
+      'Timeline evidence of self-iteration. Records each important decision and evolution node.',
     timelineTitle: 'Timeline',
     addTimelineEntry: 'Add Timeline Entry',
     entryContent: 'Entry Content',
@@ -299,12 +302,13 @@ export const translations: Record<Language, Translation> = {
       decision: 'Decision',
       evolution: 'Evolution',
       principle: 'Principle',
-      task: 'Task'
+      task: 'Task',
     },
-    
+
     // Egonetics View
     egoneticsTitle: 'Egonetics',
-    egoneticsSubtitle: 'Non-transgressible user principles. Defines system behavior boundaries and core values.',
+    egoneticsSubtitle:
+      'Non-transgressible user principles. Defines system behavior boundaries and core values.',
     principlesTitle: 'Principles List',
     addPrinciple: 'Add Principle',
     principleContent: 'Principle Content',
@@ -312,7 +316,7 @@ export const translations: Record<Language, Translation> = {
     status: 'Status',
     active: 'Active',
     archived: 'Archived',
-    
+
     // Tasks View
     tasksTitle: 'Tasks',
     tasksSubtitle: 'Notion-style task cards. Free writing, flexible properties.',
@@ -331,7 +335,7 @@ export const translations: Record<Language, Translation> = {
     addTask: 'Add Task',
     noTasks: 'No tasks yet',
     createFirstTask: 'Create first task',
-    
+
     // Common
     save: 'Save',
     delete: 'Delete',
@@ -341,22 +345,22 @@ export const translations: Record<Language, Translation> = {
     success: 'Success',
     error: 'Error',
     warningAlert: 'Warning',
-    info: 'Info'
-  }
+    info: 'Info',
+  },
 }
 
 // Hook to use translations
 export function useTranslation() {
   const { uiState } = useChronicleStore()
   const language = uiState.language || 'zh'
-  
+
   return {
     t: translations[language as Language],
     language,
     setLanguage: (lang: Language) => {
       const { setUIState } = useChronicleStore.getState()
       setUIState({ language: lang })
-    }
+    },
   }
 }
 

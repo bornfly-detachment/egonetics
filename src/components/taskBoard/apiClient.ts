@@ -32,9 +32,7 @@ export interface ApiClient {
  */
 export function createApiClient(pageType: string): ApiClient {
   // Task 类型使用 kanban API，其他类型使用标准 API
-  const endpoint = pageType === 'task'
-    ? `${API_BASE}/kanban/tasks`
-    : `${API_BASE}/${pageType}s`
+  const endpoint = pageType === 'task' ? `${API_BASE}/kanban/tasks` : `${API_BASE}/${pageType}s`
 
   return {
     /**
@@ -75,7 +73,7 @@ export function createApiClient(pageType: string): ApiClient {
         const res = await fetch(url.toString())
         if (!res.ok) return []
         const data = await res.json()
-        return Array.isArray(data) ? data : data.data ?? []
+        return Array.isArray(data) ? data : (data.data ?? [])
       } catch (error) {
         console.error(`Failed to fetch ${pageType} list:`, error)
         return []

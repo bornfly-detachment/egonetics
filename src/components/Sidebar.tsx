@@ -7,7 +7,7 @@ import {
   Brain,
   History,
   Calendar,
-  BookOpen
+  BookOpen,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
@@ -15,12 +15,36 @@ import { useTranslation } from '@/lib/translations'
 const Sidebar: React.FC = () => {
   const { uiState, setUIState, verifyChain, getEntryCount } = useChronicleStore()
   const { t, language, setLanguage } = useTranslation()
-  
+
   const lifeCoreItems = [
-    { id: 'memory', label: t.memory, icon: Calendar, color: 'text-blue-400', description: t.memoryDesc },
-    { id: 'theory', label: t.theory, icon: Brain, color: 'text-yellow-400', description: t.theoryDesc },
-    { id: 'chronicle', label: t.chronicle, icon: History, color: 'text-primary-400', description: t.chronicleDesc },
-    { id: 'egonetics', label: t.principles, icon: Shield, color: 'text-red-400', description: t.egoneticsDesc },
+    {
+      id: 'memory',
+      label: t.memory,
+      icon: Calendar,
+      color: 'text-blue-400',
+      description: t.memoryDesc,
+    },
+    {
+      id: 'theory',
+      label: t.theory,
+      icon: Brain,
+      color: 'text-yellow-400',
+      description: t.theoryDesc,
+    },
+    {
+      id: 'chronicle',
+      label: t.chronicle,
+      icon: History,
+      color: 'text-primary-400',
+      description: t.chronicleDesc,
+    },
+    {
+      id: 'egonetics',
+      label: t.principles,
+      icon: Shield,
+      color: 'text-red-400',
+      description: t.egoneticsDesc,
+    },
   ]
 
   const otherItems = [
@@ -44,15 +68,17 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className={`glass-panel h-full flex flex-col transition-all duration-300 ${uiState.sidebarOpen ? 'w-64' : 'w-20'}`}>
+    <aside
+      className={`glass-panel h-full flex flex-col transition-all duration-300 ${uiState.sidebarOpen ? 'w-64' : 'w-20'}`}
+    >
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center space-x-3">
           {/* 侧边栏 Logo：使用 bornfly_logo.png，自适应大小 */}
-          <img 
-            src="/bornfly_logo.png" 
-            alt="Bornfly Logo" 
-            className="max-w-full max-h-16 object-contain app-logo" 
+          <img
+            src="/bornfly_logo.png"
+            alt="Bornfly Logo"
+            className="max-w-full max-h-16 object-contain app-logo"
             style={{ maxHeight: '64px', width: 'auto', height: 'auto' }}
           />
           {uiState.sidebarOpen && (
@@ -119,9 +145,7 @@ const Sidebar: React.FC = () => {
               }`}
             >
               <item.icon className={`w-5 h-5 ${item.color}`} />
-              {uiState.sidebarOpen && (
-                <span className="font-medium">{item.label}</span>
-              )}
+              {uiState.sidebarOpen && <span className="font-medium">{item.label}</span>}
             </button>
           ))}
         </div>

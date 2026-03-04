@@ -55,8 +55,8 @@ const TaskPageView: React.FC = () => {
     if (!taskId) return
 
     fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.name) {
           setTaskName(data.name)
         }
@@ -80,7 +80,14 @@ const TaskPageView: React.FC = () => {
             onClick={() => navigate('/tasks')}
             className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
             <span className="text-sm">返回任务列表</span>
@@ -101,7 +108,14 @@ const TaskPageView: React.FC = () => {
           onClick={() => navigate('/tasks')}
           className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           <span className="text-sm">返回任务列表</span>

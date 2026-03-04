@@ -6,18 +6,19 @@
 
 ### 主要改动
 
-| 功能 | 旧逻辑 | 新逻辑 |
-|------|--------|--------|
-| **点击 task 卡片** | 弹出编辑弹窗 | 导航到详情页 `/tasks/{taskId}` |
-| **编辑任务** | 在看板弹窗编辑 | 右上角编辑按钮 → 在详情页或弹窗编辑 |
-| **任务详情** | 无 | 完整详情页面，展示所有信息 |
-| **编辑按钮位置** | 无 | 卡片右上角 + 详情页右上角 |
+| 功能               | 旧逻辑         | 新逻辑                              |
+| ------------------ | -------------- | ----------------------------------- |
+| **点击 task 卡片** | 弹出编辑弹窗   | 导航到详情页 `/tasks/{taskId}`      |
+| **编辑任务**       | 在看板弹窗编辑 | 右上角编辑按钮 → 在详情页或弹窗编辑 |
+| **任务详情**       | 无             | 完整详情页面，展示所有信息          |
+| **编辑按钮位置**   | 无             | 卡片右上角 + 详情页右上角           |
 
 ---
 
 ## 📁 新增文件
 
 ### 1. **KanbanBoard.tsx** (改造版本)
+
 - **位置**: `/mnt/user-data/outputs/KanbanBoard.tsx`
 - **改动点**:
   - ✅ 导入 `useNavigate` from `react-router-dom`
@@ -27,6 +28,7 @@
   - ✅ 编辑弹窗现在只在右上角编辑按钮点击时弹出
 
 **关键代码示例**:
+
 ```typescript
 // 点击卡片 → 导航到详情页
 const handleCardClick = useCallback((taskId: string) => {
@@ -45,6 +47,7 @@ onClick={() => !showMenu && onCardClick(task.id)}
 ---
 
 ### 2. **TaskDetailPage.tsx** (新增)
+
 - **位置**: `/mnt/user-data/outputs/TaskDetailPage.tsx`
 - **功能**:
   - 路由: `/tasks/:taskId`
@@ -55,6 +58,7 @@ onClick={() => !showMenu && onCardClick(task.id)}
   - 左上角返回按钮返回看板
 
 **关键特性**:
+
 ```typescript
 const apiClient = useMemo(() => createApiClient('task'), [])
 
@@ -74,6 +78,7 @@ const handleEdit = async (updated: Partial<Task>) => {
 ---
 
 ### 3. **apiClient.ts** (新增)
+
 - **位置**: `/mnt/user-data/outputs/apiClient.ts`
 - **功能**:
   - 创建类型化的 API 客户端
@@ -82,6 +87,7 @@ const handleEdit = async (updated: Partial<Task>) => {
   - 自动处理网络错误
 
 **使用示例**:
+
 ```typescript
 // 方式 1：创建 task API 客户端（推荐）
 const taskApi = createTaskApiClient()
@@ -96,6 +102,7 @@ const chronicles = await chronicleApi.fetchList()
 ---
 
 ### 4. **INTEGRATION_GUIDE.md** (新增)
+
 - **位置**: `/mnt/user-data/outputs/INTEGRATION_GUIDE.md`
 - **内容**:
   - 路由配置示例
@@ -112,6 +119,7 @@ const chronicles = await chronicleApi.fetchList()
 ## 🔄 交互流程
 
 ### 看板页面 (KanbanBoard)
+
 ```
 用户点击 task 卡片
     ↓
@@ -137,6 +145,7 @@ const chronicles = await chronicleApi.fetchList()
 ```
 
 ### 详情页 (TaskDetailPage)
+
 ```
 用户进入详情页 /tasks/{taskId}
     ↓
@@ -164,12 +173,15 @@ const chronicles = await chronicleApi.fetchList()
 ## 📦 安装和集成步骤
 
 ### 1. 安装依赖
+
 ```bash
 npm install react-router-dom@6+
 ```
 
 ### 2. 配置路由
+
 在 `App.tsx` 中添加路由：
+
 ```typescript
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import KanbanBoard from './components/KanbanBoard'
@@ -188,12 +200,15 @@ function App() {
 ```
 
 ### 3. 复制文件
+
 - 将 `KanbanBoard.tsx` 替换原文件
 - 将 `TaskDetailPage.tsx` 放入 `src/pages/`
 - 将 `apiClient.ts` 放入 `src/utils/`
 
 ### 4. 检查 API 地址
+
 确保 `apiClient.ts` 中的 `API_BASE` 与你的后端地址一致：
+
 ```typescript
 const API_BASE = 'http://localhost:3003/api'
 ```
@@ -203,6 +218,7 @@ const API_BASE = 'http://localhost:3003/api'
 ## 🎯 核心 API 端点
 
 ### 后端需要实现的接口
+
 - `GET /api/tasks` - 获取所有任务
 - `GET /api/tasks/:id` - 获取单个任务 (详情页)
 - `POST /api/tasks` - 创建任务
@@ -214,18 +230,20 @@ const API_BASE = 'http://localhost:3003/api'
 ## 🔍 关键改动对比
 
 ### 旧版 TaskCard
+
 ```typescript
 // 点击卡片弹出编辑弹窗
 onClick={() => !showMenu && onEdit(task)}
 ```
 
 ### 新版 TaskCard
+
 ```typescript
 // 点击卡片导航到详情页
 onClick={() => !showMenu && onCardClick(task.id)}
 
 // 右上角编辑按钮
-<button onClick={(e) => { 
+<button onClick={(e) => {
   e.stopPropagation()
   onEditClick(task)
 }}>
@@ -237,11 +255,11 @@ onClick={() => !showMenu && onCardClick(task.id)}
 
 ## 📊 组件职责划分
 
-| 组件 | 职责 |
-|------|------|
-| **KanbanBoard** | 看板视图、卡片列表、拖拽排序、快速编辑 |
-| **TaskDetailPage** | 详情视图、完整信息展示、详细编辑 |
-| **apiClient** | 统一的 API 调用、错误处理、类型支持 |
+| 组件               | 职责                                   |
+| ------------------ | -------------------------------------- |
+| **KanbanBoard**    | 看板视图、卡片列表、拖拽排序、快速编辑 |
+| **TaskDetailPage** | 详情视图、完整信息展示、详细编辑       |
+| **apiClient**      | 统一的 API 调用、错误处理、类型支持    |
 
 ---
 
@@ -257,19 +275,25 @@ onClick={() => !showMenu && onCardClick(task.id)}
 ## ❓ 常见问题
 
 ### Q: 点击卡片不跳转？
+
 **A**: 检查以下几点：
+
 1. 是否在路由中配置了 `/tasks/:taskId` 路由
 2. `useNavigate()` 是否正确导入
 3. `react-router-dom` 是否已安装
 
 ### Q: 详情页加载失败？
+
 **A**: 检查以下几点：
+
 1. 后端是否实现了 `GET /api/tasks/:id` 接口
 2. `API_BASE` 地址是否正确
 3. 浏览器控制台是否有网络错误
 
 ### Q: 编辑后无法保存？
+
 **A**: 检查以下几点：
+
 1. 后端是否实现了 `PUT /api/tasks/:id` 接口
 2. 请求体格式是否正确
 3. 浏览器控制台是否有错误信息
@@ -278,18 +302,19 @@ onClick={() => !showMenu && onCardClick(task.id)}
 
 ## 📝 文件清单
 
-| 文件 | 类型 | 说明 |
-|------|------|------|
-| `KanbanBoard.tsx` | 改造版本 | 看板主组件，添加了导航逻辑 |
-| `TaskDetailPage.tsx` | 新增 | 任务详情页组件 |
-| `apiClient.ts` | 新增 | API 客户端工厂函数 |
-| `INTEGRATION_GUIDE.md` | 文档 | 详细集成指南 |
+| 文件                   | 类型     | 说明                       |
+| ---------------------- | -------- | -------------------------- |
+| `KanbanBoard.tsx`      | 改造版本 | 看板主组件，添加了导航逻辑 |
+| `TaskDetailPage.tsx`   | 新增     | 任务详情页组件             |
+| `apiClient.ts`         | 新增     | API 客户端工厂函数         |
+| `INTEGRATION_GUIDE.md` | 文档     | 详细集成指南               |
 
 ---
 
 ## 🔗 后续扩展
 
 ### 支持其他页面类型
+
 现有架构支持轻松扩展到其他页面类型（如 Chronicle）：
 
 ```typescript
@@ -300,6 +325,7 @@ const chronicleApi = createApiClient('chronicle')
 ```
 
 ### 添加更多功能
+
 - ✏️ 评论系统
 - 📋 子任务支持
 - 📎 附件上传
@@ -328,6 +354,7 @@ const chronicleApi = createApiClient('chronicle')
 ## 📞 支持
 
 如有任何问题，请：
+
 1. 查看 `INTEGRATION_GUIDE.md` 中的常见问题解答
 2. 检查浏览器控制台的错误信息
 3. 检查网络请求（F12 → Network 标签）

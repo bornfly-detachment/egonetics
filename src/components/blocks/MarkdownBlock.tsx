@@ -24,7 +24,10 @@ const MarkdownBlock: React.FC<MarkdownBlockProps> = ({ content, onChange }) => {
       .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-8 mb-4 gradient-text">$1</h1>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-neutral-800 px-1 py-0.5 rounded text-sm font-mono">$1</code>')
+      .replace(
+        /`(.*?)`/g,
+        '<code class="bg-neutral-800 px-1 py-0.5 rounded text-sm font-mono">$1</code>'
+      )
       .replace(/\n/g, '<br />')
   }
 
@@ -49,10 +52,7 @@ const MarkdownBlock: React.FC<MarkdownBlockProps> = ({ content, onChange }) => {
             placeholder="输入 Markdown..."
           />
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              className="btn-primary text-sm px-3 py-1"
-            >
+            <button onClick={handleSave} className="btn-primary text-sm px-3 py-1">
               保存
             </button>
             <button

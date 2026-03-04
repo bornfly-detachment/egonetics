@@ -49,7 +49,7 @@ function createTaskApiClient(taskId: string, taskName: string, taskIcon: string)
     if (storedPageId) {
       try {
         const pages = await baseClient.listPages()
-        const existingPage = pages.find(p => p.id === storedPageId)
+        const existingPage = pages.find((p) => p.id === storedPageId)
         if (existingPage) {
           if (existingPage.title !== taskName || existingPage.icon !== taskIcon) {
             return await baseClient.updatePage(storedPageId, { title: taskName, icon: taskIcon })
@@ -150,11 +150,7 @@ const NotionPageView: React.FC = () => {
 
   if (!isLoading && !task) {
     return (
-      <PageLayout
-        title="任务不存在"
-        showBack
-        onBack={handleBack}
-      >
+      <PageLayout title="任务不存在" showBack onBack={handleBack}>
         <div className="p-8 text-center">
           <p className="text-neutral-400 mb-4">任务不存在或已被删除</p>
           <button
@@ -170,12 +166,7 @@ const NotionPageView: React.FC = () => {
 
   if (isLoading || !taskApiClient) {
     return (
-      <PageLayout
-        title={task?.name || '加载中...'}
-        icon={task?.icon}
-        showBack
-        onBack={handleBack}
-      >
+      <PageLayout title={task?.name || '加载中...'} icon={task?.icon} showBack onBack={handleBack}>
         <div className="p-8 text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-neutral-400">加载页面...</p>
@@ -192,7 +183,14 @@ const NotionPageView: React.FC = () => {
           onClick={handleBack}
           className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           <span className="text-sm">返回任务列表</span>

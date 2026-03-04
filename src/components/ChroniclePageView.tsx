@@ -17,9 +17,7 @@ const ChroniclePageView: React.FC = () => {
           <span className="text-white font-medium">Chronicle</span>
         </div>
         <div className="flex-1" />
-        <div className="text-neutral-500 text-sm">
-          记录生命的连续性
-        </div>
+        <div className="text-neutral-500 text-sm">记录生命的连续性</div>
       </div>
 
       {/* PageManager 内容区 */}

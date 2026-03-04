@@ -60,15 +60,14 @@ const JsonBlock: React.FC<JsonBlockProps> = ({ content, onChange }) => {
             placeholder='{"key": "value"}'
           />
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              className="btn-primary text-sm px-3 py-1"
-            >
+            <button onClick={handleSave} className="btn-primary text-sm px-3 py-1">
               保存
             </button>
             <button
               onClick={() => {
-                setEditValue(typeof content === 'string' ? content : JSON.stringify(content, null, 2))
+                setEditValue(
+                  typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+                )
                 setIsEditing(false)
               }}
               className="btn-secondary text-sm px-3 py-1"

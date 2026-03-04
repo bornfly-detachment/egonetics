@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Calendar,
   Edit3,
   Eye,
@@ -34,7 +34,7 @@ import {
   Link,
   Type,
   Hash,
-  CheckSquare
+  CheckSquare,
 } from 'lucide-react'
 import { useTasksStore } from '@/stores/useTasksStore'
 import { useChronicleStore } from '@/stores/useChronicleStore'
@@ -56,13 +56,20 @@ import PageLayout from './PageLayout'
 // Property type icons
 const PropertyTypeIcon: React.FC<{ type: PropertyType }> = ({ type }) => {
   switch (type) {
-    case 'text': return <Type className="w-4 h-4" />
-    case 'number': return <Hash className="w-4 h-4" />
-    case 'date': return <Calendar className="w-4 h-4" />
-    case 'checkbox': return <CheckSquare className="w-4 h-4" />
-    case 'url': return <Link className="w-4 h-4" />
-    case 'select': return <List className="w-4 h-4" />
-    default: return <Type className="w-4 h-4" />
+    case 'text':
+      return <Type className="w-4 h-4" />
+    case 'number':
+      return <Hash className="w-4 h-4" />
+    case 'date':
+      return <Calendar className="w-4 h-4" />
+    case 'checkbox':
+      return <CheckSquare className="w-4 h-4" />
+    case 'url':
+      return <Link className="w-4 h-4" />
+    case 'select':
+      return <List className="w-4 h-4" />
+    default:
+      return <Type className="w-4 h-4" />
   }
 }
 
@@ -85,16 +92,16 @@ const PropertyRow: React.FC<{
 }> = ({ def, value, onChange, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
-  
+
   useEffect(() => {
     setEditValue(value)
   }, [value])
-  
+
   const handleSave = () => {
     onChange(editValue)
     setIsEditing(false)
   }
-  
+
   const renderInput = () => {
     switch (def.type) {
       case 'text':
@@ -154,8 +161,10 @@ const PropertyRow: React.FC<{
             className="w-full bg-transparent text-neutral-200 outline-none border-b border-white/20 focus:border-primary-500 transition-colors py-1"
           >
             <option value="">选择...</option>
-            {(def.options || []).map(opt => (
-              <option key={opt} value={opt} className="bg-neutral-800">{opt}</option>
+            {(def.options || []).map((opt) => (
+              <option key={opt} value={opt} className="bg-neutral-800">
+                {opt}
+              </option>
             ))}
           </select>
         )
@@ -163,12 +172,12 @@ const PropertyRow: React.FC<{
         return null
     }
   }
-  
+
   return (
     <div className="group flex items-center gap-3 py-2 px-3 hover:bg-white/5 rounded-lg transition-colors">
       <PropertyTypeIcon type={def.type} />
       <span className="text-sm text-neutral-400 w-20 flex-shrink-0">{def.name}</span>
-      
+
       {isEditing ? (
         <div className="flex-1 flex items-center gap-2">
           {renderInput()}
@@ -177,17 +186,18 @@ const PropertyRow: React.FC<{
           </button>
         </div>
       ) : (
-        <div 
+        <div
           onClick={() => setIsEditing(true)}
           className="flex-1 text-sm text-neutral-200 cursor-pointer min-h-[24px] flex items-center"
         >
-          {def.type === 'checkbox' 
-            ? (value ? '✓' : '○')
-            : value || <span className="text-neutral-600 italic">点击编辑</span>
-          }
+          {def.type === 'checkbox'
+            ? value
+              ? '✓'
+              : '○'
+            : value || <span className="text-neutral-600 italic">点击编辑</span>}
         </div>
       )}
-      
+
       <button
         onClick={onDelete}
         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded text-neutral-500 hover:text-red-400 transition-all"
@@ -207,32 +217,39 @@ const AddPropertyModal: React.FC<{
   const [name, setName] = useState('')
   const [type, setType] = useState<PropertyType>('text')
   const [options, setOptions] = useState('')
-  
+
   if (!isOpen) return null
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-    
+
     onAdd({
       name: name.trim(),
       type,
-      options: type === 'select' || type === 'multi-select' 
-        ? options.split(',').map(o => o.trim()).filter(o => o)
-        : undefined
+      options:
+        type === 'select' || type === 'multi-select'
+          ? options
+              .split(',')
+              .map((o) => o.trim())
+              .filter((o) => o)
+          : undefined,
     })
-    
+
     setName('')
     setType('text')
     setOptions('')
     onClose()
   }
-  
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-      <div className="glass-panel p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div className="glass-panel p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-semibold mb-4">添加属性</h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-2">属性名称</label>
@@ -245,18 +262,18 @@ const AddPropertyModal: React.FC<{
               autoFocus
             />
           </div>
-          
+
           <div>
             <label className="block text-sm text-neutral-400 mb-2">属性类型</label>
             <div className="grid grid-cols-4 gap-2">
-              {PROPERTY_TYPES.map(pt => (
+              {PROPERTY_TYPES.map((pt) => (
                 <button
                   key={pt.type}
                   type="button"
                   onClick={() => setType(pt.type)}
                   className={`p-3 rounded-lg text-center transition-all ${
-                    type === pt.type 
-                      ? 'bg-primary-500/30 border border-primary-500/50' 
+                    type === pt.type
+                      ? 'bg-primary-500/30 border border-primary-500/50'
                       : 'bg-white/5 hover:bg-white/10 border border-transparent'
                   }`}
                 >
@@ -266,7 +283,7 @@ const AddPropertyModal: React.FC<{
               ))}
             </div>
           </div>
-          
+
           {(type === 'select' || type === 'multi-select') && (
             <div>
               <label className="block text-sm text-neutral-400 mb-2">选项 (逗号分隔)</label>
@@ -279,7 +296,7 @@ const AddPropertyModal: React.FC<{
               />
             </div>
           )}
-          
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">
               取消
@@ -297,7 +314,7 @@ const AddPropertyModal: React.FC<{
 // Tiptap Editor Toolbar
 const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
   if (!editor) return null
-  
+
   const ToolbarButton: React.FC<{
     onClick: () => void
     isActive?: boolean
@@ -309,10 +326,10 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       onClick={onClick}
       disabled={disabled}
       className={`p-2 rounded transition-colors ${
-        disabled 
+        disabled
           ? 'opacity-30 cursor-not-allowed text-neutral-500'
-          : isActive 
-            ? 'bg-white/20 text-primary-400' 
+          : isActive
+            ? 'bg-white/20 text-primary-400'
             : 'hover:bg-white/10 text-neutral-400'
       }`}
       title={title}
@@ -320,24 +337,18 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       {children}
     </button>
   )
-  
+
   return (
     <div className="flex items-center gap-1 p-2 border-b border-white/10 flex-wrap">
-      <ToolbarButton
-        onClick={() => editor.chain().focus().undo().run()}
-        title="撤销"
-      >
+      <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="撤销">
         <Undo className="w-4 h-4" />
       </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().redo().run()}
-        title="重做"
-      >
+      <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="重做">
         <Redo className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <div className="w-px h-6 bg-white/10 mx-1" />
-      
+
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={editor.isActive('bold')}
@@ -380,9 +391,9 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       >
         <Highlighter className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <div className="w-px h-6 bg-white/10 mx-1" />
-      
+
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         isActive={editor.isActive('heading', { level: 1 })}
@@ -404,9 +415,9 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       >
         <Heading3 className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <div className="w-px h-6 bg-white/10 mx-1" />
-      
+
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         isActive={editor.isActive('bulletList')}
@@ -428,9 +439,9 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       >
         <Quote className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <div className="w-px h-6 bg-white/10 mx-1" />
-      
+
       <ToolbarButton
         onClick={() => {
           const url = window.prompt('输入链接地址')
@@ -443,7 +454,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       >
         <Link className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <ToolbarButton
         onClick={() => {
           const color = window.prompt('输入颜色 (hex)', '#ffffff')
@@ -455,18 +466,20 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
       >
         <Palette className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <div className="w-px h-6 bg-white/10 mx-1" />
-      
+
       {/* Table controls */}
       <div className="flex items-center gap-0 border border-white/10 rounded">
         <ToolbarButton
-          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          onClick={() =>
+            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+          }
           title="插入表格"
         >
           <TableIcon className="w-4 h-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().addColumnBefore().run()}
           title="在前面添加列"
@@ -474,7 +487,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
         >
           <Columns className="w-4 h-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().addRowAfter().run()}
           title="在后面添加行"
@@ -482,7 +495,7 @@ const EditorToolbar: React.FC<{ editor: any }> = ({ editor }) => {
         >
           <Rows className="w-4 h-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().deleteTable().run()}
           title="删除表格"
@@ -504,33 +517,33 @@ const MarkdownEditor: React.FC<{
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: '开始书写你的内容... 支持表格、富文本、代码块等'
+        placeholder: '开始书写你的内容... 支持表格、富文本、代码块等',
       }),
       UnderlineExt,
       Highlight.configure({
-        multicolor: true
+        multicolor: true,
       }),
       LinkExt.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-primary-400 hover:text-primary-300 underline'
-        }
+          class: 'text-primary-400 hover:text-primary-300 underline',
+        },
       }),
       TextStyle,
       Color,
       Table.configure({
         resizable: true,
         HTMLAttributes: {
-          class: 'border-collapse border border-white/20'
-        }
+          class: 'border-collapse border border-white/20',
+        },
       }),
       TableRow,
       TableHeader,
       TableCell.configure({
         HTMLAttributes: {
-          class: 'border border-white/20 p-2'
-        }
-      })
+          class: 'border border-white/20 p-2',
+        },
+      }),
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
@@ -538,11 +551,11 @@ const MarkdownEditor: React.FC<{
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[400px] p-6 bg-transparent'
-      }
-    }
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-[400px] p-6 bg-transparent',
+      },
+    },
   })
-  
+
   return (
     <div className="flex flex-col h-full bg-neutral-900/30 rounded-xl overflow-hidden">
       <EditorToolbar editor={editor} />
@@ -554,39 +567,39 @@ const MarkdownEditor: React.FC<{
 }
 
 const ProjectDetailView: React.FC = () => {
-  const { 
-    tasks, 
-    currentTaskId, 
+  const {
+    tasks,
+    currentTaskId,
     setCurrentTask,
-    addPropertyDef, 
+    addPropertyDef,
     deletePropertyDef,
     updatePropertyValue,
     updateContent,
-    loadTask
+    loadTask,
   } = useTasksStore()
-  const setUIState = useChronicleStore(s => s.setUIState)
-  
+  const setUIState = useChronicleStore((s) => s.setUIState)
+
   // 加载任务详情（如果缺少属性定义）
   useEffect(() => {
     if (currentTaskId) {
-      const currentTask = tasks.find(t => t.id === currentTaskId)
+      const currentTask = tasks.find((t) => t.id === currentTaskId)
       if (currentTask && (!currentTask.propertyDefs || !currentTask.properties)) {
         // 任务存在但缺少详情，加载完整数据
         loadTask(currentTaskId)
       }
     }
   }, [currentTaskId, tasks, loadTask])
-  
+
   const [showAddProperty, setShowAddProperty] = useState(false)
   const [showActions, setShowActions] = useState(false)
-  
-  const task = tasks.find(t => t.id === currentTaskId)
-  
+
+  const task = tasks.find((t) => t.id === currentTaskId)
+
   if (!task) {
     return (
       <div className="p-8 text-center">
         <p className="text-neutral-400 mb-4">任务不存在</p>
-        <button 
+        <button
           onClick={() => {
             setCurrentTask(null)
             setUIState({ currentView: 'tasks' })
@@ -598,7 +611,7 @@ const ProjectDetailView: React.FC = () => {
       </div>
     )
   }
-  
+
   // Format date with more detail
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -607,24 +620,24 @@ const ProjectDetailView: React.FC = () => {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
-  
+
   // Get content stats
   const getContentStats = () => {
     if (!task.content) return { chars: 0, words: 0, readingTime: 0 }
-    
+
     const text = task.content.replace(/<[^>]*>/g, '')
     const chars = text.length
-    const words = text.split(/\s+/).filter(w => w.length > 0).length
+    const words = text.split(/\s+/).filter((w) => w.length > 0).length
     const readingTime = Math.ceil(words / 200) // 200 words per minute
-    
+
     return { chars, words, readingTime }
   }
-  
+
   const contentStats = getContentStats()
-  
+
   // Action buttons
   const ActionButtons = () => (
     <div className="flex items-center gap-2">
@@ -635,7 +648,7 @@ const ProjectDetailView: React.FC = () => {
         <Plus className="w-4 h-4" />
         添加属性
       </button>
-      
+
       <div className="relative">
         <button
           onClick={() => setShowActions(!showActions)}
@@ -643,7 +656,7 @@ const ProjectDetailView: React.FC = () => {
         >
           <MoreVertical className="w-5 h-5" />
         </button>
-        
+
         {showActions && (
           <div className="absolute right-0 top-full mt-2 bg-neutral-800/95 backdrop-blur-sm rounded-lg shadow-2xl py-2 z-20 min-w-[180px] border border-white/10">
             <button
@@ -699,7 +712,7 @@ const ProjectDetailView: React.FC = () => {
       </div>
     </div>
   )
-  
+
   return (
     <PageLayout
       title={task.name}
@@ -718,7 +731,9 @@ const ProjectDetailView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="text-center">
-              <div className="text-xl font-bold gradient-text">{task.propertyDefs?.length || 0}</div>
+              <div className="text-xl font-bold gradient-text">
+                {task.propertyDefs?.length || 0}
+              </div>
               <div className="text-xs text-neutral-500 mt-1">自定义属性</div>
             </div>
             <div className="h-6 w-px bg-white/10" />
@@ -732,14 +747,14 @@ const ProjectDetailView: React.FC = () => {
               <div className="text-xs text-neutral-500 mt-1">分钟阅读</div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm text-neutral-400">
             <Clock className="w-4 h-4" />
             <span>最后更新: {formatDate(task.updated_at)}</span>
           </div>
         </div>
       </div>
-      
+
       {/* Content */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Left: Properties Panel - Blog sidebar style */}
@@ -747,7 +762,9 @@ const ProjectDetailView: React.FC = () => {
           <div className="sticky top-6 space-y-4">
             <div className="glass-panel p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-sm text-neutral-400 uppercase tracking-wider">任务属性</h3>
+                <h3 className="font-semibold text-sm text-neutral-400 uppercase tracking-wider">
+                  任务属性
+                </h3>
                 <button
                   onClick={() => setShowAddProperty(true)}
                   className="p-1.5 hover:bg-white/10 rounded text-neutral-400 hover:text-white transition-colors"
@@ -756,9 +773,9 @@ const ProjectDetailView: React.FC = () => {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-              
+
               <div className="space-y-3">
-                {task.propertyDefs?.map(def => (
+                {task.propertyDefs?.map((def) => (
                   <PropertyRow
                     key={def.id}
                     def={def}
@@ -767,7 +784,7 @@ const ProjectDetailView: React.FC = () => {
                     onDelete={() => deletePropertyDef(task.id, def.id)}
                   />
                 )) || []}
-                
+
                 {(!task.propertyDefs || task.propertyDefs.length === 0) && (
                   <div className="text-center py-6 text-neutral-500 text-sm">
                     <Plus className="w-5 h-5 mx-auto mb-2 opacity-50" />
@@ -776,10 +793,12 @@ const ProjectDetailView: React.FC = () => {
                 )}
               </div>
             </div>
-            
+
             {/* Quick Stats */}
             <div className="glass-panel p-5">
-              <h3 className="font-semibold text-sm text-neutral-400 uppercase tracking-wider mb-3">文档信息</h3>
+              <h3 className="font-semibold text-sm text-neutral-400 uppercase tracking-wider mb-3">
+                文档信息
+              </h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-neutral-400">创建时间</span>
@@ -809,7 +828,7 @@ const ProjectDetailView: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Right: Content Editor - Blog content style */}
         <div className="lg:col-span-4">
           <div className="glass-panel overflow-hidden">
@@ -828,7 +847,7 @@ const ProjectDetailView: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Editor */}
             <div className="h-[600px]">
               <MarkdownEditor
@@ -836,7 +855,7 @@ const ProjectDetailView: React.FC = () => {
                 onChange={(content) => updateContent(task.id, content)}
               />
             </div>
-            
+
             {/* Editor footer */}
             <div className="border-t border-white/10 p-4">
               <div className="flex items-center justify-between text-sm text-neutral-500">
@@ -846,7 +865,10 @@ const ProjectDetailView: React.FC = () => {
                   <span>段落: {task.content ? (task.content.match(/<p>/g) || []).length : 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-1 hover:bg-white/10 rounded transition-colors" title="历史记录">
+                  <button
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="历史记录"
+                  >
                     <History className="w-4 h-4" />
                   </button>
                   <button className="p-1 hover:bg-white/10 rounded transition-colors" title="收藏">
@@ -858,7 +880,7 @@ const ProjectDetailView: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Modals */}
       <AddPropertyModal
         isOpen={showAddProperty}

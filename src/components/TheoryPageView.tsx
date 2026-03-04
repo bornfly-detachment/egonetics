@@ -22,11 +22,12 @@ const chronicleFetch = async (path: string, opts?: RequestInit) => {
   return r.json()
 }
 
-const chroniclePost = (path: string, body: unknown) => chronicleFetch(path, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-})
+const chroniclePost = (path: string, body: unknown) =>
+  chronicleFetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 
 // ── Main Component ─────────────────────────────────────────
 const TheoryPageView: React.FC = () => {
@@ -44,17 +45,21 @@ const TheoryPageView: React.FC = () => {
     try {
       const data = await chronicleFetch('/chronicle/entries?type=theory')
       const map: Record<string, ArchivedPageInfo> = {}
-      for (const entry of (data.entries || [])) {
+      for (const entry of data.entries || []) {
         // source_id maps to page id; entries are DESC so first = latest
         if (entry.source_id && !map[entry.source_id]) {
           map[entry.source_id] = { version_tag: entry.version_tag || '', entry_id: entry.id }
         }
       }
       setArchivedPages(map)
-    } catch { /* non-critical, silently ignore */ }
+    } catch {
+      /* non-critical, silently ignore */
+    }
   }, [])
 
-  useEffect(() => { loadArchivedPages() }, [loadArchivedPages])
+  useEffect(() => {
+    loadArchivedPages()
+  }, [loadArchivedPages])
 
   // ── Archive handler: open modal ──
   const handleArchivePage = useCallback((page: PageMeta, blocks: Block[]) => {
@@ -87,7 +92,9 @@ const TheoryPageView: React.FC = () => {
     }
   }
 
-  const closeModal = () => { if (!archiving) setArchiveModal(null) }
+  const closeModal = () => {
+    if (!archiving) setArchiveModal(null)
+  }
 
   return (
     <div className="h-screen flex flex-col bg-[#191919]">
@@ -98,9 +105,7 @@ const TheoryPageView: React.FC = () => {
           <span className="text-white font-medium">Theory</span>
         </div>
         <div className="flex-1" />
-        <div className="text-neutral-500 text-sm">
-          Bornfly Theory 知识体系
-        </div>
+        <div className="text-neutral-500 text-sm">Bornfly Theory 知识体系</div>
       </div>
 
       {/* PageManager 内容区 */}
@@ -121,7 +126,10 @@ const TheoryPageView: React.FC = () => {
               <h2 className="text-white font-semibold text-base flex items-center gap-2">
                 🔒 入库 Chronicle
               </h2>
-              <button onClick={closeModal} className="text-neutral-400 hover:text-white transition-colors">
+              <button
+                onClick={closeModal}
+                className="text-neutral-400 hover:text-white transition-colors"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -141,8 +149,8 @@ const TheoryPageView: React.FC = () => {
                   className="w-full bg-neutral-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500/50 placeholder-neutral-600"
                   placeholder="e.g. v1.0, v2.0-alpha"
                   value={modalVersionTag}
-                  onChange={e => setModalVersionTag(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleConfirmArchive()}
+                  onChange={(e) => setModalVersionTag(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmArchive()}
                 />
               </div>
 
@@ -154,13 +162,11 @@ const TheoryPageView: React.FC = () => {
                   rows={3}
                   placeholder="这个版本记录了什么…"
                   value={modalSummary}
-                  onChange={e => setModalSummary(e.target.value)}
+                  onChange={(e) => setModalSummary(e.target.value)}
                 />
               </div>
 
-              {archiveError && (
-                <p className="text-xs text-red-400">{archiveError}</p>
-              )}
+              {archiveError && <p className="text-xs text-red-400">{archiveError}</p>}
 
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-1">
@@ -168,13 +174,15 @@ const TheoryPageView: React.FC = () => {
                   type="button"
                   onClick={closeModal}
                   disabled={archiving}
-                  className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors disabled:opacity-40">
+                  className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors disabled:opacity-40"
+                >
                   取消
                 </button>
                 <button
                   onClick={handleConfirmArchive}
                   disabled={archiving || !modalVersionTag.trim()}
-                  className="flex items-center gap-2 px-5 py-2 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white rounded-lg font-medium transition-colors">
+                  className="flex items-center gap-2 px-5 py-2 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white rounded-lg font-medium transition-colors"
+                >
                   {archiving && <Loader2 size={13} className="animate-spin" />}
                   确认入库
                 </button>

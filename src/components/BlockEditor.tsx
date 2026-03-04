@@ -4,92 +4,309 @@
 // ============================================================
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
-  Plus, Trash2, GripVertical,
-  Type, Heading1, Heading2, Heading3,
-  List, ListOrdered, CheckSquare, Quote,
-  Code, Image, Minus, ChevronRight, ChevronDown,
-  Table, AlertCircle, Info, AlertTriangle, Lightbulb,
-  ToggleLeft, Columns, Link, Hash, Film, FileText,
-  BookOpen, Star, ArrowRight, FileEdit,
+  Plus,
+  Trash2,
+  GripVertical,
+  Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  CheckSquare,
+  Quote,
+  Code,
+  Image,
+  Minus,
+  ChevronRight,
+  ChevronDown,
+  Table,
+  AlertCircle,
+  Info,
+  AlertTriangle,
+  Lightbulb,
+  ToggleLeft,
+  Columns,
+  Link,
+  Hash,
+  Film,
+  FileText,
+  BookOpen,
+  Star,
+  ArrowRight,
+  FileEdit,
+  Tag,
 } from 'lucide-react'
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import type { Block, BlockType, RichTextSegment, TableCell } from './types'
+import BlockTagSelector, { SelectedTagsList } from './BlockTagSelector'
+import CodeBlock from './CodeBlock'
 
 export type { Block, BlockType, RichTextSegment, TableCell }
 
 // ─── 权限模式 ──────────────────────────────────────────────────────────────────
 export interface BlockPermissions {
-  canEdit: boolean      // 可编辑文本内容
-  canDelete: boolean    // 可删除块
-  canAdd: boolean       // 可新增块
-  canReorder: boolean   // 可拖拽排序
+  canEdit: boolean // 可编辑文本内容
+  canDelete: boolean // 可删除块
+  canAdd: boolean // 可新增块
+  canReorder: boolean // 可拖拽排序
 }
-const DEFAULT_PERM: BlockPermissions = { canEdit: true, canDelete: true, canAdd: true, canReorder: true }
+const DEFAULT_PERM: BlockPermissions = {
+  canEdit: true,
+  canDelete: true,
+  canAdd: true,
+  canReorder: true,
+}
 
 // ─── 代码语言列表 ──────────────────────────────────────────────────────────────
 const CODE_LANGUAGES = [
-  'plaintext','markdown','json','javascript','typescript',
-  'python','java','c','cpp','csharp','go','rust','php',
-  'ruby','swift','kotlin','scala','bash','shell','powershell',
-  'sql','html','css','scss','xml','yaml','toml','dockerfile',
-  'graphql','r','matlab','lua','perl','haskell','elixir',
+  'plaintext',
+  'markdown',
+  'json',
+  'javascript',
+  'typescript',
+  'python',
+  'java',
+  'c',
+  'cpp',
+  'csharp',
+  'go',
+  'rust',
+  'php',
+  'ruby',
+  'swift',
+  'kotlin',
+  'scala',
+  'bash',
+  'shell',
+  'powershell',
+  'sql',
+  'html',
+  'css',
+  'scss',
+  'xml',
+  'yaml',
+  'toml',
+  'dockerfile',
+  'graphql',
+  'r',
+  'matlab',
+  'lua',
+  'perl',
+  'haskell',
+  'elixir',
 ]
 
 // ─── 块类型配置 ────────────────────────────────────────────────────────────────
 const BLOCK_TYPE_GROUPS = [
-  { group: '基础文本', items: [
-    { type: 'paragraph' as const,       label: '段落',     icon: Type,          shortcut: 'text',  desc: '普通段落文本' },
-    { type: 'heading1' as const,        label: '标题 1',   icon: Heading1,      shortcut: 'h1',    desc: '大标题' },
-    { type: 'heading2' as const,        label: '标题 2',   icon: Heading2,      shortcut: 'h2',    desc: '中标题' },
-    { type: 'heading3' as const,        label: '标题 3',   icon: Heading3,      shortcut: 'h3',    desc: '小标题' },
-    { type: 'heading4' as const,        label: '标题 4',   icon: Hash,          shortcut: 'h4',    desc: '最小标题' },
-    { type: 'quote' as const,           label: '引用',     icon: Quote,         shortcut: 'quote', desc: '引用段落' },
-  ]},
-  { group: '列表', items: [
-    { type: 'bullet' as const,          label: '无序列表', icon: List,          shortcut: 'ul',    desc: '• 项目列表' },
-    { type: 'numbered' as const,        label: '有序列表', icon: ListOrdered,   shortcut: 'ol',    desc: '1. 2. 3.' },
-    { type: 'todo' as const,            label: '待办事项', icon: CheckSquare,   shortcut: 'todo',  desc: '可勾选列表' },
-    { type: 'toggle' as const,          label: '折叠列表', icon: ToggleLeft,    shortcut: 'tog',   desc: '可折叠块' },
-  ]},
-  { group: '标注', items: [
-    { type: 'callout_info' as const,    label: '信息',     icon: Info,          shortcut: 'info',  desc: '🔵 信息提示' },
-    { type: 'callout_warning' as const, label: '警告',     icon: AlertTriangle, shortcut: 'warn',  desc: '🟡 警告提示' },
-    { type: 'callout_success' as const, label: '成功',     icon: AlertCircle,   shortcut: 'ok',    desc: '🟢 成功提示' },
-    { type: 'callout_tip' as const,     label: '技巧',     icon: Lightbulb,     shortcut: 'tip',   desc: '💡 小技巧' },
-  ]},
-  { group: '代码 & 公式', items: [
-    { type: 'code' as const,            label: '代码块',   icon: Code,          shortcut: 'code',  desc: '多语言代码' },
-    { type: 'math' as const,            label: '行内公式', icon: BookOpen,      shortcut: 'math',  desc: 'LaTeX 行内' },
-    { type: 'equation_block' as const,  label: '公式块',   icon: Star,          shortcut: 'eq',    desc: 'LaTeX 独立块' },
-  ]},
-  { group: '媒体', items: [
-    { type: 'image' as const,           label: '图片',     icon: Image,         shortcut: 'img',   desc: '图片（URL 或本地文件）' },
-    { type: 'video' as const,           label: '视频',     icon: Film,          shortcut: 'vid',   desc: '视频（URL 或本地文件）' },
-    { type: 'audio' as const,           label: '音频',     icon: BookOpen,      shortcut: 'audio', desc: '音频（URL 或本地文件）' },
-    { type: 'file' as const,            label: '文件',     icon: FileText,      shortcut: 'file',  desc: '附件（PDF/ZIP/文档等）' },
-    { type: 'bookmark' as const,        label: '书签',     icon: Link,          shortcut: 'bm',    desc: '网页书签' },
-  ]},
-  { group: '结构', items: [
-    { type: 'table' as const,           label: '表格',     icon: Table,         shortcut: 'table', desc: '结构化表格' },
-    { type: 'columns2' as const,        label: '两列',     icon: Columns,       shortcut: 'col2',  desc: '两栏布局' },
-    { type: 'columns3' as const,        label: '三列',     icon: Columns,       shortcut: 'col3',  desc: '三栏布局' },
-    { type: 'divider' as const,         label: '分隔线',   icon: Minus,         shortcut: 'hr',    desc: '水平线' },
-    { type: 'toc' as const,             label: '目录',     icon: ArrowRight,    shortcut: 'toc',   desc: '自动目录' },
-  ]},
-  { group: '页面', items: [
-    { type: 'subpage' as const,         label: '子页面',   icon: FileEdit,      shortcut: 'page',  desc: '嵌入一个子页面入口' },
-  ]},
+  {
+    group: '基础文本',
+    items: [
+      {
+        type: 'paragraph' as const,
+        label: '段落',
+        icon: Type,
+        shortcut: 'text',
+        desc: '普通段落文本',
+      },
+      {
+        type: 'heading1' as const,
+        label: '标题 1',
+        icon: Heading1,
+        shortcut: 'h1',
+        desc: '大标题',
+      },
+      {
+        type: 'heading2' as const,
+        label: '标题 2',
+        icon: Heading2,
+        shortcut: 'h2',
+        desc: '中标题',
+      },
+      {
+        type: 'heading3' as const,
+        label: '标题 3',
+        icon: Heading3,
+        shortcut: 'h3',
+        desc: '小标题',
+      },
+      { type: 'heading4' as const, label: '标题 4', icon: Hash, shortcut: 'h4', desc: '最小标题' },
+      { type: 'quote' as const, label: '引用', icon: Quote, shortcut: 'quote', desc: '引用段落' },
+    ],
+  },
+  {
+    group: '列表',
+    items: [
+      {
+        type: 'bullet' as const,
+        label: '无序列表',
+        icon: List,
+        shortcut: 'ul',
+        desc: '• 项目列表',
+      },
+      {
+        type: 'numbered' as const,
+        label: '有序列表',
+        icon: ListOrdered,
+        shortcut: 'ol',
+        desc: '1. 2. 3.',
+      },
+      {
+        type: 'todo' as const,
+        label: '待办事项',
+        icon: CheckSquare,
+        shortcut: 'todo',
+        desc: '可勾选列表',
+      },
+      {
+        type: 'toggle' as const,
+        label: '折叠列表',
+        icon: ToggleLeft,
+        shortcut: 'tog',
+        desc: '可折叠块',
+      },
+    ],
+  },
+  {
+    group: '标注',
+    items: [
+      {
+        type: 'callout_info' as const,
+        label: '信息',
+        icon: Info,
+        shortcut: 'info',
+        desc: '🔵 信息提示',
+      },
+      {
+        type: 'callout_warning' as const,
+        label: '警告',
+        icon: AlertTriangle,
+        shortcut: 'warn',
+        desc: '🟡 警告提示',
+      },
+      {
+        type: 'callout_success' as const,
+        label: '成功',
+        icon: AlertCircle,
+        shortcut: 'ok',
+        desc: '🟢 成功提示',
+      },
+      {
+        type: 'callout_tip' as const,
+        label: '技巧',
+        icon: Lightbulb,
+        shortcut: 'tip',
+        desc: '💡 小技巧',
+      },
+    ],
+  },
+  {
+    group: '代码 & 公式',
+    items: [
+      { type: 'code' as const, label: '代码块', icon: Code, shortcut: 'code', desc: '多语言代码' },
+      {
+        type: 'math' as const,
+        label: '行内公式',
+        icon: BookOpen,
+        shortcut: 'math',
+        desc: 'LaTeX 行内',
+      },
+      {
+        type: 'equation_block' as const,
+        label: '公式块',
+        icon: Star,
+        shortcut: 'eq',
+        desc: 'LaTeX 独立块',
+      },
+    ],
+  },
+  {
+    group: '媒体',
+    items: [
+      {
+        type: 'image' as const,
+        label: '图片',
+        icon: Image,
+        shortcut: 'img',
+        desc: '图片（URL 或本地文件）',
+      },
+      {
+        type: 'video' as const,
+        label: '视频',
+        icon: Film,
+        shortcut: 'vid',
+        desc: '视频（URL 或本地文件）',
+      },
+      {
+        type: 'audio' as const,
+        label: '音频',
+        icon: BookOpen,
+        shortcut: 'audio',
+        desc: '音频（URL 或本地文件）',
+      },
+      {
+        type: 'file' as const,
+        label: '文件',
+        icon: FileText,
+        shortcut: 'file',
+        desc: '附件（PDF/ZIP/文档等）',
+      },
+      { type: 'bookmark' as const, label: '书签', icon: Link, shortcut: 'bm', desc: '网页书签' },
+    ],
+  },
+  {
+    group: '结构',
+    items: [
+      { type: 'table' as const, label: '表格', icon: Table, shortcut: 'table', desc: '结构化表格' },
+      {
+        type: 'columns2' as const,
+        label: '两列',
+        icon: Columns,
+        shortcut: 'col2',
+        desc: '两栏布局',
+      },
+      {
+        type: 'columns3' as const,
+        label: '三列',
+        icon: Columns,
+        shortcut: 'col3',
+        desc: '三栏布局',
+      },
+      { type: 'divider' as const, label: '分隔线', icon: Minus, shortcut: 'hr', desc: '水平线' },
+      { type: 'toc' as const, label: '目录', icon: ArrowRight, shortcut: 'toc', desc: '自动目录' },
+    ],
+  },
+  {
+    group: '页面',
+    items: [
+      {
+        type: 'subpage' as const,
+        label: '子页面',
+        icon: FileEdit,
+        shortcut: 'page',
+        desc: '嵌入一个子页面入口',
+      },
+    ],
+  },
 ]
 
-interface BlockTypeItem { type: BlockType; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; shortcut: string; desc: string }
-const ALL_BLOCK_TYPES: BlockTypeItem[] = BLOCK_TYPE_GROUPS.flatMap(g => g.items as BlockTypeItem[])
+interface BlockTypeItem {
+  type: BlockType
+  label: string
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  shortcut: string
+  desc: string
+}
+const ALL_BLOCK_TYPES: BlockTypeItem[] = BLOCK_TYPE_GROUPS.flatMap(
+  (g) => g.items as BlockTypeItem[]
+)
 const MAX_NEST_LEVEL = 8
 const ITEM_TYPE = 'BLOCK'
 export const generateBlockId = () => `b-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
 
 // ─── 工具函数 ──────────────────────────────────────────────────────────────────
-export const getPlainText = (segs: RichTextSegment[]) => segs.map(s => s.text).join('')
+export const getPlainText = (segs: RichTextSegment[]) => segs.map((s) => s.text).join('')
 export const makeSegs = (text: string): RichTextSegment[] => [{ text }]
 
 export function positionBetween(before: number | null, after: number | null): number {
@@ -100,26 +317,37 @@ export function positionBetween(before: number | null, after: number | null): nu
 }
 
 export function defaultBlockContent(type: BlockType): Block['content'] {
-  if (type === 'table') return {
-    rich_text: [], tableColCount: 3, tableHasHeader: true,
-    tableRows: [
-      [{ rich_text: makeSegs('列 1') }, { rich_text: makeSegs('列 2') }, { rich_text: makeSegs('列 3') }],
-      [{ rich_text: [] }, { rich_text: [] }, { rich_text: [] }],
-    ]
-  }
-  if (type === 'code')            return { rich_text: [], language: 'plaintext' }
-  if (type === 'callout_info')    return { rich_text: [], calloutIcon: 'ℹ️' }
+  if (type === 'table')
+    return {
+      rich_text: [],
+      tableColCount: 3,
+      tableHasHeader: true,
+      tableRows: [
+        [
+          { rich_text: makeSegs('列 1') },
+          { rich_text: makeSegs('列 2') },
+          { rich_text: makeSegs('列 3') },
+        ],
+        [{ rich_text: [] }, { rich_text: [] }, { rich_text: [] }],
+      ],
+    }
+  if (type === 'code') return { rich_text: [], language: 'plaintext' }
+  if (type === 'callout_info') return { rich_text: [], calloutIcon: 'ℹ️' }
   if (type === 'callout_warning') return { rich_text: [], calloutIcon: '⚠️' }
   if (type === 'callout_success') return { rich_text: [], calloutIcon: '✅' }
-  if (type === 'callout_tip')     return { rich_text: [], calloutIcon: '💡' }
-  if (type === 'toggle')          return { rich_text: [], toggleOpen: false }
-  if (type === 'subpage')         return { rich_text: [], subpageTitle: '新页面', subpageIcon: '📄' }
+  if (type === 'callout_tip') return { rich_text: [], calloutIcon: '💡' }
+  if (type === 'toggle') return { rich_text: [], toggleOpen: false }
+  if (type === 'subpage') return { rich_text: [], subpageTitle: '新页面', subpageIcon: '📄' }
   return { rich_text: [] }
 }
 
 // ─── 富文本渲染 ────────────────────────────────────────────────────────────────
-function RichText({ segments, placeholder = '输入内容，或按 / 插入块…' }: {
-  segments: RichTextSegment[], placeholder?: string
+function RichText({
+  segments,
+  placeholder = '输入内容，或按 / 插入块…',
+}: {
+  segments: RichTextSegment[]
+  placeholder?: string
 }) {
   if (!segments.length || (segments.length === 1 && !segments[0].text))
     return <span className="text-neutral-500 select-none">{placeholder}</span>
@@ -132,17 +360,35 @@ function RichText({ segments, placeholder = '输入内容，或按 / 插入块�
           seg.underline ? 'underline' : '',
           seg.strikethrough ? 'line-through' : '',
           seg.code ? 'font-mono bg-neutral-800 px-1 rounded text-sm text-green-300' : '',
-        ].filter(Boolean).join(' ')
-        return seg.link
-          ? <a key={i} href={seg.link} target="_blank" rel="noreferrer" className={`${cls} text-blue-400 underline`}>{seg.text}</a>
-          : <span key={i} className={cls}>{seg.text}</span>
+        ]
+          .filter(Boolean)
+          .join(' ')
+        return seg.link ? (
+          <a
+            key={i}
+            href={seg.link}
+            target="_blank"
+            rel="noreferrer"
+            className={`${cls} text-blue-400 underline`}
+          >
+            {seg.text}
+          </a>
+        ) : (
+          <span key={i} className={cls}>
+            {seg.text}
+          </span>
+        )
       })}
     </>
   )
 }
 
 // ─── 子页面块展示 ──────────────────────────────────────────────────────────────
-function SubpageBlockView({ block, onNavigate, onCreateSubpage }: {
+function SubpageBlockView({
+  block,
+  onNavigate,
+  onCreateSubpage,
+}: {
   block: Block
   onNavigate?: (pageId: string) => void
   onCreateSubpage?: (blockId: string) => Promise<string>
@@ -157,47 +403,73 @@ function SubpageBlockView({ block, onNavigate, onCreateSubpage }: {
           e.stopPropagation()
           if (creating || !onCreateSubpage) return
           setCreating(true)
-          try { await onCreateSubpage(block.id) } finally { setCreating(false) }
+          try {
+            await onCreateSubpage(block.id)
+          } finally {
+            setCreating(false)
+          }
         }}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-neutral-700 hover:border-neutral-500 text-neutral-500 hover:text-neutral-300 transition-all text-sm group"
       >
         <span className="text-base">📄</span>
-        <span className={creating ? 'text-neutral-600' : ''}>{creating ? '正在创建页面…' : '点击创建子页面'}</span>
+        <span className={creating ? 'text-neutral-600' : ''}>
+          {creating ? '正在创建页面…' : '点击创建子页面'}
+        </span>
       </button>
     )
   }
 
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); onNavigate?.(subpageId) }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onNavigate?.(subpageId)
+      }}
       className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 border border-neutral-700/60 hover:border-neutral-600 transition-all text-sm group"
     >
       <span className="text-base shrink-0">{subpageIcon ?? '📄'}</span>
-      <span className="text-neutral-200 group-hover:text-white transition-colors font-medium truncate">{subpageTitle || '无标题'}</span>
-      <ChevronRight size={13} className="ml-auto text-neutral-600 group-hover:text-neutral-400 shrink-0" />
+      <span className="text-neutral-200 group-hover:text-white transition-colors font-medium truncate">
+        {subpageTitle || '无标题'}
+      </span>
+      <ChevronRight
+        size={13}
+        className="ml-auto text-neutral-600 group-hover:text-neutral-400 shrink-0"
+      />
     </button>
   )
 }
 
 // ─── 图片块（支持拖拽调整宽度）─────────────────────────────────────────────────
-function ImageBlock({ url, fileName, width, onWidthChange }: {
-  url: string; fileName?: string; width: number; onWidthChange?: (w: number) => void
+function ImageBlock({
+  url,
+  fileName,
+  width,
+  onWidthChange,
+}: {
+  url: string
+  fileName?: string
+  width: number
+  onWidthChange?: (w: number) => void
 }) {
   const [displayWidth, setDisplayWidth] = useState(width)
   const containerRef = useRef<HTMLDivElement>(null)
   const widthRef = useRef(width)
 
-  useEffect(() => { setDisplayWidth(width); widthRef.current = width }, [width])
+  useEffect(() => {
+    setDisplayWidth(width)
+    widthRef.current = width
+  }, [width])
 
   const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation()
+    e.preventDefault()
+    e.stopPropagation()
     const startX = e.clientX
     const startW = widthRef.current
 
     const onMove = (ev: MouseEvent) => {
       const parentW = containerRef.current?.parentElement?.offsetWidth ?? 800
       const dx = ev.clientX - startX
-      const newW = Math.max(10, Math.min(100, Math.round(startW + dx / parentW * 100)))
+      const newW = Math.max(10, Math.min(100, Math.round(startW + (dx / parentW) * 100)))
       widthRef.current = newW
       setDisplayWidth(newW)
     }
@@ -211,13 +483,17 @@ function ImageBlock({ url, fileName, width, onWidthChange }: {
   }
 
   return (
-    <div ref={containerRef} className="relative my-1 group/imgblock" style={{ width: `${displayWidth}%` }}>
+    <div
+      ref={containerRef}
+      className="relative my-1 group/imgblock"
+      style={{ width: `${displayWidth}%` }}
+    >
       <img src={url} alt={fileName || ''} className="w-full rounded-lg shadow-lg block" />
       {onWidthChange && (
         <div
           className="absolute top-0 right-0 h-full w-4 cursor-col-resize opacity-0 group-hover/imgblock:opacity-100 transition-opacity flex items-center justify-end pr-0.5"
           onMouseDown={handleResizeStart}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="w-1.5 h-10 bg-blue-400/70 rounded-full" />
         </div>
@@ -227,7 +503,15 @@ function ImageBlock({ url, fileName, width, onWidthChange }: {
 }
 
 // ─── 块内容展示 ────────────────────────────────────────────────────────────────
-function BlockViewContent({ block, isEditing, allBlocks, onTableCommit, onNavigate, onCreateSubpage, onUpdateContent }: {
+function BlockViewContent({
+  block,
+  isEditing,
+  allBlocks,
+  onTableCommit,
+  onNavigate,
+  onCreateSubpage,
+  onUpdateContent,
+}: {
   block: Block
   isEditing?: boolean
   allBlocks?: Map<string, Block>
@@ -240,7 +524,9 @@ function BlockViewContent({ block, isEditing, allBlocks, onTableCommit, onNaviga
   const segs = content.rich_text
 
   if (type === 'subpage') {
-    return <SubpageBlockView block={block} onNavigate={onNavigate} onCreateSubpage={onCreateSubpage} />
+    return (
+      <SubpageBlockView block={block} onNavigate={onNavigate} onCreateSubpage={onCreateSubpage} />
+    )
   }
 
   if (type === 'table') {
@@ -255,17 +541,31 @@ function BlockViewContent({ block, isEditing, allBlocks, onTableCommit, onNaviga
               <tr key={ri}>
                 {Array.from({ length: cols }).map((_, ci) => {
                   const cell = row[ci] ?? { rich_text: [] }
-                  const Tag = (hasHeader && ri === 0) ? 'th' : 'td'
+                  const Tag = hasHeader && ri === 0 ? 'th' : 'td'
                   return (
-                    <Tag key={ci} className={`border border-neutral-700 px-3 py-1.5 text-left ${hasHeader && ri === 0 ? 'bg-neutral-800/80 font-semibold text-neutral-200' : 'text-neutral-300'}`}>
-                      {isEditing
-                        ? <input className="bg-transparent outline-none w-full min-w-[60px]"
-                            defaultValue={getPlainText(cell.rich_text)}
-                            onBlur={e => onTableCommit?.(rows.map((r, rIdx) =>
-                              rIdx === ri ? r.map((c, cIdx) => cIdx === ci ? { rich_text: makeSegs(e.target.value) } : c) : r
-                            ))} />
-                        : <RichText segments={cell.rich_text} placeholder="" />
-                      }
+                    <Tag
+                      key={ci}
+                      className={`border border-neutral-700 px-3 py-1.5 text-left ${hasHeader && ri === 0 ? 'bg-neutral-800/80 font-semibold text-neutral-200' : 'text-neutral-300'}`}
+                    >
+                      {isEditing ? (
+                        <input
+                          className="bg-transparent outline-none w-full min-w-[60px]"
+                          defaultValue={getPlainText(cell.rich_text)}
+                          onBlur={(e) =>
+                            onTableCommit?.(
+                              rows.map((r, rIdx) =>
+                                rIdx === ri
+                                  ? r.map((c, cIdx) =>
+                                      cIdx === ci ? { rich_text: makeSegs(e.target.value) } : c
+                                    )
+                                  : r
+                              )
+                            )
+                          }
+                        />
+                      ) : (
+                        <RichText segments={cell.rich_text} placeholder="" />
+                      )}
                     </Tag>
                   )
                 })}
@@ -276,13 +576,36 @@ function BlockViewContent({ block, isEditing, allBlocks, onTableCommit, onNaviga
         {isEditing && (
           <div className="flex gap-2 mt-2 flex-wrap">
             {[
-              { label: '+ 行', action: () => onTableCommit?.([...rows, Array.from({ length: cols }, () => ({ rich_text: [] as RichTextSegment[] }))]) },
-              { label: '+ 列', action: () => onTableCommit?.(rows.map(r => [...r, { rich_text: [] as RichTextSegment[] }])) },
-              ...(rows.length > 1 ? [{ label: '- 末行', action: () => onTableCommit?.(rows.slice(0, -1)) }] : []),
-              ...(cols > 1 ? [{ label: '- 末列', action: () => onTableCommit?.(rows.map(r => r.slice(0, -1))) }] : []),
-            ].map(btn => (
-              <button key={btn.label} onClick={btn.action}
-                className="text-xs text-neutral-500 hover:text-neutral-300 px-2 py-0.5 rounded border border-neutral-700 hover:border-neutral-500 transition-colors">
+              {
+                label: '+ 行',
+                action: () =>
+                  onTableCommit?.([
+                    ...rows,
+                    Array.from({ length: cols }, () => ({ rich_text: [] as RichTextSegment[] })),
+                  ]),
+              },
+              {
+                label: '+ 列',
+                action: () =>
+                  onTableCommit?.(rows.map((r) => [...r, { rich_text: [] as RichTextSegment[] }])),
+              },
+              ...(rows.length > 1
+                ? [{ label: '- 末行', action: () => onTableCommit?.(rows.slice(0, -1)) }]
+                : []),
+              ...(cols > 1
+                ? [
+                    {
+                      label: '- 末列',
+                      action: () => onTableCommit?.(rows.map((r) => r.slice(0, -1))),
+                    },
+                  ]
+                : []),
+            ].map((btn) => (
+              <button
+                key={btn.label}
+                onClick={btn.action}
+                className="text-xs text-neutral-500 hover:text-neutral-300 px-2 py-0.5 rounded border border-neutral-700 hover:border-neutral-500 transition-colors"
+              >
                 {btn.label}
               </button>
             ))}
@@ -293,153 +616,324 @@ function BlockViewContent({ block, isEditing, allBlocks, onTableCommit, onNaviga
   }
 
   const calloutMap: Record<string, { bg: string; border: string }> = {
-    callout_info:    { bg: 'bg-blue-950/40',   border: 'border-blue-600/50' },
+    callout_info: { bg: 'bg-blue-950/40', border: 'border-blue-600/50' },
     callout_warning: { bg: 'bg-yellow-950/40', border: 'border-yellow-600/50' },
-    callout_success: { bg: 'bg-green-950/40',  border: 'border-green-600/50' },
-    callout_tip:     { bg: 'bg-purple-950/40', border: 'border-purple-600/50' },
+    callout_success: { bg: 'bg-green-950/40', border: 'border-green-600/50' },
+    callout_tip: { bg: 'bg-purple-950/40', border: 'border-purple-600/50' },
   }
   if (type in calloutMap) {
     const s = calloutMap[type]
     return (
       <div className={`flex gap-3 rounded-lg border px-4 py-3 my-0.5 ${s.bg} ${s.border}`}>
         <span className="text-lg shrink-0 select-none">{content.calloutIcon}</span>
-        <div className="flex-1 text-neutral-200"><RichText segments={segs} /></div>
-      </div>
-    )
-  }
-
-  if (type === 'code') {
-    return (
-      <div className="my-0.5 rounded-lg overflow-hidden border border-neutral-700/60">
-        <div className="px-3 py-1 bg-neutral-800/80 border-b border-neutral-700/60">
-          <span className="text-xs text-neutral-500 font-mono">{content.language ?? 'plaintext'}</span>
+        <div className="flex-1 text-neutral-200">
+          <RichText segments={segs} />
         </div>
-        <pre className="p-4 text-sm text-green-300 font-mono overflow-x-auto whitespace-pre-wrap bg-neutral-800/40">
-          <RichText segments={segs} placeholder="// 点击输入代码…" />
-        </pre>
       </div>
     )
   }
 
-  if (type === 'math') return <code className="font-mono text-yellow-300 bg-neutral-800 px-2 py-0.5 rounded text-sm">{getPlainText(segs) || <span className="text-neutral-500 italic">LaTeX…</span>}</code>
-  if (type === 'equation_block') return (
-    <div className="bg-neutral-800/60 rounded-lg p-5 text-center my-1 border border-neutral-700/40">
-      <code className="font-mono text-yellow-300 text-base">{getPlainText(segs) || <span className="text-neutral-500 italic">输入 LaTeX 公式…</span>}</code>
-    </div>
-  )
+  if (type === 'math')
+    return (
+      <code className="font-mono text-yellow-300 bg-neutral-800 px-2 py-0.5 rounded text-sm">
+        {getPlainText(segs) || <span className="text-neutral-500 italic">LaTeX…</span>}
+      </code>
+    )
+  if (type === 'equation_block')
+    return (
+      <div className="bg-neutral-800/60 rounded-lg p-5 text-center my-1 border border-neutral-700/40">
+        <code className="font-mono text-yellow-300 text-base">
+          {getPlainText(segs) || <span className="text-neutral-500 italic">输入 LaTeX 公式…</span>}
+        </code>
+      </div>
+    )
 
   if (type === 'image') {
     const url = getPlainText(segs)
-    return url
-      ? <ImageBlock url={url} fileName={content.fileName} width={content.imageWidth ?? 100} onWidthChange={onUpdateContent ? (w) => onUpdateContent({ imageWidth: w }) : undefined} />
-      : <div className="border-2 border-dashed border-neutral-700 rounded-lg p-8 text-center text-neutral-500 text-sm my-1">🖼️ 点击输入图片 URL 或选择文件</div>
+    return url ? (
+      <ImageBlock
+        url={url}
+        fileName={content.fileName}
+        width={content.imageWidth ?? 100}
+        onWidthChange={onUpdateContent ? (w) => onUpdateContent({ imageWidth: w }) : undefined}
+      />
+    ) : (
+      <div className="border-2 border-dashed border-neutral-700 rounded-lg p-8 text-center text-neutral-500 text-sm my-1">
+        🖼️ 点击输入图片 URL 或选择文件
+      </div>
+    )
   }
   if (type === 'video') {
     const url = getPlainText(segs)
     if (url) {
       const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
-      if (ytMatch) return <div className="my-1 aspect-video rounded-lg overflow-hidden border border-neutral-700"><iframe src={`https://www.youtube.com/embed/${ytMatch[1]}`} className="w-full h-full" allowFullScreen /></div>
+      if (ytMatch)
+        return (
+          <div className="my-1 aspect-video rounded-lg overflow-hidden border border-neutral-700">
+            <iframe
+              src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+              className="w-full h-full"
+              allowFullScreen
+            />
+          </div>
+        )
       return <video src={url} controls className="max-w-full rounded-lg my-1" />
     }
-    return <div className="border-2 border-dashed border-neutral-700 rounded-lg p-8 text-center text-neutral-500 text-sm my-1">🎬 点击输入视频 URL 或选择文件</div>
+    return (
+      <div className="border-2 border-dashed border-neutral-700 rounded-lg p-8 text-center text-neutral-500 text-sm my-1">
+        🎬 点击输入视频 URL 或选择文件
+      </div>
+    )
   }
   if (type === 'audio') {
     const url = getPlainText(segs)
-    return url
-      ? <div className="my-1 flex items-center gap-3 px-4 py-3 bg-neutral-800/60 rounded-lg border border-neutral-700">
-          <span className="text-lg shrink-0">🎵</span>
-          <div className="flex-1 min-w-0">
-            {content.fileName && <p className="text-xs text-neutral-500 mb-1 truncate">{content.fileName}</p>}
-            <audio src={url} controls className="w-full" style={{ height: '36px' }} />
-          </div>
-        </div>
-      : <div className="border-2 border-dashed border-neutral-700 rounded-lg p-6 text-center text-neutral-500 text-sm my-1">🎵 点击输入音频 URL 或选择文件</div>
-  }
-  if (type === 'file') {
-    const url = getPlainText(segs)
-    if (!url) return <div className="border-2 border-dashed border-neutral-700 rounded-lg p-6 text-center text-neutral-500 text-sm my-1">📎 点击输入文件 URL 或选择文件</div>
-    const ext = url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
-    const IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','svg','bmp','tiff','ico','avif']
-    const VIDEO_EXTS = ['mp4','webm','ogv','mov','avi','mkv','m4v']
-    const AUDIO_EXTS = ['mp3','wav','ogg','aac','flac','m4a','opus','weba']
-    const fname = content.fileName || decodeURIComponent(url.split('/').pop() || '') || '附件'
-    if (ext === 'pdf') return (
-      <div className="my-1 rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900" style={{ height: '600px' }}>
-        <embed src={url} type="application/pdf" width="100%" height="100%" />
-      </div>
-    )
-    if (IMAGE_EXTS.includes(ext)) return <ImageBlock url={url} fileName={fname} width={content.imageWidth ?? 100} onWidthChange={onUpdateContent ? (w) => onUpdateContent({ imageWidth: w }) : undefined} />
-    if (VIDEO_EXTS.includes(ext)) return <video src={url} controls className="max-w-full rounded-lg my-1" />
-    if (AUDIO_EXTS.includes(ext)) return (
+    return url ? (
       <div className="my-1 flex items-center gap-3 px-4 py-3 bg-neutral-800/60 rounded-lg border border-neutral-700">
         <span className="text-lg shrink-0">🎵</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-neutral-500 mb-1 truncate">{fname}</p>
+          {content.fileName && (
+            <p className="text-xs text-neutral-500 mb-1 truncate">{content.fileName}</p>
+          )}
           <audio src={url} controls className="w-full" style={{ height: '36px' }} />
         </div>
       </div>
+    ) : (
+      <div className="border-2 border-dashed border-neutral-700 rounded-lg p-6 text-center text-neutral-500 text-sm my-1">
+        🎵 点击输入音频 URL 或选择文件
+      </div>
     )
+  }
+  if (type === 'file') {
+    const url = getPlainText(segs)
+    if (!url)
+      return (
+        <div className="border-2 border-dashed border-neutral-700 rounded-lg p-6 text-center text-neutral-500 text-sm my-1">
+          📎 点击输入文件 URL 或选择文件
+        </div>
+      )
+    const ext = url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
+    const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico', 'avif']
+    const VIDEO_EXTS = ['mp4', 'webm', 'ogv', 'mov', 'avi', 'mkv', 'm4v']
+    const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'opus', 'weba']
+    const fname = content.fileName || decodeURIComponent(url.split('/').pop() || '') || '附件'
+    if (ext === 'pdf')
+      return (
+        <div
+          className="my-1 rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900"
+          style={{ height: '600px' }}
+        >
+          <embed src={url} type="application/pdf" width="100%" height="100%" />
+        </div>
+      )
+    if (IMAGE_EXTS.includes(ext))
+      return (
+        <ImageBlock
+          url={url}
+          fileName={fname}
+          width={content.imageWidth ?? 100}
+          onWidthChange={onUpdateContent ? (w) => onUpdateContent({ imageWidth: w }) : undefined}
+        />
+      )
+    if (VIDEO_EXTS.includes(ext))
+      return <video src={url} controls className="max-w-full rounded-lg my-1" />
+    if (AUDIO_EXTS.includes(ext))
+      return (
+        <div className="my-1 flex items-center gap-3 px-4 py-3 bg-neutral-800/60 rounded-lg border border-neutral-700">
+          <span className="text-lg shrink-0">🎵</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-neutral-500 mb-1 truncate">{fname}</p>
+            <audio src={url} controls className="w-full" style={{ height: '36px' }} />
+          </div>
+        </div>
+      )
     return (
-      <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 my-1 px-4 py-2.5 bg-neutral-800/60 rounded-lg border border-neutral-700 hover:bg-neutral-800 text-sm text-blue-400">
-        <FileText size={15} className="shrink-0" /><span className="truncate">{fname}</span>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2 my-1 px-4 py-2.5 bg-neutral-800/60 rounded-lg border border-neutral-700 hover:bg-neutral-800 text-sm text-blue-400"
+      >
+        <FileText size={15} className="shrink-0" />
+        <span className="truncate">{fname}</span>
       </a>
     )
   }
   if (type === 'bookmark') {
     const url = getPlainText(segs)
-    return url
-      ? <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 my-1 px-4 py-2.5 bg-neutral-800/60 rounded-lg border border-neutral-700 hover:bg-neutral-800 text-sm text-blue-400"><Link size={15} className="shrink-0" /><span className="truncate">{url}</span></a>
-      : <div className="border-2 border-dashed border-neutral-700 rounded-lg p-6 text-center text-neutral-500 text-sm my-1">🔗 点击输入网页 URL</div>
-  }
-  if (type === 'divider') return <hr className="border-neutral-700/60 my-2" />
-  if (type === 'toc') {
-    const headings = allBlocks ? Array.from(allBlocks.values()).filter(b => ['heading1','heading2','heading3','heading4'].includes(b.type)).sort((a, b) => a.position - b.position) : []
-    if (!headings.length) return <div className="text-neutral-600 text-sm italic my-1 bg-neutral-800/30 rounded-lg px-4 py-3">目录将在添加标题后自动生成</div>
-    const indent: Record<string, string> = { heading1: 'ml-0 font-medium', heading2: 'ml-4', heading3: 'ml-8 text-neutral-400', heading4: 'ml-12 text-neutral-500' }
-    return (
-      <div className="bg-neutral-800/30 rounded-lg p-4 my-1 text-sm border border-neutral-700/30">
-        <div className="text-[10px] text-neutral-600 font-semibold uppercase tracking-widest mb-2">目录</div>
-        <div className="space-y-1">{headings.map(h => <div key={h.id} className={`${indent[h.type] ?? ''} text-blue-400 hover:text-blue-300 cursor-pointer truncate`}>{getPlainText(h.content.rich_text) || '（无标题）'}</div>)}</div>
+    return url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2 my-1 px-4 py-2.5 bg-neutral-800/60 rounded-lg border border-neutral-700 hover:bg-neutral-800 text-sm text-blue-400"
+      >
+        <Link size={15} className="shrink-0" />
+        <span className="truncate">{url}</span>
+      </a>
+    ) : (
+      <div className="border-2 border-dashed border-neutral-700 rounded-lg p-6 text-center text-neutral-500 text-sm my-1">
+        🔗 点击输入网页 URL
       </div>
     )
   }
-  if (type === 'toggle') return (
-    <div className="flex items-baseline gap-1.5 text-neutral-200">
-      <span className="text-neutral-500 text-[11px] shrink-0">{content.toggleOpen ? '▾' : '▸'}</span>
-      <span><RichText segments={segs} /></span>
-    </div>
-  )
+  if (type === 'divider') return <hr className="border-neutral-700/60 my-2" />
+  if (type === 'toc') {
+    const headings = allBlocks
+      ? Array.from(allBlocks.values())
+          .filter((b) => ['heading1', 'heading2', 'heading3', 'heading4'].includes(b.type))
+          .sort((a, b) => a.position - b.position)
+      : []
+    if (!headings.length)
+      return (
+        <div className="text-neutral-600 text-sm italic my-1 bg-neutral-800/30 rounded-lg px-4 py-3">
+          目录将在添加标题后自动生成
+        </div>
+      )
+    const indent: Record<string, string> = {
+      heading1: 'ml-0 font-medium',
+      heading2: 'ml-4',
+      heading3: 'ml-8 text-neutral-400',
+      heading4: 'ml-12 text-neutral-500',
+    }
+    return (
+      <div className="bg-neutral-800/30 rounded-lg p-4 my-1 text-sm border border-neutral-700/30">
+        <div className="text-[10px] text-neutral-600 font-semibold uppercase tracking-widest mb-2">
+          目录
+        </div>
+        <div className="space-y-1">
+          {headings.map((h) => (
+            <div
+              key={h.id}
+              className={`${indent[h.type] ?? ''} text-blue-400 hover:text-blue-300 cursor-pointer truncate`}
+            >
+              {getPlainText(h.content.rich_text) || '（无标题）'}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  if (type === 'toggle')
+    return (
+      <div className="flex items-baseline gap-1.5 text-neutral-200">
+        <span className="text-neutral-500 text-[11px] shrink-0">
+          {content.toggleOpen ? '▾' : '▸'}
+        </span>
+        <span>
+          <RichText segments={segs} />
+        </span>
+      </div>
+    )
   if (type === 'columns2' || type === 'columns3') {
     const n = type === 'columns2' ? 2 : 3
     return (
       <div className="grid gap-3 my-1" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
-        {Array.from({ length: n }).map((_, i) => <div key={i} className="min-h-10 rounded border border-dashed border-neutral-700/50 p-2 text-xs text-neutral-600">第 {i+1} 列</div>)}
+        {Array.from({ length: n }).map((_, i) => (
+          <div
+            key={i}
+            className="min-h-10 rounded border border-dashed border-neutral-700/50 p-2 text-xs text-neutral-600"
+          >
+            第 {i + 1} 列
+          </div>
+        ))}
       </div>
     )
   }
 
   switch (type) {
-    case 'heading1': return <h1 className="text-[32px] font-bold text-neutral-100 mt-2 leading-tight"><RichText segments={segs} /></h1>
-    case 'heading2': return <h2 className="text-2xl font-semibold text-neutral-100 mt-1"><RichText segments={segs} /></h2>
-    case 'heading3': return <h3 className="text-xl font-medium text-neutral-200"><RichText segments={segs} /></h3>
-    case 'heading4': return <h4 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider"><RichText segments={segs} /></h4>
-    case 'quote':    return <blockquote className="border-l-[3px] border-neutral-600 pl-4 italic text-neutral-400 my-0.5"><RichText segments={segs} /></blockquote>
-    case 'bullet':   return <div className="flex items-baseline gap-2 text-neutral-200"><span className="text-neutral-600 shrink-0 text-xs">•</span><span><RichText segments={segs} /></span></div>
-    case 'numbered': return <div className="flex items-baseline gap-2 text-neutral-200"><span className="text-neutral-500 shrink-0 tabular-nums text-sm min-w-[1.5rem] text-right">{content.numberStart ?? 1}.</span><span><RichText segments={segs} /></span></div>
-    case 'todo':     return (
-      <div className="flex items-center gap-2 text-neutral-200">
-        <input type="checkbox" checked={!!block.metadata?.checked} onChange={() => {}} className="accent-blue-500 shrink-0" />
-        <span className={block.metadata?.checked ? 'line-through text-neutral-500' : ''}><RichText segments={segs} /></span>
-      </div>
-    )
-    default: return <p className="text-neutral-200 leading-relaxed"><RichText segments={segs} /></p>
+    case 'heading1':
+      return (
+        <h1 className="text-[32px] font-bold text-neutral-100 mt-2 leading-tight">
+          <RichText segments={segs} />
+        </h1>
+      )
+    case 'heading2':
+      return (
+        <h2 className="text-2xl font-semibold text-neutral-100 mt-1">
+          <RichText segments={segs} />
+        </h2>
+      )
+    case 'heading3':
+      return (
+        <h3 className="text-xl font-medium text-neutral-200">
+          <RichText segments={segs} />
+        </h3>
+      )
+    case 'heading4':
+      return (
+        <h4 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider">
+          <RichText segments={segs} />
+        </h4>
+      )
+    case 'quote':
+      return (
+        <blockquote className="border-l-[3px] border-neutral-600 pl-4 italic text-neutral-400 my-0.5">
+          <RichText segments={segs} />
+        </blockquote>
+      )
+    case 'bullet':
+      return (
+        <div className="flex items-baseline gap-2 text-neutral-200">
+          <span className="text-neutral-600 shrink-0 text-xs">•</span>
+          <span>
+            <RichText segments={segs} />
+          </span>
+        </div>
+      )
+    case 'numbered':
+      return (
+        <div className="flex items-baseline gap-2 text-neutral-200">
+          <span className="text-neutral-500 shrink-0 tabular-nums text-sm min-w-[1.5rem] text-right">
+            {content.numberStart ?? 1}.
+          </span>
+          <span>
+            <RichText segments={segs} />
+          </span>
+        </div>
+      )
+    case 'todo':
+      return (
+        <div className="flex items-center gap-2 text-neutral-200">
+          <input
+            type="checkbox"
+            checked={!!block.metadata?.checked}
+            onChange={() => {}}
+            className="accent-blue-500 shrink-0"
+          />
+          <span className={block.metadata?.checked ? 'line-through text-neutral-500' : ''}>
+            <RichText segments={segs} />
+          </span>
+        </div>
+      )
+    default:
+      return (
+        <p className="text-neutral-200 leading-relaxed">
+          <RichText segments={segs} />
+        </p>
+      )
   }
 }
 
 // ─── 内联编辑器 ────────────────────────────────────────────────────────────────
-function InlineEditor({ block, isEditing, onCommit, onStartEdit, onKeyDown, allBlocks, onTableCommit, onNavigate, onCreateSubpage, onTypeChange, onSlashMenu, onExitEdit, onUpdateContent }: {
-  block: Block, isEditing: boolean
-  onCommit: (text: string) => void, onStartEdit: () => void
+function InlineEditor({
+  block,
+  isEditing,
+  onCommit,
+  onStartEdit,
+  onKeyDown,
+  allBlocks,
+  onTableCommit,
+  onNavigate,
+  onCreateSubpage,
+  onTypeChange,
+  onSlashMenu,
+  onExitEdit,
+  onUpdateContent,
+}: {
+  block: Block
+  isEditing: boolean
+  onCommit: (text: string) => void
+  onStartEdit: () => void
   onKeyDown?: (e: React.KeyboardEvent<HTMLElement>) => void
   allBlocks?: Map<string, Block>
   onTableCommit?: (rows: TableCell[][]) => void
@@ -463,56 +957,115 @@ function InlineEditor({ block, isEditing, onCommit, onStartEdit, onKeyDown, allB
         el.focus()
         const len = el.value.length
         el.setSelectionRange(len, len)
-        if (el instanceof HTMLTextAreaElement) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` }
+        if (el instanceof HTMLTextAreaElement) {
+          el.style.height = 'auto'
+          el.style.height = `${el.scrollHeight}px`
+        }
       }, 0)
     }
   }, [isEditing])
 
   const commit = () => onCommit(draft)
   const handleKD = (e: React.KeyboardEvent<HTMLElement>) => {
-    if (e.key === '/' && draft === '' && onSlashMenu) { e.preventDefault(); onSlashMenu(); return }
-    if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') { e.preventDefault(); commit(); onKeyDown?.(e); return }
-    if (e.key === 'Escape') { e.preventDefault(); commit(); return }
+    if (e.key === '/' && draft === '' && onSlashMenu) {
+      e.preventDefault()
+      onSlashMenu()
+      return
+    }
+    if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') {
+      e.preventDefault()
+      commit()
+      onKeyDown?.(e)
+      return
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      commit()
+      return
+    }
     onKeyDown?.(e)
   }
-  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${t.scrollHeight}px` }
+  const autoResize = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const t = e.currentTarget
+    t.style.height = 'auto'
+    t.style.height = `${t.scrollHeight}px`
+  }
 
   // subpage 块不需要文本编辑
-  if (block.type === 'subpage') return (
-    <BlockViewContent block={block} allBlocks={allBlocks} onNavigate={onNavigate} onCreateSubpage={onCreateSubpage} />
-  )
+  if (block.type === 'subpage')
+    return (
+      <BlockViewContent
+        block={block}
+        allBlocks={allBlocks}
+        onNavigate={onNavigate}
+        onCreateSubpage={onCreateSubpage}
+      />
+    )
 
-  if (!isEditing) return (
-    <div className="cursor-text w-full" onClick={onStartEdit}>
-      <BlockViewContent block={block} allBlocks={allBlocks} onTableCommit={onTableCommit} onNavigate={onNavigate} onUpdateContent={onUpdateContent} />
-    </div>
-  )
-  if (block.type === 'table') return <BlockViewContent block={block} isEditing allBlocks={allBlocks} onTableCommit={onTableCommit} />
-  if (block.type === 'divider' || block.type === 'toc') { commit(); return <BlockViewContent block={block} allBlocks={allBlocks} /> }
+  if (!isEditing)
+    return (
+      <div className="cursor-text w-full" onClick={onStartEdit}>
+        <BlockViewContent
+          block={block}
+          allBlocks={allBlocks}
+          onTableCommit={onTableCommit}
+          onNavigate={onNavigate}
+          onUpdateContent={onUpdateContent}
+        />
+      </div>
+    )
+  if (block.type === 'table')
+    return (
+      <BlockViewContent
+        block={block}
+        isEditing
+        allBlocks={allBlocks}
+        onTableCommit={onTableCommit}
+      />
+    )
+  if (block.type === 'divider' || block.type === 'toc') {
+    commit()
+    return <BlockViewContent block={block} allBlocks={allBlocks} />
+  }
 
-  const shared = 'w-full bg-transparent border-none outline-none resize-none text-inherit font-inherit caret-white placeholder-neutral-600'
+  const shared =
+    'w-full bg-transparent border-none outline-none resize-none text-inherit font-inherit caret-white placeholder-neutral-600'
 
-  if (block.type === 'code') return (
-    <textarea ref={textareaRef} value={draft} onChange={e => setDraft(e.target.value)}
-      onBlur={commit} onKeyDown={handleKD} rows={Math.max(3, draft.split('\n').length + 1)}
-      className={`${shared} font-mono text-sm text-green-300 leading-relaxed`} placeholder="// 输入代码…" spellCheck={false} />
-  )
+  if (block.type === 'code') {
+    return (
+      <CodeBlock
+        language={block.content.language ?? 'plaintext'}
+        value={draft}
+        onChange={(val) => setDraft(val)}
+        onBlur={commit}
+        placeholder="// 输入代码…"
+      />
+    )
+  }
 
-  if (['image','video','audio','file','bookmark'].includes(block.type)) {
+  if (['image', 'video', 'audio', 'file', 'bookmark'].includes(block.type)) {
     const phMap: Record<string, string> = {
-      image: '图片 URL 或选择文件…', video: '视频 URL 或选择文件…',
-      audio: '音频 URL 或选择文件…', file: '文件 URL 或选择文件…', bookmark: '网页 URL…',
+      image: '图片 URL 或选择文件…',
+      video: '视频 URL 或选择文件…',
+      audio: '音频 URL 或选择文件…',
+      file: '文件 URL 或选择文件…',
+      bookmark: '网页 URL…',
     }
     const ph = phMap[block.type] ?? 'URL…'
 
-    if (['image','video','audio','file'].includes(block.type)) {
-      const accept = block.type === 'image' ? 'image/*'
-        : block.type === 'video' ? 'video/*'
-        : block.type === 'audio' ? 'audio/*'
-        : '*/*'
+    if (['image', 'video', 'audio', 'file'].includes(block.type)) {
+      const accept =
+        block.type === 'image'
+          ? 'image/*'
+          : block.type === 'video'
+            ? 'video/*'
+            : block.type === 'audio'
+              ? 'audio/*'
+              : '*/*'
 
       const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]; if (!file) return
+        const file = e.target.files?.[0]
+        if (!file) return
         // 立即用 blob URL 显示，无需等待上传
         const blobUrl = URL.createObjectURL(file)
         onCommit(blobUrl)
@@ -530,14 +1083,23 @@ function InlineEditor({ block, isEditing, onCommit, onStartEdit, onKeyDown, allB
           const d = await r.json()
           onCommit(d.url)
           URL.revokeObjectURL(blobUrl)
-        } catch (err) { console.error('[upload]', err) }
+        } catch (err) {
+          console.error('[upload]', err)
+        }
       }
 
       return (
         <div className="flex items-center gap-2 w-full">
-          <input ref={inputRef} type="text" value={draft} onChange={e => setDraft(e.target.value)}
-            onBlur={commit} onKeyDown={handleKD as any}
-            className={`${shared} text-sm flex-1`} placeholder={ph} />
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={handleKD as any}
+            className={`${shared} text-sm flex-1`}
+            placeholder={ph}
+          />
           <label className="shrink-0 cursor-pointer px-2 py-0.5 text-[11px] bg-neutral-700 hover:bg-neutral-600 rounded text-neutral-300 whitespace-nowrap select-none">
             选择文件
             <input type="file" accept={accept} className="hidden" onChange={handleFileSelect} />
@@ -545,41 +1107,100 @@ function InlineEditor({ block, isEditing, onCommit, onStartEdit, onKeyDown, allB
         </div>
       )
     }
-    return <input ref={inputRef} type="text" value={draft} onChange={e => setDraft(e.target.value)} onBlur={commit} onKeyDown={handleKD as any} className={`${shared} text-sm`} placeholder={ph} />
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={handleKD as any}
+        className={`${shared} text-sm`}
+        placeholder={ph}
+      />
+    )
   }
 
   const handleMdChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
     if (onTypeChange) {
-      const trigger = (type: BlockType) => { setDraft(''); onTypeChange(type) }
-      if (val === '# ')          { trigger('heading1');  return }
-      if (val === '## ')         { trigger('heading2');  return }
-      if (val === '### ')        { trigger('heading3');  return }
-      if (val === '#### ')       { trigger('heading4');  return }
-      if (val === '> ')          { trigger('quote');     return }
-      if (val === '- ' || val === '* ') { trigger('bullet'); return }
-      if (val === '1. ')         { trigger('numbered'); return }
-      if (val === '---')         { trigger('divider');   return }
-      if (val === '[ ] ')        { trigger('todo');      return }
-      if (val.startsWith('```')) { trigger('code');      return }
+      const trigger = (type: BlockType) => {
+        setDraft('')
+        onTypeChange(type)
+      }
+      if (val === '# ') {
+        trigger('heading1')
+        return
+      }
+      if (val === '## ') {
+        trigger('heading2')
+        return
+      }
+      if (val === '### ') {
+        trigger('heading3')
+        return
+      }
+      if (val === '#### ') {
+        trigger('heading4')
+        return
+      }
+      if (val === '> ') {
+        trigger('quote')
+        return
+      }
+      if (val === '- ' || val === '* ') {
+        trigger('bullet')
+        return
+      }
+      if (val === '1. ') {
+        trigger('numbered')
+        return
+      }
+      if (val === '---') {
+        trigger('divider')
+        return
+      }
+      if (val === '[ ] ') {
+        trigger('todo')
+        return
+      }
+      if (val.startsWith('```')) {
+        trigger('code')
+        return
+      }
       // Slash command shortcuts: /code /h1 /h2 etc.
       if (val.startsWith('/') && val.length > 1 && !val.includes(' ')) {
         const cmd = val.slice(1).toLowerCase()
-        const match = ALL_BLOCK_TYPES.find(bt => bt.shortcut === cmd)
-        if (match) { trigger(match.type); return }
+        const match = ALL_BLOCK_TYPES.find((bt) => bt.shortcut === cmd)
+        if (match) {
+          trigger(match.type)
+          return
+        }
       }
     }
     setDraft(val)
   }
   return (
-    <textarea ref={textareaRef} value={draft} onChange={handleMdChange}
-      onBlur={commit} onKeyDown={handleKD} onInput={autoResize}
-      rows={1} className={`${shared} overflow-hidden leading-relaxed`} placeholder="输入内容，或 / 插入块，或以 # ## > - 1. 开头自动转换类型…" />
+    <textarea
+      ref={textareaRef}
+      value={draft}
+      onChange={handleMdChange}
+      onBlur={commit}
+      onKeyDown={handleKD}
+      onInput={autoResize}
+      rows={1}
+      className={`${shared} overflow-hidden leading-relaxed`}
+      placeholder="输入内容，或 / 插入块，或以 # ## > - 1. 开头自动转换类型…"
+    />
   )
 }
 
 // ─── 斜杠菜单 ──────────────────────────────────────────────────────────────────
-function SlashMenu({ position, onSelect, onClose }: {
+function SlashMenu({
+  position,
+  onSelect,
+  onClose,
+}: {
   position: { top: number; left: number }
   onSelect: (type: BlockType) => void
   onClose: () => void
@@ -589,18 +1210,37 @@ function SlashMenu({ position, onSelect, onClose }: {
   const [hIdx, setHIdx] = useState(0)
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
-    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
   }, [onClose])
 
-  const filtered = search ? ALL_BLOCK_TYPES.filter(b => b.label.includes(search) || b.shortcut.includes(search.toLowerCase()) || b.desc.includes(search)) : null
+  const filtered = search
+    ? ALL_BLOCK_TYPES.filter(
+        (b) =>
+          b.label.includes(search) ||
+          b.shortcut.includes(search.toLowerCase()) ||
+          b.desc.includes(search)
+      )
+    : null
   useEffect(() => setHIdx(0), [search])
 
   const handleKD = (e: React.KeyboardEvent) => {
     const list = filtered ?? ALL_BLOCK_TYPES
-    if (e.key === 'Escape') { onClose(); return }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setHIdx(h => Math.min(h + 1, list.length - 1)) }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); setHIdx(h => Math.max(h - 1, 0)) }
+    if (e.key === 'Escape') {
+      onClose()
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHIdx((h) => Math.min(h + 1, list.length - 1))
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHIdx((h) => Math.max(h - 1, 0))
+    }
     if (e.key === 'Enter' && list[hIdx]) onSelect(list[hIdx].type)
   }
 
@@ -610,45 +1250,69 @@ function SlashMenu({ position, onSelect, onClose }: {
   }
 
   return (
-    <div ref={ref} className="fixed z-50 bg-[#1e1e1e] border border-neutral-700/80 rounded-xl shadow-2xl w-64 overflow-hidden" style={style}>
+    <div
+      ref={ref}
+      className="fixed z-50 bg-[#1e1e1e] border border-neutral-700/80 rounded-xl shadow-2xl w-64 overflow-hidden"
+      style={style}
+    >
       <div className="px-3 py-2 border-b border-neutral-800">
-        <input autoFocus value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleKD}
-          placeholder="搜索块类型…" className="w-full bg-transparent text-sm text-neutral-200 outline-none placeholder-neutral-600" />
+        <input
+          autoFocus
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={handleKD}
+          placeholder="搜索块类型…"
+          className="w-full bg-transparent text-sm text-neutral-200 outline-none placeholder-neutral-600"
+        />
       </div>
       <div className="max-h-[360px] overflow-y-auto py-1">
         {filtered ? (
-          filtered.length === 0
-            ? <p className="text-xs text-neutral-600 px-4 py-3">无匹配结果</p>
-            : filtered.map((bt, i) => {
-                const Icon = bt.icon
-                return (
-                  <button key={bt.type} onClick={() => onSelect(bt.type)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${i === hIdx ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-                    <Icon size={14} className="text-neutral-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-neutral-200">{bt.label}</div>
-                      <div className="text-[10px] text-neutral-600 truncate">{bt.desc}</div>
-                    </div>
-                    <span className="text-[10px] text-neutral-700 font-mono shrink-0">/{bt.shortcut}</span>
-                  </button>
-                )
-              })
+          filtered.length === 0 ? (
+            <p className="text-xs text-neutral-600 px-4 py-3">无匹配结果</p>
+          ) : (
+            filtered.map((bt, i) => {
+              const Icon = bt.icon
+              return (
+                <button
+                  key={bt.type}
+                  onClick={() => onSelect(bt.type)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${i === hIdx ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                >
+                  <Icon size={14} className="text-neutral-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-neutral-200">{bt.label}</div>
+                    <div className="text-[10px] text-neutral-600 truncate">{bt.desc}</div>
+                  </div>
+                  <span className="text-[10px] text-neutral-700 font-mono shrink-0">
+                    /{bt.shortcut}
+                  </span>
+                </button>
+              )
+            })
+          )
         ) : (
-          BLOCK_TYPE_GROUPS.map(group => (
+          BLOCK_TYPE_GROUPS.map((group) => (
             <div key={group.group}>
-              <div className="text-[10px] text-neutral-700 font-semibold uppercase tracking-widest px-3 pt-3 pb-1.5">{group.group}</div>
+              <div className="text-[10px] text-neutral-700 font-semibold uppercase tracking-widest px-3 pt-3 pb-1.5">
+                {group.group}
+              </div>
               {group.items.map((bt) => {
-                const globalIdx = ALL_BLOCK_TYPES.findIndex(x => x.type === bt.type)
+                const globalIdx = ALL_BLOCK_TYPES.findIndex((x) => x.type === bt.type)
                 const Icon = bt.icon
                 return (
-                  <button key={bt.type} onClick={() => onSelect(bt.type)}
-                    className={`w-full flex items-center gap-3 px-3 py-1.5 text-left transition-colors ${globalIdx === hIdx ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                  <button
+                    key={bt.type}
+                    onClick={() => onSelect(bt.type)}
+                    className={`w-full flex items-center gap-3 px-3 py-1.5 text-left transition-colors ${globalIdx === hIdx ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                  >
                     <Icon size={14} className="text-neutral-500 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-neutral-200">{bt.label}</div>
                       <div className="text-[10px] text-neutral-600 truncate">{bt.desc}</div>
                     </div>
-                    <span className="text-[10px] text-neutral-700 font-mono shrink-0">/{bt.shortcut}</span>
+                    <span className="text-[10px] text-neutral-700 font-mono shrink-0">
+                      /{bt.shortcut}
+                    </span>
                   </button>
                 )
               })}
@@ -687,116 +1351,295 @@ interface BlockNodeProps {
 }
 
 function BlockNode({
-  block, level, allBlocks, getChildren,
-  editingId, setEditingId, focusedId, setFocusedId,
-  onUpdate, onDelete, onAddAfter, onAddInside, onMove,
-  onIndent, onOutdent, showSlashMenu, siblingIndex = 0,
-  onNavigate, onCreateSubpage, perm,
+  block,
+  level,
+  allBlocks,
+  getChildren,
+  editingId,
+  setEditingId,
+  focusedId,
+  setFocusedId,
+  onUpdate,
+  onDelete,
+  onAddAfter,
+  onAddInside,
+  onMove,
+  onIndent,
+  onOutdent,
+  showSlashMenu,
+  siblingIndex = 0,
+  onNavigate,
+  onCreateSubpage,
+  perm,
 }: BlockNodeProps) {
   const rowRef = useRef<HTMLDivElement>(null)
   const [dropZone, setDropZone] = useState<DropZone>(null)
+  const [showTagSelector, setShowTagSelector] = useState(false)
   const children = getChildren(block.id)
   const hasChildren = children.length > 0
   const isEditing = editingId === block.id
   const isFocused = focusedId === block.id
   const isSubpage = block.type === 'subpage'
+  const blockTags = block.metadata?.tags || []
 
-  const blockWithNum = block.type === 'numbered' ? { ...block, content: { ...block.content, numberStart: siblingIndex + 1 } } : block
+  const blockWithNum =
+    block.type === 'numbered'
+      ? { ...block, content: { ...block.content, numberStart: siblingIndex + 1 } }
+      : block
 
-  const [{ isDragging }, drag] = useDrag({ type: ITEM_TYPE, item: { id: block.id }, collect: m => ({ isDragging: m.isDragging() }) })
+  const [{ isDragging }, drag] = useDrag({
+    type: ITEM_TYPE,
+    item: { id: block.id },
+    collect: (m) => ({ isDragging: m.isDragging() }),
+  })
   const [, drop] = useDrop<{ id: string }, void, {}>({
     accept: ITEM_TYPE,
     hover(item, monitor) {
       if (!rowRef.current || item.id === block.id) return
-      const isDesc = (cId: string, aId: string): boolean => { const b = allBlocks.get(cId); if (!b || b.parentId === null) return false; return b.parentId === aId || isDesc(b.parentId, aId) }
+      const isDesc = (cId: string, aId: string): boolean => {
+        const b = allBlocks.get(cId)
+        if (!b || b.parentId === null) return false
+        return b.parentId === aId || isDesc(b.parentId, aId)
+      }
       if (isDesc(block.id, item.id)) return
       const rect = rowRef.current.getBoundingClientRect()
       const ratio = (monitor.getClientOffset()!.y - rect.top) / rect.height
-      setDropZone(ratio < 0.25 ? 'before' : (ratio > 0.75 && level < MAX_NEST_LEVEL) ? 'inside' : 'after')
+      setDropZone(
+        ratio < 0.25 ? 'before' : ratio > 0.75 && level < MAX_NEST_LEVEL ? 'inside' : 'after'
+      )
     },
-    drop(item, monitor) { if (monitor.didDrop() || !dropZone || item.id === block.id) return; onMove(item.id, block.id, dropZone); setDropZone(null) },
-    collect: () => ({})
+    drop(item, monitor) {
+      if (monitor.didDrop() || !dropZone || item.id === block.id) return
+      onMove(item.id, block.id, dropZone)
+      setDropZone(null)
+    },
+    collect: () => ({}),
   })
   if (perm.canReorder) drag(drop(rowRef))
   else drop(rowRef)
 
-  const handleCommit = (text: string) => onUpdate(block.id, { content: { ...block.content, rich_text: makeSegs(text) } })
-  const handleTableCommit = (rows: TableCell[][]) => onUpdate(block.id, { content: { ...block.content, tableRows: rows, tableColCount: rows[0]?.length ?? block.content.tableColCount } })
-  const handleTypeChange = (type: BlockType) => onUpdate(block.id, { type, content: defaultBlockContent(type) })
-  const handleUpdateContent = (patch: Partial<Block['content']>) => onUpdate(block.id, { content: { ...block.content, ...patch } })
-  const handleShowSlashMenu = () => { if (perm.canAdd && rowRef.current) showSlashMenu(block.id, rowRef.current.getBoundingClientRect()) }
+  const handleCommit = (text: string) =>
+    onUpdate(block.id, { content: { ...block.content, rich_text: makeSegs(text) } })
+  const handleTableCommit = (rows: TableCell[][]) =>
+    onUpdate(block.id, {
+      content: {
+        ...block.content,
+        tableRows: rows,
+        tableColCount: rows[0]?.length ?? block.content.tableColCount,
+      },
+    })
+  const handleTypeChange = (type: BlockType) =>
+    onUpdate(block.id, { type, content: defaultBlockContent(type) })
+  const handleUpdateContent = (patch: Partial<Block['content']>) =>
+    onUpdate(block.id, { content: { ...block.content, ...patch } })
+  const handleShowSlashMenu = () => {
+    if (perm.canAdd && rowRef.current)
+      showSlashMenu(block.id, rowRef.current.getBoundingClientRect())
+  }
   const handleKD = (e: React.KeyboardEvent<HTMLElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') { if (perm.canAdd) { onAddAfter(block.id); setEditingId(null) } }
-    else if (e.key === 'Tab') { e.preventDefault(); e.shiftKey ? onOutdent(block.id) : onIndent(block.id) }
-    else if (e.key === 'Backspace' && getPlainText(block.content.rich_text) === '') { e.preventDefault(); if (perm.canDelete) onDelete(block.id) }
+    if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') {
+      if (perm.canAdd) {
+        onAddAfter(block.id)
+        setEditingId(null)
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      e.shiftKey ? onOutdent(block.id) : onIndent(block.id)
+    } else if (e.key === 'Backspace' && getPlainText(block.content.rich_text) === '') {
+      e.preventDefault()
+      if (perm.canDelete) onDelete(block.id)
+    }
   }
 
-  const dropCls = dropZone === 'before' ? 'border-t-2 border-blue-400' : dropZone === 'after' ? 'border-b-2 border-blue-400' : dropZone === 'inside' ? 'ring-2 ring-blue-400/60 ring-inset' : ''
+  const dropCls =
+    dropZone === 'before'
+      ? 'border-t-2 border-blue-400'
+      : dropZone === 'after'
+        ? 'border-b-2 border-blue-400'
+        : dropZone === 'inside'
+          ? 'ring-2 ring-blue-400/60 ring-inset'
+          : ''
   const isToggle = block.type === 'toggle'
   const childrenVisible = !block.collapsed && (!isToggle || block.content.toggleOpen)
 
   return (
-    <div className={`relative ${isDragging ? 'opacity-25' : ''}`} onMouseLeave={() => setDropZone(null)}>
+    <div
+      className={`relative ${isDragging ? 'opacity-25' : ''}`}
+      onMouseLeave={() => setDropZone(null)}
+    >
       <div
         ref={rowRef}
         className={`group flex items-start gap-1 rounded-md py-[3px] transition-colors ${isFocused && !isEditing ? 'bg-white/5' : 'hover:bg-white/[0.04]'} ${dropCls}`}
         style={{ paddingLeft: `${level * 24 + 4}px` }}
-        onClick={() => { if (!isSubpage) { setFocusedId(block.id); if (perm.canEdit) setEditingId(block.id) } }}
+        onClick={() => {
+          if (!isSubpage) {
+            setFocusedId(block.id)
+            if (perm.canEdit) setEditingId(block.id)
+          }
+        }}
       >
         {/* 折叠 + 拖拽 */}
         <div className="flex items-center gap-0.5 shrink-0 pt-1">
-          {(hasChildren || isToggle) ? (
-            <button onClick={e => { e.stopPropagation(); isToggle ? onUpdate(block.id, { content: { ...block.content, toggleOpen: !block.content.toggleOpen } }) : onUpdate(block.id, { collapsed: !block.collapsed }) }}
-              className="w-4 h-4 flex items-center justify-center text-neutral-700 hover:text-neutral-400 transition-colors">
+          {hasChildren || isToggle ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                isToggle
+                  ? onUpdate(block.id, {
+                      content: { ...block.content, toggleOpen: !block.content.toggleOpen },
+                    })
+                  : onUpdate(block.id, { collapsed: !block.collapsed })
+              }}
+              className="w-4 h-4 flex items-center justify-center text-neutral-700 hover:text-neutral-400 transition-colors"
+            >
               {childrenVisible ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             </button>
-          ) : <div className="w-4" />}
+          ) : (
+            <div className="w-4" />
+          )}
           {perm.canReorder ? (
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" onMouseDown={e => e.stopPropagation()}>
+            <div
+              className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
               <GripVertical size={13} className="text-neutral-700 hover:text-neutral-500" />
             </div>
-          ) : <div className="w-4" />}
+          ) : (
+            <div className="w-4" />
+          )}
         </div>
 
         {/* 内容 */}
         <div className="flex-1 min-w-0 py-[1px]">
+          {/* 标签显示 */}
+          {blockTags.length > 0 && (
+            <div className="mb-1.5">
+              <SelectedTagsList
+                tags={blockTags}
+                onRemove={
+                  perm.canEdit
+                    ? (tagId) => {
+                        onUpdate(block.id, {
+                          metadata: {
+                            ...block.metadata,
+                            tags: blockTags.filter((t) => t.tagId !== tagId),
+                          },
+                        })
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          )}
+
           {block.type === 'code' && (
-            <div className="mb-1" onClick={e => e.stopPropagation()}>
-              <select value={block.content.language ?? 'plaintext'}
-                onChange={e => onUpdate(block.id, { content: { ...block.content, language: e.target.value } })}
-                className="text-[11px] bg-neutral-800 border border-neutral-700 rounded px-2 py-0.5 text-neutral-400 outline-none cursor-pointer hover:border-neutral-600">
-                {CODE_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+            <div className="mb-1" onClick={(e) => e.stopPropagation()}>
+              <select
+                value={block.content.language ?? 'plaintext'}
+                onChange={(e) =>
+                  onUpdate(block.id, { content: { ...block.content, language: e.target.value } })
+                }
+                className="text-[11px] bg-neutral-800 border border-neutral-700 rounded px-2 py-0.5 text-neutral-400 outline-none cursor-pointer hover:border-neutral-600"
+              >
+                {CODE_LANGUAGES.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
               </select>
             </div>
           )}
-          <InlineEditor block={blockWithNum} isEditing={isEditing} onCommit={handleCommit}
-            onStartEdit={() => { if (!isSubpage) { setFocusedId(block.id); setEditingId(block.id) } }}
-            onKeyDown={handleKD} allBlocks={allBlocks} onTableCommit={handleTableCommit}
-            onNavigate={onNavigate} onCreateSubpage={onCreateSubpage}
+          <InlineEditor
+            block={blockWithNum}
+            isEditing={isEditing}
+            onCommit={handleCommit}
+            onStartEdit={() => {
+              if (!isSubpage) {
+                setFocusedId(block.id)
+                setEditingId(block.id)
+              }
+            }}
+            onKeyDown={handleKD}
+            allBlocks={allBlocks}
+            onTableCommit={handleTableCommit}
+            onNavigate={onNavigate}
+            onCreateSubpage={onCreateSubpage}
             onTypeChange={perm.canEdit ? handleTypeChange : undefined}
             onSlashMenu={perm.canAdd ? handleShowSlashMenu : undefined}
             onExitEdit={() => setEditingId(null)}
-            onUpdateContent={handleUpdateContent} />
+            onUpdateContent={handleUpdateContent}
+          />
         </div>
 
         {/* 操作按钮 */}
-        {(perm.canAdd || perm.canDelete) && (
+        {(perm.canAdd || perm.canDelete || perm.canEdit) && (
           <div className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center gap-0.5 pt-1 transition-opacity">
+            {!isSubpage && perm.canEdit && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowTagSelector(!showTagSelector)
+                  }}
+                  className={`w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition-colors ${
+                    blockTags.length > 0
+                      ? 'text-blue-400'
+                      : 'text-neutral-600 hover:text-neutral-300'
+                  }`}
+                  title="添加标签"
+                >
+                  <Tag size={11} />
+                </button>
+                {showTagSelector && (
+                  <div className="absolute top-full right-0 mt-1 z-50">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <BlockTagSelector
+                        selectedTags={blockTags}
+                        onChange={(tags) => {
+                          onUpdate(block.id, {
+                            metadata: { ...block.metadata, tags },
+                          })
+                        }}
+                        onClose={() => setShowTagSelector(false)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {!isSubpage && perm.canAdd && (
               <>
-                <button onClick={e => { e.stopPropagation(); onAddAfter(block.id) }}
-                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors" title="同级添加（Enter）">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAddAfter(block.id)
+                  }}
+                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors"
+                  title="同级添加（Enter）"
+                >
                   <Plus size={11} />
                 </button>
-                <button onClick={e => { e.stopPropagation(); onAddInside(block.id) }}
-                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors" title="添加子块（Tab）">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAddInside(block.id)
+                  }}
+                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors"
+                  title="添加子块（Tab）"
+                >
                   <ArrowRight size={11} />
                 </button>
               </>
             )}
             {perm.canDelete && (
-              <button onClick={e => { e.stopPropagation(); onDelete(block.id) }}
-                className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-neutral-600 hover:text-red-400 transition-colors" title="删除">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(block.id)
+                }}
+                className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-neutral-600 hover:text-red-400 transition-colors"
+                title="删除"
+              >
                 <Trash2 size={11} />
               </button>
             )}
@@ -805,13 +1648,32 @@ function BlockNode({
       </div>
 
       {/* 子块递归 */}
-      {childrenVisible && children.map((child, idx) => (
-        <BlockNode key={child.id} block={child} level={level + 1} allBlocks={allBlocks} getChildren={getChildren}
-          editingId={editingId} setEditingId={setEditingId} focusedId={focusedId} setFocusedId={setFocusedId}
-          onUpdate={onUpdate} onDelete={onDelete} onAddAfter={onAddAfter} onAddInside={onAddInside}
-          onMove={onMove} onIndent={onIndent} onOutdent={onOutdent} showSlashMenu={showSlashMenu}
-          siblingIndex={idx} onNavigate={onNavigate} onCreateSubpage={onCreateSubpage} perm={perm} />
-      ))}
+      {childrenVisible &&
+        children.map((child, idx) => (
+          <BlockNode
+            key={child.id}
+            block={child}
+            level={level + 1}
+            allBlocks={allBlocks}
+            getChildren={getChildren}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            focusedId={focusedId}
+            setFocusedId={setFocusedId}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onAddAfter={onAddAfter}
+            onAddInside={onAddInside}
+            onMove={onMove}
+            onIndent={onIndent}
+            onOutdent={onOutdent}
+            showSlashMenu={showSlashMenu}
+            siblingIndex={idx}
+            onNavigate={onNavigate}
+            onCreateSubpage={onCreateSubpage}
+            perm={perm}
+          />
+        ))}
     </div>
   )
 }
@@ -828,8 +1690,13 @@ export interface BlockEditorProps {
 }
 
 export default function BlockEditor({
-  pageId, initialBlocks = [], onChange, readOnly = false,
-  permissions, onNavigate, onCreateSubpage,
+  pageId,
+  initialBlocks = [],
+  onChange,
+  readOnly = false,
+  permissions,
+  onNavigate,
+  onCreateSubpage,
 }: BlockEditorProps) {
   const perm: BlockPermissions = {
     ...DEFAULT_PERM,
@@ -838,122 +1705,268 @@ export default function BlockEditor({
   }
 
   const [blocksMap, setBlocksMap] = useState<Map<string, Block>>(() => {
-    if (initialBlocks.length) return new Map(initialBlocks.map(b => [b.id, b]))
+    if (initialBlocks.length) return new Map(initialBlocks.map((b) => [b.id, b]))
     const id = generateBlockId()
-    return new Map([[id, { id, parentId: null, type: 'paragraph' as BlockType, content: { rich_text: [] }, position: 1 }]])
+    return new Map([
+      [
+        id,
+        {
+          id,
+          parentId: null,
+          type: 'paragraph' as BlockType,
+          content: { rich_text: [] },
+          position: 1,
+        },
+      ],
+    ])
   })
   const [editingId, setEditingId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
-  const [slashMenu, setSlashMenu] = useState<{ anchorId: string; pos: { top: number; left: number } } | null>(null)
+  const [slashMenu, setSlashMenu] = useState<{
+    anchorId: string
+    pos: { top: number; left: number }
+  } | null>(null)
 
   useEffect(() => {
     if (initialBlocks.length) {
-      setBlocksMap(new Map(initialBlocks.map(b => [b.id, b])))
+      setBlocksMap(new Map(initialBlocks.map((b) => [b.id, b])))
     } else {
       const id = generateBlockId()
-      setBlocksMap(new Map([[id, { id, parentId: null, type: 'paragraph' as BlockType, content: { rich_text: [] }, position: 1 }]]))
+      setBlocksMap(
+        new Map([
+          [
+            id,
+            {
+              id,
+              parentId: null,
+              type: 'paragraph' as BlockType,
+              content: { rich_text: [] },
+              position: 1,
+            },
+          ],
+        ])
+      )
     }
-    setEditingId(null); setFocusedId(null)
+    setEditingId(null)
+    setFocusedId(null)
   }, [pageId])
 
-  const emit = useCallback((m: Map<string, Block>) => onChange?.(Array.from(m.values())), [onChange])
-  const getChildren = useCallback((parentId: string | null) =>
-    Array.from(blocksMap.values()).filter(b => b.parentId === parentId).sort((a, b) => a.position - b.position)
-  , [blocksMap])
+  const emit = useCallback(
+    (m: Map<string, Block>) => onChange?.(Array.from(m.values())),
+    [onChange]
+  )
+  const getChildren = useCallback(
+    (parentId: string | null) =>
+      Array.from(blocksMap.values())
+        .filter((b) => b.parentId === parentId)
+        .sort((a, b) => a.position - b.position),
+    [blocksMap]
+  )
 
-  const updateBlock = useCallback((id: string, updates: Partial<Block>) => {
-    setBlocksMap(prev => { const b = prev.get(id); if (!b) return prev; const next = new Map(prev); next.set(id, { ...b, ...updates }); emit(next); return next })
-  }, [emit])
+  const updateBlock = useCallback(
+    (id: string, updates: Partial<Block>) => {
+      setBlocksMap((prev) => {
+        const b = prev.get(id)
+        if (!b) return prev
+        const next = new Map(prev)
+        next.set(id, { ...b, ...updates })
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
-  const deleteBlock = useCallback((id: string) => {
-    setBlocksMap(prev => {
-      const next = new Map(prev)
-      const rm = (bid: string) => { Array.from(next.values()).filter(b => b.parentId === bid).forEach(c => rm(c.id)); next.delete(bid) }
-      rm(id)
-      if (!Array.from(next.values()).some(b => b.parentId === null)) {
-        const def: Block = { id: generateBlockId(), parentId: null, type: 'paragraph', content: { rich_text: [] }, position: 1 }
-        next.set(def.id, def); setFocusedId(def.id); setEditingId(def.id)
-      } else { setFocusedId(null); setEditingId(null) }
-      emit(next); return next
-    })
-  }, [emit])
+  const deleteBlock = useCallback(
+    (id: string) => {
+      setBlocksMap((prev) => {
+        const next = new Map(prev)
+        const rm = (bid: string) => {
+          Array.from(next.values())
+            .filter((b) => b.parentId === bid)
+            .forEach((c) => rm(c.id))
+          next.delete(bid)
+        }
+        rm(id)
+        if (!Array.from(next.values()).some((b) => b.parentId === null)) {
+          const def: Block = {
+            id: generateBlockId(),
+            parentId: null,
+            type: 'paragraph',
+            content: { rich_text: [] },
+            position: 1,
+          }
+          next.set(def.id, def)
+          setFocusedId(def.id)
+          setEditingId(def.id)
+        } else {
+          setFocusedId(null)
+          setEditingId(null)
+        }
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
-  const addAfter = useCallback((refId: string, type: BlockType = 'paragraph') => {
-    setBlocksMap(prev => {
-      const ref = prev.get(refId); if (!ref) return prev
-      const sibs = Array.from(prev.values()).filter(b => b.parentId === ref.parentId).sort((a,b) => a.position - b.position)
-      const idx = sibs.findIndex(b => b.id === refId)
-      const nb: Block = { id: generateBlockId(), parentId: ref.parentId, type, content: defaultBlockContent(type),
-        position: positionBetween(sibs[idx]?.position ?? null, sibs[idx+1]?.position ?? null) }
-      const next = new Map(prev); next.set(nb.id, nb)
-      setFocusedId(nb.id); setEditingId(nb.id); emit(next); return next
-    })
-  }, [emit])
+  const addAfter = useCallback(
+    (refId: string, type: BlockType = 'paragraph') => {
+      setBlocksMap((prev) => {
+        const ref = prev.get(refId)
+        if (!ref) return prev
+        const sibs = Array.from(prev.values())
+          .filter((b) => b.parentId === ref.parentId)
+          .sort((a, b) => a.position - b.position)
+        const idx = sibs.findIndex((b) => b.id === refId)
+        const nb: Block = {
+          id: generateBlockId(),
+          parentId: ref.parentId,
+          type,
+          content: defaultBlockContent(type),
+          position: positionBetween(sibs[idx]?.position ?? null, sibs[idx + 1]?.position ?? null),
+        }
+        const next = new Map(prev)
+        next.set(nb.id, nb)
+        setFocusedId(nb.id)
+        setEditingId(nb.id)
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
-  const addInside = useCallback((parentId: string, type: BlockType = 'paragraph') => {
-    setBlocksMap(prev => {
-      const children = Array.from(prev.values()).filter(b => b.parentId === parentId).sort((a,b) => a.position - b.position)
-      const nb: Block = { id: generateBlockId(), parentId, type, content: defaultBlockContent(type),
-        position: children.length ? children[children.length-1].position + 1 : 1 }
-      const next = new Map(prev); next.set(nb.id, nb)
-      const parent = prev.get(parentId)
-      if (parent) {
-        if (parent.type === 'toggle') next.set(parentId, { ...parent, content: { ...parent.content, toggleOpen: true } })
-        else if (parent.collapsed) next.set(parentId, { ...parent, collapsed: false })
-      }
-      setFocusedId(nb.id); setEditingId(nb.id); emit(next); return next
-    })
-  }, [emit])
+  const addInside = useCallback(
+    (parentId: string, type: BlockType = 'paragraph') => {
+      setBlocksMap((prev) => {
+        const children = Array.from(prev.values())
+          .filter((b) => b.parentId === parentId)
+          .sort((a, b) => a.position - b.position)
+        const nb: Block = {
+          id: generateBlockId(),
+          parentId,
+          type,
+          content: defaultBlockContent(type),
+          position: children.length ? children[children.length - 1].position + 1 : 1,
+        }
+        const next = new Map(prev)
+        next.set(nb.id, nb)
+        const parent = prev.get(parentId)
+        if (parent) {
+          if (parent.type === 'toggle')
+            next.set(parentId, { ...parent, content: { ...parent.content, toggleOpen: true } })
+          else if (parent.collapsed) next.set(parentId, { ...parent, collapsed: false })
+        }
+        setFocusedId(nb.id)
+        setEditingId(nb.id)
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
-  const moveBlock = useCallback((dragId: string, targetId: string, zone: 'before'|'after'|'inside') => {
-    setBlocksMap(prev => {
-      const drag = prev.get(dragId), target = prev.get(targetId)
-      if (!drag || !target || dragId === targetId) return prev
-      const isAnc = (cId: string, aId: string): boolean => { const b = prev.get(cId); if (!b || b.parentId === null) return false; return b.parentId === aId || isAnc(b.parentId, aId) }
-      if (isAnc(targetId, dragId)) return prev
-      let newParentId: string|null, newPos: number
-      if (zone === 'inside') {
-        newParentId = targetId
-        const ch = Array.from(prev.values()).filter(b => b.parentId === targetId).sort((a,b) => a.position-b.position)
-        newPos = ch.length ? ch[ch.length-1].position + 1 : 1
-      } else {
-        newParentId = target.parentId
-        const sibs = Array.from(prev.values()).filter(b => b.parentId === target.parentId && b.id !== dragId).sort((a,b) => a.position-b.position)
-        const idx = sibs.findIndex(b => b.id === targetId)
-        newPos = positionBetween(
-          zone === 'after' ? sibs[idx]?.position ?? null : sibs[idx-1]?.position ?? null,
-          zone === 'before' ? sibs[idx]?.position ?? null : sibs[idx+1]?.position ?? null,
-        )
-      }
-      const next = new Map(prev); next.set(dragId, { ...drag, parentId: newParentId, position: newPos }); emit(next); return next
-    })
-  }, [emit])
+  const moveBlock = useCallback(
+    (dragId: string, targetId: string, zone: 'before' | 'after' | 'inside') => {
+      setBlocksMap((prev) => {
+        const drag = prev.get(dragId),
+          target = prev.get(targetId)
+        if (!drag || !target || dragId === targetId) return prev
+        const isAnc = (cId: string, aId: string): boolean => {
+          const b = prev.get(cId)
+          if (!b || b.parentId === null) return false
+          return b.parentId === aId || isAnc(b.parentId, aId)
+        }
+        if (isAnc(targetId, dragId)) return prev
+        let newParentId: string | null, newPos: number
+        if (zone === 'inside') {
+          newParentId = targetId
+          const ch = Array.from(prev.values())
+            .filter((b) => b.parentId === targetId)
+            .sort((a, b) => a.position - b.position)
+          newPos = ch.length ? ch[ch.length - 1].position + 1 : 1
+        } else {
+          newParentId = target.parentId
+          const sibs = Array.from(prev.values())
+            .filter((b) => b.parentId === target.parentId && b.id !== dragId)
+            .sort((a, b) => a.position - b.position)
+          const idx = sibs.findIndex((b) => b.id === targetId)
+          newPos = positionBetween(
+            zone === 'after' ? (sibs[idx]?.position ?? null) : (sibs[idx - 1]?.position ?? null),
+            zone === 'before' ? (sibs[idx]?.position ?? null) : (sibs[idx + 1]?.position ?? null)
+          )
+        }
+        const next = new Map(prev)
+        next.set(dragId, { ...drag, parentId: newParentId, position: newPos })
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
-  const indentBlock = useCallback((id: string) => {
-    setBlocksMap(prev => {
-      const block = prev.get(id); if (!block) return prev
-      const sibs = Array.from(prev.values()).filter(b => b.parentId === block.parentId).sort((a,b) => a.position-b.position)
-      const idx = sibs.findIndex(b => b.id === id); if (idx === 0) return prev
-      const newParent = sibs[idx-1]
-      const ch = Array.from(prev.values()).filter(b => b.parentId === newParent.id).sort((a,b) => a.position-b.position)
-      const next = new Map(prev)
-      next.set(id, { ...block, parentId: newParent.id, position: ch.length ? ch[ch.length-1].position+1 : 1 })
-      next.set(newParent.id, { ...newParent, collapsed: false, content: newParent.type === 'toggle' ? { ...newParent.content, toggleOpen: true } : newParent.content })
-      emit(next); return next
-    })
-  }, [emit])
+  const indentBlock = useCallback(
+    (id: string) => {
+      setBlocksMap((prev) => {
+        const block = prev.get(id)
+        if (!block) return prev
+        const sibs = Array.from(prev.values())
+          .filter((b) => b.parentId === block.parentId)
+          .sort((a, b) => a.position - b.position)
+        const idx = sibs.findIndex((b) => b.id === id)
+        if (idx === 0) return prev
+        const newParent = sibs[idx - 1]
+        const ch = Array.from(prev.values())
+          .filter((b) => b.parentId === newParent.id)
+          .sort((a, b) => a.position - b.position)
+        const next = new Map(prev)
+        next.set(id, {
+          ...block,
+          parentId: newParent.id,
+          position: ch.length ? ch[ch.length - 1].position + 1 : 1,
+        })
+        next.set(newParent.id, {
+          ...newParent,
+          collapsed: false,
+          content:
+            newParent.type === 'toggle'
+              ? { ...newParent.content, toggleOpen: true }
+              : newParent.content,
+        })
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
-  const outdentBlock = useCallback((id: string) => {
-    setBlocksMap(prev => {
-      const block = prev.get(id); if (!block || block.parentId === null) return prev
-      const parent = prev.get(block.parentId); if (!parent) return prev
-      const gsibs = Array.from(prev.values()).filter(b => b.parentId === parent.parentId).sort((a,b) => a.position-b.position)
-      const pidx = gsibs.findIndex(b => b.id === parent.id)
-      const next = new Map(prev)
-      next.set(id, { ...block, parentId: parent.parentId, position: positionBetween(gsibs[pidx]?.position ?? null, gsibs[pidx+1]?.position ?? null) })
-      emit(next); return next
-    })
-  }, [emit])
+  const outdentBlock = useCallback(
+    (id: string) => {
+      setBlocksMap((prev) => {
+        const block = prev.get(id)
+        if (!block || block.parentId === null) return prev
+        const parent = prev.get(block.parentId)
+        if (!parent) return prev
+        const gsibs = Array.from(prev.values())
+          .filter((b) => b.parentId === parent.parentId)
+          .sort((a, b) => a.position - b.position)
+        const pidx = gsibs.findIndex((b) => b.id === parent.id)
+        const next = new Map(prev)
+        next.set(id, {
+          ...block,
+          parentId: parent.parentId,
+          position: positionBetween(
+            gsibs[pidx]?.position ?? null,
+            gsibs[pidx + 1]?.position ?? null
+          ),
+        })
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
   const showSlashMenu = useCallback((anchorId: string, rect: DOMRect) => {
     setSlashMenu({ anchorId, pos: { top: rect.bottom + 4, left: rect.left } })
@@ -961,47 +1974,73 @@ export default function BlockEditor({
 
   const handleSlashSelect = (type: BlockType) => {
     if (!slashMenu) return
-    setBlocksMap(prev => {
-      const b = prev.get(slashMenu.anchorId); if (!b) return prev
+    setBlocksMap((prev) => {
+      const b = prev.get(slashMenu.anchorId)
+      if (!b) return prev
       const next = new Map(prev)
-      next.set(slashMenu.anchorId, { ...b, type, content: { ...defaultBlockContent(type), rich_text: b.content.rich_text } })
-      emit(next); return next
+      next.set(slashMenu.anchorId, {
+        ...b,
+        type,
+        content: { ...defaultBlockContent(type), rich_text: b.content.rich_text },
+      })
+      emit(next)
+      return next
     })
-    setSlashMenu(null); setEditingId(slashMenu.anchorId)
+    setSlashMenu(null)
+    setEditingId(slashMenu.anchorId)
   }
 
-  const handleCreateSubpage = useCallback(async (blockId: string): Promise<string> => {
-    if (!onCreateSubpage) return ''
-    const newPageId = await onCreateSubpage(blockId, pageId)
-    setBlocksMap(prev => {
-      const b = prev.get(blockId); if (!b) return prev
-      const next = new Map(prev)
-      next.set(blockId, { ...b, content: { ...b.content, subpageId: newPageId } })
-      emit(next); return next
-    })
-    return newPageId
-  }, [onCreateSubpage, pageId, emit])
+  const handleCreateSubpage = useCallback(
+    async (blockId: string): Promise<string> => {
+      if (!onCreateSubpage) return ''
+      const newPageId = await onCreateSubpage(blockId, pageId)
+      setBlocksMap((prev) => {
+        const b = prev.get(blockId)
+        if (!b) return prev
+        const next = new Map(prev)
+        next.set(blockId, { ...b, content: { ...b.content, subpageId: newPageId } })
+        emit(next)
+        return next
+      })
+      return newPageId
+    },
+    [onCreateSubpage, pageId, emit]
+  )
 
   // ─── 媒体块：blob → 服务器 URL 原地替换 ────────────────────────────────────
-  const addMediaBlock = useCallback((url: string, type: BlockType, id?: string) => {
-    setBlocksMap(prev => {
-      const next = new Map(prev)
-      if (id && prev.has(id)) {
-        const b = prev.get(id)!
-        next.set(id, { ...b, content: { ...b.content, rich_text: [{ text: url }] } })
-      } else {
-        const roots = Array.from(prev.values()).filter(b => b.parentId === null).sort((a, b) => a.position - b.position)
-        const last  = roots[roots.length - 1]
-        const pos   = last ? last.position + 1 : 1
-        const nb: Block = { id: id ?? generateBlockId(), parentId: null, type, content: { ...defaultBlockContent(type), rich_text: [{ text: url }] }, position: pos }
-        next.set(nb.id, nb)
-      }
-      emit(next); return next
-    })
-  }, [emit])
+  const addMediaBlock = useCallback(
+    (url: string, type: BlockType, id?: string) => {
+      setBlocksMap((prev) => {
+        const next = new Map(prev)
+        if (id && prev.has(id)) {
+          const b = prev.get(id)!
+          next.set(id, { ...b, content: { ...b.content, rich_text: [{ text: url }] } })
+        } else {
+          const roots = Array.from(prev.values())
+            .filter((b) => b.parentId === null)
+            .sort((a, b) => a.position - b.position)
+          const last = roots[roots.length - 1]
+          const pos = last ? last.position + 1 : 1
+          const nb: Block = {
+            id: id ?? generateBlockId(),
+            parentId: null,
+            type,
+            content: { ...defaultBlockContent(type), rich_text: [{ text: url }] },
+            position: pos,
+          }
+          next.set(nb.id, nb)
+        }
+        emit(next)
+        return next
+      })
+    },
+    [emit]
+  )
 
   const addMediaBlockRef = useRef(addMediaBlock)
-  useEffect(() => { addMediaBlockRef.current = addMediaBlock }, [addMediaBlock])
+  useEffect(() => {
+    addMediaBlockRef.current = addMediaBlock
+  }, [addMediaBlock])
 
   // ─── 文件拖拽：window capture 绕过 react-dnd HTML5Backend 拦截 ───────────
   const containerRef = useRef<HTMLDivElement>(null)
@@ -1012,11 +2051,12 @@ export default function BlockEditor({
     let enterCount = 0
 
     const isFileEvent = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files')
-    const inContainer  = (e: DragEvent) => !!containerRef.current?.contains(e.target as Node)
+    const inContainer = (e: DragEvent) => !!containerRef.current?.contains(e.target as Node)
 
     const onDragEnter = (e: DragEvent) => {
       if (!isFileEvent(e) || !inContainer(e)) return
-      enterCount++; setIsFileDragging(true)
+      enterCount++
+      setIsFileDragging(true)
     }
     const onDragLeave = (e: DragEvent) => {
       if (!isFileEvent(e)) return
@@ -1030,14 +2070,19 @@ export default function BlockEditor({
     }
     const onDrop = async (e: DragEvent) => {
       if (!isFileEvent(e) || !inContainer(e)) return
-      e.preventDefault(); e.stopPropagation()
-      enterCount = 0; setIsFileDragging(false)
+      e.preventDefault()
+      e.stopPropagation()
+      enterCount = 0
+      setIsFileDragging(false)
 
       for (const file of Array.from(e.dataTransfer!.files)) {
-        const fileType: BlockType = file.type.startsWith('image/') ? 'image'
-          : file.type.startsWith('video/') ? 'video'
-          : file.type.startsWith('audio/') ? 'audio'
-          : 'file'
+        const fileType: BlockType = file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('video/')
+            ? 'video'
+            : file.type.startsWith('audio/')
+              ? 'audio'
+              : 'file'
         const blobUrl = URL.createObjectURL(file)
         const blockId = generateBlockId()
         addMediaBlockRef.current(blobUrl, fileType, blockId)
@@ -1053,19 +2098,21 @@ export default function BlockEditor({
           const d = await r.json()
           addMediaBlockRef.current(d.url, fileType, blockId)
           URL.revokeObjectURL(blobUrl)
-        } catch (err) { console.error('[drop upload]', err) }
+        } catch (err) {
+          console.error('[drop upload]', err)
+        }
       }
     }
 
     window.addEventListener('dragenter', onDragEnter, { capture: true })
     window.addEventListener('dragleave', onDragLeave, { capture: true })
-    window.addEventListener('dragover',  onDragOver,  { capture: true })
-    window.addEventListener('drop',      onDrop,      { capture: true })
+    window.addEventListener('dragover', onDragOver, { capture: true })
+    window.addEventListener('drop', onDrop, { capture: true })
     return () => {
       window.removeEventListener('dragenter', onDragEnter, { capture: true })
       window.removeEventListener('dragleave', onDragLeave, { capture: true })
-      window.removeEventListener('dragover',  onDragOver,  { capture: true })
-      window.removeEventListener('drop',      onDrop,      { capture: true })
+      window.removeEventListener('dragover', onDragOver, { capture: true })
+      window.removeEventListener('drop', onDrop, { capture: true })
     }
   }, [perm.canAdd])
 
@@ -1080,18 +2127,50 @@ export default function BlockEditor({
       )}
       <DndProvider backend={HTML5Backend}>
         <div onClick={() => setEditingId(null)}>
-          <div onClick={e => e.stopPropagation()}>
+          <div onClick={(e) => e.stopPropagation()}>
             {rootBlocks.map((block, idx) => (
-              <BlockNode key={block.id} block={block} level={0} allBlocks={blocksMap} getChildren={getChildren}
-                editingId={editingId} setEditingId={setEditingId} focusedId={focusedId} setFocusedId={setFocusedId}
-                onUpdate={updateBlock} onDelete={deleteBlock} onAddAfter={addAfter} onAddInside={addInside}
-                onMove={moveBlock} onIndent={indentBlock} onOutdent={outdentBlock}
-                showSlashMenu={showSlashMenu} siblingIndex={idx}
-                onNavigate={onNavigate} onCreateSubpage={handleCreateSubpage} perm={perm} />
+              <BlockNode
+                key={block.id}
+                block={block}
+                level={0}
+                allBlocks={blocksMap}
+                getChildren={getChildren}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                focusedId={focusedId}
+                setFocusedId={setFocusedId}
+                onUpdate={updateBlock}
+                onDelete={deleteBlock}
+                onAddAfter={addAfter}
+                onAddInside={addInside}
+                onMove={moveBlock}
+                onIndent={indentBlock}
+                onOutdent={outdentBlock}
+                showSlashMenu={showSlashMenu}
+                siblingIndex={idx}
+                onNavigate={onNavigate}
+                onCreateSubpage={handleCreateSubpage}
+                perm={perm}
+              />
             ))}
           </div>
-          {perm.canAdd && <div className="h-32 cursor-text" onClick={e => { e.stopPropagation(); const r = rootBlocks; if (r.length) addAfter(r[r.length-1].id) }} />}
-          {slashMenu && <SlashMenu position={slashMenu.pos} onSelect={handleSlashSelect} onClose={() => setSlashMenu(null)} />}
+          {perm.canAdd && (
+            <div
+              className="h-32 cursor-text"
+              onClick={(e) => {
+                e.stopPropagation()
+                const r = rootBlocks
+                if (r.length) addAfter(r[r.length - 1].id)
+              }}
+            />
+          )}
+          {slashMenu && (
+            <SlashMenu
+              position={slashMenu.pos}
+              onSelect={handleSlashSelect}
+              onClose={() => setSlashMenu(null)}
+            />
+          )}
         </div>
       </DndProvider>
     </div>

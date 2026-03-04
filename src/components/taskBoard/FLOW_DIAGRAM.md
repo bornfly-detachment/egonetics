@@ -3,6 +3,7 @@
 ## 📊 交互流程对比
 
 ### 改造前 (Before)
+
 ```
 看板 (KanbanBoard)
 │
@@ -20,6 +21,7 @@
 ```
 
 ### 改造后 (After)
+
 ```
 看板 (KanbanBoard)
 │
@@ -61,6 +63,7 @@
 ## 🔄 详细交互流程
 
 ### 场景 1: 查看任务详情
+
 ```
 用户在看板看到一个 task 卡片
         │
@@ -89,6 +92,7 @@
 ```
 
 ### 场景 2: 快速编辑（在看板页面）
+
 ```
 用户在看板看到一个 task 卡片
         │
@@ -119,6 +123,7 @@
 ```
 
 ### 场景 3: 拖拽排序（不变）
+
 ```
 用户在看板拖拽 task 卡片
         │
@@ -144,6 +149,7 @@
 ```
 
 ### 场景 4: 删除任务
+
 ```
 方式 A: 在看板页面
   task 右侧菜单 → 删除任务 → 确认
@@ -170,7 +176,9 @@
 ## 🎯 核心改动点
 
 ### 1. TaskCard 组件
+
 **改造前:**
+
 ```typescript
 interface CardProps {
   onEdit: (t: Task) => void  // 点击卡片弹窗编辑
@@ -182,6 +190,7 @@ onClick={() => !showMenu && onEdit(task)}
 ```
 
 **改造后:**
+
 ```typescript
 interface CardProps {
   onCardClick: (taskId: string) => void    // 导航到详情页
@@ -202,7 +211,9 @@ onClick={() => !showMenu && onCardClick(task.id)}
 ```
 
 ### 2. KanbanBoard 主组件
+
 **改造前:**
+
 ```typescript
 const [editingTask, setEditingTask] = useState(null)
 
@@ -214,16 +225,20 @@ const onEditTask = (task) => {
 ```
 
 **改造后:**
+
 ```typescript
 const navigate = useNavigate()
 const [editingTask, setEditingTask] = useState(null)
 
-const handleCardClick = useCallback((taskId: string) => {
-  navigate(`/tasks/${taskId}`)
-}, [navigate])
+const handleCardClick = useCallback(
+  (taskId: string) => {
+    navigate(`/tasks/${taskId}`)
+  },
+  [navigate]
+)
 
 const handleEditTask = (task) => {
-  setEditingTask(task)  // 仅编辑按钮时触发
+  setEditingTask(task) // 仅编辑按钮时触发
 }
 
 // 点击卡片时调用 handleCardClick
@@ -231,6 +246,7 @@ const handleEditTask = (task) => {
 ```
 
 ### 3. 新增 TaskDetailPage
+
 ```typescript
 // 完整的任务详情页组件
 - 使用 useParams 获取 taskId
@@ -241,9 +257,10 @@ const handleEditTask = (task) => {
 ```
 
 ### 4. 新增 apiClient
+
 ```typescript
 // 统一的 API 客户端
-createApiClient('task')     // 创建 task 类型的客户端
+createApiClient('task') // 创建 task 类型的客户端
 createApiClient('chronicle') // 创建 chronicle 类型的客户端
 // 支持 fetchOne, fetchList, save, delete
 ```
@@ -253,12 +270,14 @@ createApiClient('chronicle') // 创建 chronicle 类型的客户端
 ## 📱 用户体验改进
 
 ### Before (改造前)
+
 - ❌ 点击卡片弹窗太小，信息不完整
 - ❌ 所有编辑都在弹窗中进行
 - ❌ 无法清楚地看到任务的完整信息
 - ❌ 无法看到任务的创建/修改时间
 
 ### After (改造后)
+
 - ✅ 点击卡片可以进入完整的详情页
 - ✅ 支持快速编辑（编辑按钮 → 弹窗）
 - ✅ 详情页显示所有任务信息
@@ -271,11 +290,13 @@ createApiClient('chronicle') // 创建 chronicle 类型的客户端
 ## 🔗 API 接口清单
 
 ### 看板相关（不变）
+
 - `GET /api/kanban` - 获取看板数据
 - `PUT /api/kanban/columns` - 更新列
 - `PUT /api/kanban/tasks` - 更新任务列表
 
 ### 任务相关（新增）
+
 - `GET /api/tasks/:id` - 获取单个任务详情
 - `POST /api/tasks` - 创建新任务
 - `PUT /api/tasks/:id` - 更新任务
@@ -309,16 +330,18 @@ createApiClient('chronicle') // 创建 chronicle 类型的客户端
 ## 📊 状态管理对比
 
 ### KanbanBoard 状态（不变的部分）
+
 ```typescript
-const [columns, setColumns] = useState<Column[]>([])      // 列数据
-const [draggingId, setDraggingId] = useState(null)        // 正在拖拽的任务
-const [hoverColId, setHoverColId] = useState(null)        // 悬停的列
-const [insertLine, setInsertLine] = useState(null)        // 插入位置
+const [columns, setColumns] = useState<Column[]>([]) // 列数据
+const [draggingId, setDraggingId] = useState(null) // 正在拖拽的任务
+const [hoverColId, setHoverColId] = useState(null) // 悬停的列
+const [insertLine, setInsertLine] = useState(null) // 插入位置
 ```
 
 ### KanbanBoard 状态（改造的部分）
+
 ```typescript
-const [editingTask, setEditingTask] = useState(null)      // 编辑中的任务
+const [editingTask, setEditingTask] = useState(null) // 编辑中的任务
 
 // 改造前: 点击卡片时设置 editingTask（弹弹窗编辑）
 // 改造后: 只在编辑按钮点击时设置 editingTask（弹弹窗快速编辑）
@@ -326,11 +349,12 @@ const [editingTask, setEditingTask] = useState(null)      // 编辑中的任务
 ```
 
 ### TaskDetailPage 状态（新增）
+
 ```typescript
-const [task, setTask] = useState<Task | null>(null)       // 任务数据
-const [loading, setLoading] = useState(true)              // 加载中
-const [error, setError] = useState<string | null>(null)   // 错误信息
-const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
+const [task, setTask] = useState<Task | null>(null) // 任务数据
+const [loading, setLoading] = useState(true) // 加载中
+const [error, setError] = useState<string | null>(null) // 错误信息
+const [showEdit, setShowEdit] = useState(false) // 编辑弹窗显示
 ```
 
 ---
@@ -340,6 +364,7 @@ const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
 ### 看板卡片 (TaskCard)
 
 **改造前:**
+
 ```
 ┌─────────────────────────┐
 │ 🔥 (grip)  任务名  (more)│ ← 点击卡片 → 弹窗编辑
@@ -349,6 +374,7 @@ const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
 ```
 
 **改造后:**
+
 ```
 ┌─────────────────────────┐
 │ 🔥 (grip)  任务名  ✏️ (more)│ ← 点击卡片 → 跳转详情页
@@ -360,6 +386,7 @@ const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
 ### 详情页 (TaskDetailPage)
 
 **新增:**
+
 ```
 ┌─────────────────────────────────────────┐
 │ ← 返回  |  任务管理 - 完整详情  | 编辑 ✏️ 删除 🗑️  │
@@ -386,14 +413,17 @@ const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
 ## 🚀 性能优化
 
 ### 1. 懒加载
+
 - 详情页只在用户点击时才加载数据
 - 避免一次性加载所有任务的详细信息
 
 ### 2. 缓存策略
+
 - KanbanBoard: 保持看板数据在内存中
 - TaskDetailPage: 加载单个任务数据（可添加缓存）
 
 ### 3. 自动保存
+
 - KanbanBoard: 拖拽后自动保存（debounce 600ms）
 - TaskDetailPage: 编辑后点击保存按钮
 
@@ -402,27 +432,32 @@ const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
 ## ✅ 测试检查清单
 
 ### 导航测试
+
 - [ ] 在看板点击卡片是否跳转到详情页
 - [ ] 详情页 URL 是否正确（/tasks/{taskId}）
 - [ ] 详情页返回按钮是否回到看板
 
 ### 编辑测试
+
 - [ ] 卡片编辑按钮是否正常弹窗
 - [ ] 详情页编辑按钮是否正常弹窗
 - [ ] 编辑后是否正确保存
 - [ ] 是否能看到编辑后的数据更新
 
 ### 删除测试
+
 - [ ] 卡片菜单删除是否正常工作
 - [ ] 详情页删除按钮是否正常工作
 - [ ] 删除后是否自动返回看板
 
 ### 拖拽测试
+
 - [ ] 拖拽排序是否仍然正常工作
 - [ ] 跨列拖拽是否正常工作
 - [ ] 拖拽后是否自动保存
 
 ### 数据加载测试
+
 - [ ] 详情页是否正确加载任务数据
 - [ ] 网络错误时是否显示错误提示
 - [ ] 任务不存在时是否显示错误信息
@@ -430,6 +465,7 @@ const [showEdit, setShowEdit] = useState(false)           // 编辑弹窗显示
 ---
 
 这个改造提供了更好的用户体验，允许用户：
+
 1. **快速浏览**: 点击卡片快速进入详情页
 2. **快速编辑**: 编辑按钮快速弹窗编辑
 3. **详细查看**: 完整的详情页显示所有信息

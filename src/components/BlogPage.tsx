@@ -17,9 +17,7 @@ const BlogPage: React.FC = () => {
           <span className="text-white font-medium">Blog</span>
         </div>
         <div className="flex-1" />
-        <div className="text-neutral-500 text-sm">
-          博客文章管理
-        </div>
+        <div className="text-neutral-500 text-sm">博客文章管理</div>
       </div>
 
       {/* PageManager 内容区 */}

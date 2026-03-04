@@ -1,5 +1,12 @@
 import React, { useEffect, useRef } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import MemoryView from './components/MemoryView'
 import EgoneticsView from './components/EgoneticsView'
@@ -24,7 +31,7 @@ const RouteSync: React.FC = () => {
   useEffect(() => {
     urlJustChangedRef.current = true
     const path = location.pathname
-    
+
     let view: string
     let taskId: string | null = null
 
@@ -55,9 +62,9 @@ const RouteSync: React.FC = () => {
       view = 'memory'
     }
 
-    setUIState({ 
+    setUIState({
       currentView: view as any,
-      currentTaskId: taskId
+      currentTaskId: taskId,
     })
   }, [location.pathname, setUIState])
 
@@ -131,12 +138,8 @@ const RouteSync: React.FC = () => {
 const SettingsPage: React.FC = () => {
   return (
     <div className="p-8 text-center">
-      <h1 className="text-3xl font-bold gradient-text mb-4">
-        设置
-      </h1>
-      <p className="text-neutral-400">
-        系统配置即将推出...
-      </p>
+      <h1 className="text-3xl font-bold gradient-text mb-4">设置</h1>
+      <p className="text-neutral-400">系统配置即将推出...</p>
     </div>
   )
 }
@@ -163,9 +166,7 @@ const AppContent: React.FC = () => {
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-neutral-400">
-                  初始化生命主体性...
-                </p>
+                <p className="text-neutral-400">初始化生命主体性...</p>
               </div>
             </div>
           ) : (
@@ -195,14 +196,10 @@ const AppContent: React.FC = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-neutral-300">
-                生命主体性: 活跃
-              </span>
+              <span className="text-neutral-300">生命主体性: 活跃</span>
             </div>
             <div className="text-neutral-500">|</div>
-            <div className="text-neutral-400">
-              Egonetics v0.1 · Bornfly Theory
-            </div>
+            <div className="text-neutral-400">Egonetics v0.1 · Bornfly Theory</div>
           </div>
           <div className="text-neutral-500">
             {new Date().toLocaleDateString('zh-CN', {
@@ -211,7 +208,7 @@ const AppContent: React.FC = () => {
               month: 'long',
               day: 'numeric',
               hour: '2-digit',
-              minute: '2-digit'
+              minute: '2-digit',
             })}
           </div>
         </div>

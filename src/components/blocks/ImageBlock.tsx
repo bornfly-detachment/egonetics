@@ -9,12 +9,8 @@ interface ImageBlockProps {
 
 const ImageBlock: React.FC<ImageBlockProps> = ({ content, onChange }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const [editUrl, setEditUrl] = useState(
-    typeof content === 'string' ? content : content.url
-  )
-  const [editAlt, setEditAlt] = useState(
-    typeof content === 'string' ? '' : content.alt || ''
-  )
+  const [editUrl, setEditUrl] = useState(typeof content === 'string' ? content : content.url)
+  const [editAlt, setEditAlt] = useState(typeof content === 'string' ? '' : content.alt || '')
 
   const handleSave = () => {
     onChange?.({ url: editUrl, alt: editAlt })
@@ -53,10 +49,7 @@ const ImageBlock: React.FC<ImageBlockProps> = ({ content, onChange }) => {
             placeholder="替代文本（可选）"
           />
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              className="btn-primary text-sm px-3 py-1"
-            >
+            <button onClick={handleSave} className="btn-primary text-sm px-3 py-1">
               保存
             </button>
             <button
