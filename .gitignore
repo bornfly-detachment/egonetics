@@ -25,7 +25,7 @@ lerna-debug.log*
 .idea
 .DS_Store
 *.suo
-*.ntvs*
+*.ntvs
 *.njsproj
 *.sln
 *.sw?
@@ -43,7 +43,10 @@ coverage
 *.tmp
 *.temp
 .cache
+
+# Data files (large datasets)
 data
+server/data
 
 # macOS
 .AppleDouble
@@ -59,3 +62,7 @@ server/uploads
 *.sqlite
 *.sqlite3
 *.db
+
+# Large documentation/backup files
+*.bak
+*.md.bak
