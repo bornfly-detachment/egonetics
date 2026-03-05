@@ -1,14 +1,23 @@
 import { PropertyDef, PropertyType } from '@/types'
+import { getToken, removeToken } from '@/lib/http'
 
 const API_BASE = '/api'
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken()
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...options,
   })
+
+  if (response.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+    throw new Error('未授权，请重新登录')
+  }
 
   if (!response.ok) {
     const error = await response.text()

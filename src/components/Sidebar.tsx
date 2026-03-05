@@ -10,24 +10,32 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
+  LogOut,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
-
-const NAV_ITEMS = [
-  { id: 'home',      label: '主页',     icon: Home,        color: 'text-neutral-300' },
-  { id: 'memory',    label: '记忆',     icon: Calendar,    color: 'text-blue-400' },
-  { id: 'theory',    label: '理论',     icon: Brain,       color: 'text-yellow-400' },
-  { id: 'chronicle', label: '编年史',   icon: History,     color: 'text-primary-400' },
-  { id: 'egonetics', label: '自我控制论', icon: Shield,    color: 'text-red-400' },
-  { id: 'tasks',     label: '任务',     icon: CheckSquare, color: 'text-green-400' },
-  { id: 'blog',      label: '博客',     icon: BookOpen,    color: 'text-sky-400' },
-  { id: 'agents',    label: '智能体',   icon: Cpu,         color: 'text-purple-400' },
-]
+import { useAuthStore } from '@/stores/useAuthStore'
+import { getVisibleNavItems } from '@/components/AuthGuard'
 
 const Sidebar: React.FC = () => {
   const { uiState, setUIState } = useChronicleStore()
-  const { language, setLanguage } = useTranslation()
+  const { t, language, setLanguage } = useTranslation()
+  const { user, logout } = useAuthStore()
+
+  const ALL_NAV_ITEMS = [
+    { id: 'home',      label: language === 'zh' ? '主页'    : 'Home',      icon: Home,        color: 'text-neutral-300' },
+    { id: 'memory',    label: t.memory,                                      icon: Calendar,    color: 'text-blue-400' },
+    { id: 'theory',    label: t.theory,                                      icon: Brain,       color: 'text-yellow-400' },
+    { id: 'chronicle', label: t.chronicle,                                   icon: History,     color: 'text-primary-400' },
+    { id: 'egonetics', label: t.principles,                                  icon: Shield,      color: 'text-red-400' },
+    { id: 'tasks',     label: t.tasks,                                       icon: CheckSquare, color: 'text-green-400' },
+    { id: 'blog',      label: language === 'zh' ? '博客'    : 'Blog',        icon: BookOpen,    color: 'text-sky-400' },
+    { id: 'agents',    label: t.agents,                                      icon: Cpu,         color: 'text-purple-400' },
+  ]
+
+  const visibleIds = user ? new Set(getVisibleNavItems(user.role)) : new Set(['home'])
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter(item => visibleIds.has(item.id))
+
   const open = uiState.sidebarOpen
 
   // 当前激活项：egonetics-detail 也高亮 egonetics
@@ -93,8 +101,28 @@ const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Collapse toggle */}
-      <div className="shrink-0 px-2 pb-4">
+      {/* Bottom actions */}
+      <div className="shrink-0 px-2 pb-4 space-y-1">
+        {/* Logout */}
+        <button
+          onClick={logout}
+          title={!open ? '退出登录' : undefined}
+          className={`
+            w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-red-400
+            hover:bg-white/[0.05] transition-all duration-150
+            ${open ? 'px-3 gap-2' : 'justify-center'}
+          `}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {open && (
+            <div className="flex-1 flex items-center justify-between min-w-0">
+              <span className="text-xs truncate">{user?.username || user?.email || '退出'}</span>
+              <span className="text-[10px] text-neutral-700 ml-1 truncate">{user?.role}</span>
+            </div>
+          )}
+        </button>
+
+        {/* Collapse toggle */}
         <button
           onClick={() => useChronicleStore.getState().toggleSidebar()}
           className={`

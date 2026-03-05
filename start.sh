@@ -26,6 +26,65 @@ err()  { echo -e "${R}[egonetics]${N} $*"; }
 BACKEND_PID=""
 FRONTEND_PID=""
 
+# ── 首次运行：检查 auth.db 是否已初始化 ──────────────────────
+check_auth_db() {
+  local db="$BACKEND_DIR/data/auth.db"
+  if [[ ! -f "$db" ]]; then
+    echo ""
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    warn "  首次运行：auth.db 不存在"
+    warn "  请先初始化认证数据库并创建管理员账号："
+    warn ""
+    warn "    cd server && npm run init-auth"
+    warn ""
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    read -r -p "  现在立即运行初始化？[Y/n] " ans
+    ans="${ans:-Y}"
+    if [[ "$ans" =~ ^[Yy]$ ]]; then
+      cd "$BACKEND_DIR"
+      node scripts/init-auth-db.js
+      cd "$SCRIPT_DIR"
+      echo ""
+    else
+      err "已取消。请手动运行: cd server && npm run init-auth"
+      exit 1
+    fi
+    return
+  fi
+
+  # auth.db exists — check if admin account was created
+  local has_admin
+  has_admin=$(node -e "
+    const sqlite3 = require('sqlite3');
+    const db = new sqlite3.Database('$db');
+    db.get('SELECT id FROM users WHERE role=\"admin\" LIMIT 1', (err, row) => {
+      process.stdout.write(row ? '1' : '0');
+      db.close();
+    });
+  " 2>/dev/null || echo "0")
+
+  if [[ "$has_admin" != "1" ]]; then
+    echo ""
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    warn "  auth.db 存在但尚未创建管理员账号"
+    warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    read -r -p "  现在创建管理员账号？[Y/n] " ans
+    ans="${ans:-Y}"
+    if [[ "$ans" =~ ^[Yy]$ ]]; then
+      cd "$BACKEND_DIR"
+      node scripts/init-auth-db.js
+      cd "$SCRIPT_DIR"
+      echo ""
+    else
+      warn "跳过，启动后无法登录管理员账号。"
+    fi
+  fi
+}
+
+check_auth_db
+
 # ── 清理 ──────────────────────────────────────────────────────
 cleanup() {
   echo ""

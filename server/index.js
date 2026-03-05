@@ -1,15 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
 
-const { memoryDb, tasksDb, pagesDb, agentsDb } = require('./db');
-const tasksRouter    = require('./routes/tasks');
-const pagesRouter    = require('./routes/pages');
-const memoryRouter   = require('./routes/memory');
+const { memoryDb, tasksDb, pagesDb, agentsDb, authDb } = require('./db');
+const { JWT_SECRET } = require('./middleware/auth');
+const tasksRouter     = require('./routes/tasks');
+const pagesRouter     = require('./routes/pages');
+const memoryRouter    = require('./routes/memory');
 const chronicleRouter = require('./routes/chronicle');
-const agentsRouter      = require('./routes/agents');
-const egoneticsRouter   = require('./routes/egonetics');
-const mediaRouter       = require('./routes/media');
+const agentsRouter    = require('./routes/agents');
+const egoneticsRouter = require('./routes/egonetics');
+const mediaRouter     = require('./routes/media');
+const authRouter      = require('./routes/auth');
 
 const app = express();
 const PORT = 3002;
@@ -17,16 +20,58 @@ const PORT = 3002;
 app.use(cors());
 app.use(bodyParser.json({ limit: '100mb' }));
 
-// 健康检查
+// 健康检查 (public)
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    databases: { memory: 'connected', tasks: 'connected', pages: 'connected', agents: 'connected' }
+    databases: { memory: 'connected', tasks: 'connected', pages: 'connected', agents: 'connected', auth: 'connected' }
   });
 });
 
-// 注册路由模块
+// Auth routes (public — must come BEFORE global auth middleware)
+app.use('/api', authRouter.init(authDb));
+
+// Global auth middleware — applies to all /api routes below
+// Agent can mutate: /tasks /kanban /agents /notion
+// Guest: read-only
+const AGENT_MUTATION_PATHS = ['/tasks', '/kanban', '/agents', '/notion'];
+
+app.use('/api', (req, res, next) => {
+  // Skip auth for health and all /auth/* endpoints
+  if (req.path === '/health' || req.path.startsWith('/auth')) return next();
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '未授权：缺少 Token' });
+  }
+
+  try {
+    req.user = jwt.verify(authHeader.slice(7), JWT_SECRET);
+  } catch (err) {
+    const msg = err.name === 'TokenExpiredError'
+      ? '未授权：Token 已过期，请重新登录'
+      : '未授权：Token 无效';
+    return res.status(401).json({ error: msg, expired: err.name === 'TokenExpiredError' });
+  }
+
+  // Mutation check (POST / PUT / PATCH / DELETE)
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    if (req.user.role === 'guest') {
+      return res.status(403).json({ error: '权限不足：游客不可修改数据' });
+    }
+    if (req.user.role === 'agent') {
+      const allowed = AGENT_MUTATION_PATHS.some(p => req.path.startsWith(p));
+      if (!allowed) {
+        return res.status(403).json({ error: '权限不足：Agent 只能操作 tasks 和 agents 相关资源' });
+      }
+    }
+  }
+
+  next();
+});
+
+// 注册路由模块 (all protected by global middleware above)
 app.use('/api', tasksRouter.init(tasksDb));
 app.use('/api', pagesRouter.init({ pagesDb, tasksDb }));
 app.use('/api', memoryRouter.init(memoryDb));

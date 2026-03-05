@@ -18,7 +18,10 @@ import AgentsView from './components/AgentsView'
 import TheoryPageView from './components/TheoryPageView'
 import BlogPage from './components/BlogPage'
 import HomeView from './components/HomeView'
+import LoginPage from './components/LoginPage'
 import { useChronicleStore } from './stores/useChronicleStore'
+import { useAuthStore } from './stores/useAuthStore'
+import { isPathAllowed } from './components/AuthGuard'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
@@ -208,12 +211,49 @@ const AppContent: React.FC = () => {
   )
 }
 
+// Auth + routing root (must be inside Router for useLocation)
+const AppRoot: React.FC = () => {
+  const location = useLocation()
+  const { isInitialized, user } = useAuthStore()
+
+  useEffect(() => {
+    useAuthStore.getState().initialize()
+  }, [])
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Login page
+  if (location.pathname === '/login') {
+    return user ? <Navigate to="/home" replace /> : <LoginPage />
+  }
+
+  // Not authenticated → go to login
+  if (!user) return <Navigate to="/login" replace />
+
+  // Role-based path guard
+  if (!isPathAllowed(location.pathname, user.role)) {
+    return <Navigate to="/home" replace />
+  }
+
+  return (
+    <>
+      <RouteSync />
+      <AppContent />
+    </>
+  )
+}
+
 // 根 App 组件
 function App() {
   return (
     <Router>
-      <RouteSync />
-      <AppContent />
+      <AppRoot />
     </Router>
   )
 }

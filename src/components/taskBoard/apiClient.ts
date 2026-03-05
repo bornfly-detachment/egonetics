@@ -10,7 +10,18 @@
  *   await apiClient.save(taskData)
  */
 
+import { getToken, removeToken } from '@/lib/http'
+
 const API_BASE = '/api'
+
+function authHeaders(): Record<string, string> {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function handle401(res: Response) {
+  if (res.status === 401) { removeToken(); window.location.href = '/login' }
+}
 
 export interface PageData {
   id: string
@@ -40,7 +51,8 @@ export function createApiClient(pageType: string): ApiClient {
      */
     async fetchOne(id: string): Promise<PageData | null> {
       try {
-        const res = await fetch(`${endpoint}/${id}`)
+        const res = await fetch(`${endpoint}/${id}`, { headers: authHeaders() })
+        handle401(res)
         if (!res.ok) return null
         return await res.json()
       } catch (error) {
@@ -56,7 +68,8 @@ export function createApiClient(pageType: string): ApiClient {
       try {
         // Task 类型使用 /kanban 端点获取所有数据
         if (pageType === 'task') {
-          const res = await fetch(`${API_BASE}/kanban`)
+          const res = await fetch(`${API_BASE}/kanban`, { headers: authHeaders() })
+          handle401(res)
           if (!res.ok) return []
           const data = await res.json()
           return data.tasks ?? []
@@ -70,7 +83,8 @@ export function createApiClient(pageType: string): ApiClient {
             }
           })
         }
-        const res = await fetch(url.toString())
+        const res = await fetch(url.toString(), { headers: authHeaders() })
+        handle401(res)
         if (!res.ok) return []
         const data = await res.json()
         return Array.isArray(data) ? data : (data.data ?? [])
@@ -89,7 +103,7 @@ export function createApiClient(pageType: string): ApiClient {
         const url = data.id ? `${endpoint}/${data.id}` : endpoint
         const res = await fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(data),
         })
         if (!res.ok) throw new Error(`Save failed: ${res.statusText}`)
@@ -105,7 +119,7 @@ export function createApiClient(pageType: string): ApiClient {
      */
     async delete(id: string): Promise<void> {
       try {
-        const res = await fetch(`${endpoint}/${id}`, { method: 'DELETE' })
+        const res = await fetch(`${endpoint}/${id}`, { method: 'DELETE', headers: authHeaders() })
         if (!res.ok) throw new Error(`Delete failed: ${res.statusText}`)
       } catch (error) {
         console.error(`Failed to delete ${pageType}:`, error)

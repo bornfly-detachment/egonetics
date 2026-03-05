@@ -17,11 +17,12 @@ const memoryDb  = openDb('memory.db',  'Memory');
 const tasksDb   = openDb('tasks.db',   'Tasks');
 const pagesDb   = openDb('pages.db',   'Pages');
 const agentsDb  = openDb('agents.db',  'Agents');
+const authDb    = openDb('auth.db',    'Auth');
 
 // Enable WAL mode for better concurrency on all databases
-[memoryDb, tasksDb, pagesDb, agentsDb].forEach(db => {
+[memoryDb, tasksDb, pagesDb, agentsDb, authDb].forEach(db => {
   db.run('PRAGMA journal_mode=WAL');
   db.run('PRAGMA foreign_keys=ON');
 });
 
-module.exports = { memoryDb, tasksDb, pagesDb, agentsDb };
+module.exports = { memoryDb, tasksDb, pagesDb, agentsDb, authDb };

@@ -10,6 +10,7 @@
     "init-tasks": "node scripts/init-tasks-db.js",
     "init-pages": "node scripts/init-pages-db.js",
     "init-agents": "node scripts/init-agents-db.js",
+    "init-auth": "node scripts/init-auth-db.js",
     "migrate": "node scripts/migrate-chronicle.js",
     "import": "node scripts/import-jsonl.js",
     "backup": "node ../scripts/backup-claude-projects.js",
@@ -17,9 +18,12 @@
     "backup:dry": "node ../scripts/backup-claude-projects.js --dry-run"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "resend": "^4.0.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

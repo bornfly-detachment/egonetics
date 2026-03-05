@@ -6,14 +6,15 @@
 // ============================================================
 import type { ApiClient, PageMeta, Block, CreatePageInput, MovePageInput } from './types'
 
-export const BASE_URL = 'http://localhost:3002/api' // ← 修改为你的后端地址
+export const BASE_URL = '/api'
 
 // 统一 fetch 封装（自动携带 token、处理错误）
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('egonetics_auth_token')
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
-      // Authorization: `Bearer ${localStorage.getItem('token') ?? ''}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
     ...options,

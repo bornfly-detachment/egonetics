@@ -32,6 +32,16 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
 ### Features
 
 **Implemented & Refactored (2025–2026)**
+- **Auth & Access Control** *(2026-03-05)*
+  - 3 roles: `admin` (CLI created) · `agent` (self-register, username+password) · `guest` (self-register, email+password)
+  - JWT-based auth — admin/guest: 24h · agent: 30d. 401 auto-redirects to `/login`
+  - Guest email verification via [Resend](https://resend.com) — 6-digit code, 10-min TTL
+  - Login rate limiting — 5 failures per account / 10 per IP in 15 min → temporary lockout
+  - Password rules enforced on both frontend and backend: min 8 chars, uppercase + lowercase + number
+  - Real-time username/email uniqueness check during registration
+  - Role-based route guard: guest sees `home/egonetics/tasks/blog`; agent adds `agents`; admin sees all
+  - All mutations (POST/PUT/PATCH/DELETE) blocked for guests; agents limited to tasks/agents resources
+  - `auth.db` — 5th SQLite database: `users`, `login_attempts`, `verification_codes`, `agent_tokens`
 - **Memory Module** — Dual-pane: Annotation Boards + Session Library
   - JSONL import (OpenClaw & Claude Code formats)
   - Drag-drop sessions into annotation boards
@@ -90,12 +100,13 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
 |---|---|
 | Frontend | React 18 + TypeScript + Vite |
 | Routing | React Router DOM v7 |
-| State | Zustand (3 stores, localStorage persistence) |
+| State | Zustand (3 stores + auth store, localStorage persistence) |
 | Styling | Tailwind CSS + Glassmorphism |
 | Rich Text | Custom Block System — CodeMirror 6 + highlight.js + Prettier 3 |
 | Drag & Drop | react-dnd (block reorder) |
-| Cryptography | Web Crypto API (SHA-256) |
-| Backend | Express.js + SQLite3 (4 databases) |
+| Cryptography | Web Crypto API (SHA-256) · bcryptjs (passwords) · JWT (sessions) |
+| Backend | Express.js + SQLite3 (5 databases) |
+| Email | Resend (email verification) |
 | Icons | Lucide React |
 
 ### Getting Started
@@ -114,19 +125,42 @@ npm install
 cd server && npm install && cd ..
 ```
 
-**Development** (both servers must run concurrently)
+**First-time setup** (run once before starting the server)
+
+```bash
+cd server
+npm run init-memory  # init memory.db
+npm run init-tasks   # init tasks.db
+npm run init-pages   # init pages.db
+npm run init-agents  # init agents.db
+npm run init-auth    # init auth.db + create admin account (interactive)
+cd ..
+```
+
+**Environment variables** (create `server/.env` or set in shell)
+
+```bash
+JWT_SECRET=your-very-long-random-secret   # Required in production
+RESEND_API_KEY=re_xxxxxxxxxxxx             # Resend API key for email verification
+EMAIL_FROM=Egonetics <noreply@yourdomain.com>  # Verified sender domain
+```
+
+> Without `RESEND_API_KEY`, verification codes are printed to the backend console instead of emailed — useful for local development.
+
+**Development** (single command)
+
+```bash
+./start.sh   # Starts frontend (3000) + backend (3002) concurrently
+```
+
+Or manually:
 
 ```bash
 # Terminal 1 — Frontend (http://localhost:3000)
 npm run dev
 
 # Terminal 2 — Backend (http://localhost:3002)
-cd server
-npm run init-memory  # First time: init memory.db
-npm run init-tasks   # First time: init tasks.db
-npm run init-pages   # First time: init pages.db
-npm run init-agents  # First time: init agents.db
-npm run dev
+cd server && npm run dev
 ```
 
 **Other commands**
@@ -225,24 +259,25 @@ egonetics/
 └── package.json
 ```
 
-### Routes
+### Routes & Access Control
 
-| Path | View |
-|---|---|
-| `/memory` | Memory: Annotation Boards + Session Library |
-| `/chronicle` | Chronicle Timeline (reopened for dev) |
-| `/theory` | Bornfly Theory (PageManager) |
-| `/egonetics` | Egonetics — subject card grid |
-| `/egonetics/:subjectId` | Subject detail — read-only PageManager (constitution tree) |
-| `/tasks` | Task Kanban Board |
-| `/tasks/:taskId` | Task Detail Page |
-| `/blog` | Blog / knowledge base |
-| `/agents` | Agent SVG Node Graph |
-| `/settings` | Settings |
+| Path | View | Guest | Agent | Admin |
+|---|---|:---:|:---:|:---:|
+| `/login` | Login / Register | public | public | public |
+| `/home` | Home | ✓ | ✓ | ✓ |
+| `/egonetics` | Constitution subjects | ✓ | ✓ | ✓ |
+| `/egonetics/:id` | Subject detail (read-only) | ✓ | ✓ | ✓ |
+| `/tasks` | Task Kanban Board | read | read+write | ✓ |
+| `/tasks/:taskId` | Task Detail | read | read+write | ✓ |
+| `/blog` | Blog / knowledge base | ✓ | ✓ | ✓ |
+| `/agents` | Agent SVG Node Graph | — | read+write | ✓ |
+| `/memory` | Memory sessions | — | — | ✓ |
+| `/theory` | Bornfly Theory (PageManager) | — | — | ✓ |
+| `/chronicle` | Chronicle Timeline | — | — | ✓ |
 
 ### Databases
 
-Four separate SQLite databases under `server/data/`:
+Five separate SQLite databases under `server/data/`:
 
 | File | Purpose |
 |---|---|
@@ -250,6 +285,7 @@ Four separate SQLite databases under `server/data/`:
 | `tasks.db` | Projects, tasks, kanban columns, blocks, properties, versions |
 | `pages.db` | Page hierarchy, metadata (Theory/Task/Page pages) |
 | `agents.db` | Agents, relations, egonetics subjects, constitution pages & blocks |
+| `auth.db` | Users, login attempts, email verification codes, agent tokens |
 
 ### Chronicle Design
 
@@ -331,6 +367,16 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
 ### 功能特性
 
 **已实现与重构 (2025–2026)**
+- **认证与权限控制** *(2026-03-05)*
+  - 三种角色：`admin`（CLI 创建）· `agent`（自主注册，用户名+密码）· `guest`（自主注册，邮箱+密码）
+  - JWT 认证 — admin/guest 有效期 24h · agent 30d。401 自动跳转 `/login`
+  - 游客邮箱验证通过 [Resend](https://resend.com) 发送 — 6 位数字验证码，10 分钟有效
+  - 登录限速 — 单账号 5 次 / 单 IP 10 次（15 分钟内）→ 临时锁定
+  - 密码规则前后端双重校验：最少 8 位，含大小写字母和数字
+  - 注册时实时查库检查用户名/邮箱唯一性
+  - 基于角色的路由守卫：游客可见 `home/egonetics/tasks/blog`；agent 增加 `agents`；admin 全部可见
+  - 所有变更操作（POST/PUT/PATCH/DELETE）对游客屏蔽；agent 仅限操作 tasks/agents 相关资源
+  - `auth.db` — 第 5 个 SQLite 数据库：`users`、`login_attempts`、`verification_codes`、`agent_tokens`
 - **记忆模块** — 双栏布局：标注面板 + 会话库
   - JSONL 导入（支持 OpenClaw 和 Claude Code 格式）
   - 拖拽会话到标注面板
@@ -389,12 +435,13 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
 |---|---|
 | 前端 | React 18 + TypeScript + Vite |
 | 路由 | React Router DOM v7 |
-| 状态管理 | Zustand（3 个 store，localStorage 持久化） |
+| 状态管理 | Zustand（3 个 store + auth store，localStorage 持久化） |
 | 样式 | Tailwind CSS + Glassmorphism |
 | 富文本 | 自研块系统 — CodeMirror 6 + highlight.js + Prettier 3 |
 | 拖拽 | react-dnd（块排序） |
-| 密码学 | Web Crypto API（SHA-256） |
-| 后端 | Express.js + SQLite3（4 个数据库） |
+| 密码学 | Web Crypto API（SHA-256）· bcryptjs（密码）· JWT（会话） |
+| 后端 | Express.js + SQLite3（5 个数据库） |
+| 邮件 | Resend（邮箱验证） |
 | 图标 | Lucide React |
 
 ### 快速开始
@@ -413,19 +460,42 @@ npm install
 cd server && npm install && cd ..
 ```
 
-**开发模式**（前后端需同时运行）
+**首次初始化**（只需执行一次）
+
+```bash
+cd server
+npm run init-memory  # 初始化 memory.db
+npm run init-tasks   # 初始化 tasks.db
+npm run init-pages   # 初始化 pages.db
+npm run init-agents  # 初始化 agents.db
+npm run init-auth    # 初始化 auth.db + 交互式创建管理员账号
+cd ..
+```
+
+**环境变量**（创建 `server/.env` 或在 shell 中设置）
+
+```bash
+JWT_SECRET=你的超长随机密钥        # 生产环境必须设置
+RESEND_API_KEY=re_xxxxxxxxxxxx     # Resend API Key，用于邮箱验证
+EMAIL_FROM=Egonetics <noreply@yourdomain.com>  # 已验证的发件域名
+```
+
+> 未设置 `RESEND_API_KEY` 时，验证码会直接打印到后端控制台，方便本地开发调试。
+
+**开发模式**（一键启动）
+
+```bash
+./start.sh   # 同时启动前端（3000）+ 后端（3002）
+```
+
+或手动启动：
 
 ```bash
 # 终端 1 — 前端（http://localhost:3000）
 npm run dev
 
 # 终端 2 — 后端（http://localhost:3002）
-cd server
-npm run init-memory  # 首次运行：初始化 memory.db
-npm run init-tasks   # 首次运行：初始化 tasks.db
-npm run init-pages   # 首次运行：初始化 pages.db
-npm run init-agents  # 首次运行：初始化 agents.db
-npm run dev
+cd server && npm run dev
 ```
 
 **其他命令**
@@ -524,24 +594,25 @@ egonetics/
 └── package.json
 ```
 
-### 路由列表
+### 路由列表与访问权限
 
-| 路径 | 视图 |
-|---|---|
-| `/memory` | 记忆：标注面板 + 会话库 |
-| `/chronicle` | Chronicle 时间轴（重新开发中） |
-| `/theory` | Bornfly 理论（PageManager） |
-| `/egonetics` | Egonetics — 主题卡片网格 |
-| `/egonetics/:subjectId` | 主题详情 — 只读 PageManager（宪法目录树） |
-| `/tasks` | 任务看板 |
-| `/tasks/:taskId` | 任务详情页 |
-| `/blog` | 博客 / 知识库 |
-| `/agents` | 智能体 SVG 节点图 |
-| `/settings` | 设置 |
+| 路径 | 视图 | 游客 | Agent | Admin |
+|---|---|:---:|:---:|:---:|
+| `/login` | 登录 / 注册 | 公开 | 公开 | 公开 |
+| `/home` | 主页 | ✓ | ✓ | ✓ |
+| `/egonetics` | 宪法主题网格 | ✓ | ✓ | ✓ |
+| `/egonetics/:id` | 主题详情（只读） | ✓ | ✓ | ✓ |
+| `/tasks` | 任务看板 | 只读 | 读写 | ✓ |
+| `/tasks/:taskId` | 任务详情 | 只读 | 读写 | ✓ |
+| `/blog` | 博客 / 知识库 | ✓ | ✓ | ✓ |
+| `/agents` | 智能体节点图 | — | 读写 | ✓ |
+| `/memory` | 记忆会话库 | — | — | ✓ |
+| `/theory` | Bornfly 理论 | — | — | ✓ |
+| `/chronicle` | Chronicle 时间轴 | — | — | ✓ |
 
 ### 数据库
 
-`server/data/` 目录下四个独立的 SQLite 数据库：
+`server/data/` 目录下五个独立的 SQLite 数据库：
 
 | 文件 | 用途 |
 |---|---|
@@ -549,6 +620,7 @@ egonetics/
 | `tasks.db` | 项目、任务、看板列、blocks、属性、版本 |
 | `pages.db` | 页面层级、元数据（Theory/Task/Page 页面） |
 | `agents.db` | 智能体及关系、egonetics 主题、宪法页面树与块内容 |
+| `auth.db` | 用户账号、登录记录、邮箱验证码、Agent API Token |
 
 ### Chronicle 设计
 
