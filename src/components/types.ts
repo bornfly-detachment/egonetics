@@ -138,6 +138,7 @@ export interface Block {
   content: {
     rich_text: RichTextSegment[]
     language?: string
+    viewMode?: 'edit' | 'preview' // 新增：预览/编辑模式
     tableRows?: TableCell[][]
     tableColCount?: number
     tableHasHeader?: boolean
@@ -157,6 +158,14 @@ export interface Block {
     [key: string]: any
   }
   collapsed?: boolean
+}
+
+// 块级权限（文档级或块级覆盖均使用此类型）
+export interface BlockPermissions {
+  canEdit: boolean     // 可编辑文本内容
+  canDelete: boolean   // 可删除块
+  canAdd: boolean      // 可新增块
+  canReorder: boolean  // 可拖拽排序
 }
 
 // 页面类型

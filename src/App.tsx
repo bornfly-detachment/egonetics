@@ -17,6 +17,7 @@ import AgentsView from './components/AgentsView'
 import TheoryPageView from './components/TheoryPageView'
 import BlogPage from './components/BlogPage'
 import { useChronicleStore } from './stores/useChronicleStore'
+import DevTest from './components/rich-editor/DevTest'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
@@ -184,6 +185,8 @@ const AppContent: React.FC = () => {
               {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
               <Route path="/agents" element={<AgentsView />} />
               <Route path="/settings" element={<SettingsPage />} />
+              {/* 开发验证页 — 验证完删除 */}
+              <Route path="/dev-test" element={<DevTest />} />
               <Route path="*" element={<Navigate to="/memory" replace />} />
             </Routes>
           )}

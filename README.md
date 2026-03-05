@@ -31,7 +31,7 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
 
 ### Features
 
-**Implemented & Refactored (2025)**
+**Implemented & Refactored (2025–2026)**
 - **Memory Module** — Dual-pane: Annotation Boards + Session Library
   - JSONL import (OpenClaw & Claude Code formats)
   - Drag-drop sessions into annotation boards
@@ -54,6 +54,15 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - Post-lock annotations (V1 original, V2/V3+ amendments)
 - **Agents** — SVG node graph visualization
 - **4 SQLite databases** — Clean separation by data type
+- **Rich-text Editor Architecture Refactor** *(2026-03-05)*
+  - Separated rendering layer into `src/components/rich-editor/` (28 block types)
+  - Edit/Preview fully decoupled per block type: `blocks/{type}/Editor` + `blocks/{type}/Preview`
+  - Code blocks: CodeMirror 6 (edit) + highlight.js (preview) + Prettier 3 standalone (format on save)
+  - Markdown blocks: ReactMarkdown + rehype-highlight preview
+  - `/shortcut` direct block type trigger (e.g. `/code`, `/h1`, `/todo`) + Slash menu
+  - Block-level permission interface (`canEdit`, `canDelete`, `canAdd`, `canReorder`) with reserved fields for per-block and tag-based permissions
+  - `BlockEditor.tsx` reduced by 886 lines (old rendering layer fully replaced)
+  - All 4 consumer pages (`/memory`, `/chronicle`, `/tasks/:id`, `/theory`) zero-change migration
 
 **In Progress**
 - Chronicle hash chain integrity verification
@@ -74,8 +83,8 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
 | Routing | React Router DOM v7 |
 | State | Zustand (3 stores, localStorage persistence) |
 | Styling | Tailwind CSS + Glassmorphism |
-| Rich Text | Tiptap v3 + BlockNote |
-| Drag & Drop | @dnd-kit |
+| Rich Text | Custom Block System — CodeMirror 6 + highlight.js + Prettier 3 |
+| Drag & Drop | react-dnd (block reorder) |
 | Cryptography | Web Crypto API (SHA-256) |
 | Backend | Express.js + SQLite3 (4 databases) |
 | Icons | Lucide React |
@@ -143,7 +152,23 @@ egonetics/
 │   │   ├── TheoryPageView.tsx  # Theory pages
 │   │   ├── NotionPageView.tsx  # Notion-style page wrapper
 │   │   ├── PageManager.tsx     # Full page/block editor (DO NOT MODIFY)
-│   │   ├── BlockEditor.tsx     # Rich text block editor
+│   │   ├── BlockEditor.tsx     # Block editor orchestrator (state, DnD, slash menu)
+│   │   ├── CodeBlock.tsx       # Standalone code block (CodeMirror 6)
+│   │   ├── rich-editor/        # Rendering layer — decoupled edit/preview per block type
+│   │   │   ├── index.ts        # Public exports
+│   │   │   ├── RichPreview.tsx # Read-only preview component
+│   │   │   ├── types.ts        # Re-exports from shared types
+│   │   │   ├── shared/
+│   │   │   │   ├── BlockWrapper.tsx      # Edit/Preview router per block
+│   │   │   │   ├── BlockEditorInner.tsx  # Edit dispatcher
+│   │   │   │   ├── BlockPreviewInner.tsx # Preview dispatcher (all 28 types)
+│   │   │   │   ├── blockTypeConfig.ts   # Single source of truth (shortcuts, icons)
+│   │   │   │   ├── blockUtils.ts        # getPlainText, makeSegs, positionBetween…
+│   │   │   │   └── RichText.tsx         # Inline rich text renderer
+│   │   │   └── blocks/
+│   │   │       ├── paragraph/{Editor,Preview}
+│   │   │       ├── heading/{Editor,Preview}
+│   │   │       └── code/{Editor,Preview}  # CodeMirror + hljs + Prettier
 │   │   ├── AgentsView.tsx      # SVG node graph
 │   │   ├── taskBoard/          # Kanban board components
 │   │   └── apiClient.ts        # Theory/Pages API client
@@ -151,6 +176,7 @@ egonetics/
 │   │   ├── chronicle.ts        # BornflyChronicle class (hash chain)
 │   │   ├── api.ts              # Memory/sessions API client
 │   │   ├── tasks-api.ts        # Tasks/projects REST API client
+│   │   ├── formatCode.ts       # Prettier 3 standalone — format on save
 │   │   └── translations.ts     # i18n (zh/en)
 │   ├── stores/
 │   │   ├── useChronicleStore.ts  # Primary store (UI state, entries, agents)
@@ -294,7 +320,7 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
 
 ### 功能特性
 
-**已实现与重构 (2025)**
+**已实现与重构 (2025–2026)**
 - **记忆模块** — 双栏布局：标注面板 + 会话库
   - JSONL 导入（支持 OpenClaw 和 Claude Code 格式）
   - 拖拽会话到标注面板
@@ -317,6 +343,15 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - 锁定后注解（V1 原始版，V2/V3+ 修订版）
 - **智能体** — SVG 节点图可视化
 - **4 个 SQLite 数据库** — 按数据类型清晰分离
+- **富文本编辑器架构重构** *(2026-03-05)*
+  - 渲染层独立为 `src/components/rich-editor/`，支持 28 种块类型
+  - 编辑/预览按块类型完全解耦：`blocks/{type}/Editor` + `blocks/{type}/Preview`
+  - 代码块：CodeMirror 6（编辑）+ highlight.js（预览）+ Prettier 3 standalone（保存时格式化）
+  - Markdown 块：ReactMarkdown + rehype-highlight 渲染
+  - `/shortcut` 直接触发类型转换（如 `/code`、`/h1`、`/todo`）+ 斜杠菜单双模式
+  - 块级权限接口（`canEdit`、`canDelete`、`canAdd`、`canReorder`），预留按块/按标签赋权扩展点
+  - `BlockEditor.tsx` 精简 886 行（旧渲染层全量替换）
+  - 四个消费页面（`/memory`、`/chronicle`、`/tasks/:id`、`/theory`）零改动迁移
 
 **开发中**
 - Chronicle 哈希链完整性验证
@@ -337,8 +372,8 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
 | 路由 | React Router DOM v7 |
 | 状态管理 | Zustand（3 个 store，localStorage 持久化） |
 | 样式 | Tailwind CSS + Glassmorphism |
-| 富文本 | Tiptap v3 + BlockNote |
-| 拖拽 | @dnd-kit |
+| 富文本 | 自研块系统 — CodeMirror 6 + highlight.js + Prettier 3 |
+| 拖拽 | react-dnd（块排序） |
 | 密码学 | Web Crypto API（SHA-256） |
 | 后端 | Express.js + SQLite3（4 个数据库） |
 | 图标 | Lucide React |
@@ -406,7 +441,23 @@ egonetics/
 │   │   ├── TheoryPageView.tsx  # 理论页面
 │   │   ├── NotionPageView.tsx  # Notion 风格页面包装
 │   │   ├── PageManager.tsx     # 完整页面/块编辑器（请勿修改）
-│   │   ├── BlockEditor.tsx     # 富文本块编辑器
+│   │   ├── BlockEditor.tsx     # 块编辑器编排层（状态、DnD、斜杠菜单）
+│   │   ├── CodeBlock.tsx       # 独立代码块（CodeMirror 6）
+│   │   ├── rich-editor/        # 渲染层 — 按块类型解耦编辑/预览
+│   │   │   ├── index.ts        # 公共导出
+│   │   │   ├── RichPreview.tsx # 只读预览组件
+│   │   │   ├── types.ts        # 共享类型转发
+│   │   │   ├── shared/
+│   │   │   │   ├── BlockWrapper.tsx      # 单块编辑/预览路由
+│   │   │   │   ├── BlockEditorInner.tsx  # 编辑分发器
+│   │   │   │   ├── BlockPreviewInner.tsx # 预览分发器（28 种块类型）
+│   │   │   │   ├── blockTypeConfig.ts   # 单一数据源（快捷键、图标）
+│   │   │   │   ├── blockUtils.ts        # getPlainText、makeSegs、positionBetween…
+│   │   │   │   └── RichText.tsx         # 行内富文本渲染
+│   │   │   └── blocks/
+│   │   │       ├── paragraph/{Editor,Preview}
+│   │   │       ├── heading/{Editor,Preview}
+│   │   │       └── code/{Editor,Preview}  # CodeMirror + hljs + Prettier
 │   │   ├── AgentsView.tsx      # SVG 节点图
 │   │   ├── taskBoard/          # 看板组件
 │   │   └── apiClient.ts        # Theory/Pages API 客户端
@@ -414,6 +465,7 @@ egonetics/
 │   │   ├── chronicle.ts        # BornflyChronicle 类（哈希链）
 │   │   ├── api.ts              # 记忆/会话 API 客户端
 │   │   ├── tasks-api.ts        # 任务/项目 REST API 客户端
+│   │   ├── formatCode.ts       # Prettier 3 standalone — 保存时格式化
 │   │   └── translations.ts     # 国际化（中/英）
 │   ├── stores/
 │   │   ├── useChronicleStore.ts  # 主 store（UI 状态、条目、智能体）
