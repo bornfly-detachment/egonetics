@@ -17,8 +17,8 @@ import ChronicleView from './components/ChronicleView'
 import AgentsView from './components/AgentsView'
 import TheoryPageView from './components/TheoryPageView'
 import BlogPage from './components/BlogPage'
+import HomeView from './components/HomeView'
 import { useChronicleStore } from './stores/useChronicleStore'
-import DevTest from './components/rich-editor/DevTest'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
@@ -37,7 +37,11 @@ const RouteSync: React.FC = () => {
     let view: string
     let taskId: string | null = null
 
-    if (path === '/' || path === '/memory') {
+    if (path === '/') {
+      view = 'home'
+    } else if (path === '/home') {
+      view = 'home'
+    } else if (path === '/memory') {
       view = 'memory'
     } else if (path === '/theory') {
       view = 'theory'
@@ -54,14 +58,8 @@ const RouteSync: React.FC = () => {
       taskId = path.replace('/tasks/', '')
     } else if (path === '/blog') {
       view = 'blog'
-    } else if (path === '/editor1') {
-      view = 'editor1'
-    } else if (path === '/editor2') {
-      view = 'editor2'
     } else if (path === '/agents') {
       view = 'agents'
-    } else if (path === '/settings') {
-      view = 'settings'
     } else {
       view = 'memory'
     }
@@ -85,6 +83,9 @@ const RouteSync: React.FC = () => {
     let targetPath = '/'
 
     switch (uiState.currentView) {
+      case 'home':
+        targetPath = '/home'
+        break
       case 'memory':
         targetPath = '/memory'
         break
@@ -114,17 +115,8 @@ const RouteSync: React.FC = () => {
       case 'blog':
         targetPath = '/blog'
         break
-      case 'editor1':
-        targetPath = '/editor1'
-        break
-      case 'editor2':
-        targetPath = '/editor2'
-        break
       case 'agents':
         targetPath = '/agents'
-        break
-      case 'settings':
-        targetPath = '/settings'
         break
       default:
         targetPath = '/memory'
@@ -140,16 +132,6 @@ const RouteSync: React.FC = () => {
   }, [uiState, location.pathname, navigate])
 
   return null
-}
-
-// 页面组件
-const SettingsPage: React.FC = () => {
-  return (
-    <div className="p-8 text-center">
-      <h1 className="text-3xl font-bold gradient-text mb-4">设置</h1>
-      <p className="text-neutral-400">系统配置即将推出...</p>
-    </div>
-  )
 }
 
 // 主应用内容
@@ -179,7 +161,8 @@ const AppContent: React.FC = () => {
             </div>
           ) : (
             <Routes>
-              <Route path="/" element={<Navigate to="/memory" replace />} />
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={<HomeView />} />
               <Route path="/memory" element={<MemoryView />} />
               <Route path="/theory" element={<TheoryPageView />} />
               <Route path="/chronicle" element={<ChronicleView />} />
@@ -192,10 +175,7 @@ const AppContent: React.FC = () => {
               {/* <Route path="/editor1" element={<NewNotionStyleEditor />} /> */}
               {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
               <Route path="/agents" element={<AgentsView />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              {/* 开发验证页 — 验证完删除 */}
-              <Route path="/dev-test" element={<DevTest />} />
-              <Route path="*" element={<Navigate to="/memory" replace />} />
+              <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
         </main>

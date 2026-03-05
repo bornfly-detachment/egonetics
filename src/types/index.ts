@@ -48,18 +48,16 @@ export interface Agent {
 export interface UIState {
   sidebarOpen: boolean
   currentView:
+    | 'home'
     | 'memory'
     | 'theory'
     | 'chronicle'
     | 'egonetics'
     | 'egonetics-detail'
     | 'tasks'
-    | 'agents'
-    | 'settings'
     | 'project-detail'
     | 'blog'
-    | 'editor1'
-    | 'editor2'
+    | 'agents'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'

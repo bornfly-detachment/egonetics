@@ -48,7 +48,7 @@ export const useChronicleStore = create<ChronicleStore>()(
       agents: [],
       uiState: {
         sidebarOpen: true,
-        currentView: 'memory',
+        currentView: 'home',
         currentTaskId: null,
         theme: 'dark',
         fontSize: 'md',

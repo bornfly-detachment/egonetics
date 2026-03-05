@@ -2,185 +2,111 @@ import React from 'react'
 import {
   CheckSquare,
   Cpu,
-  Settings,
-  Shield,
   Brain,
   History,
   Calendar,
   BookOpen,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  Home,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
 
+const NAV_ITEMS = [
+  { id: 'home',      label: '主页',     icon: Home,        color: 'text-neutral-300' },
+  { id: 'memory',    label: '记忆',     icon: Calendar,    color: 'text-blue-400' },
+  { id: 'theory',    label: '理论',     icon: Brain,       color: 'text-yellow-400' },
+  { id: 'chronicle', label: '编年史',   icon: History,     color: 'text-primary-400' },
+  { id: 'egonetics', label: '自我控制论', icon: Shield,    color: 'text-red-400' },
+  { id: 'tasks',     label: '任务',     icon: CheckSquare, color: 'text-green-400' },
+  { id: 'blog',      label: '博客',     icon: BookOpen,    color: 'text-sky-400' },
+  { id: 'agents',    label: '智能体',   icon: Cpu,         color: 'text-purple-400' },
+]
+
 const Sidebar: React.FC = () => {
-  const { uiState, setUIState, verifyChain, getEntryCount } = useChronicleStore()
-  const { t, language, setLanguage } = useTranslation()
+  const { uiState, setUIState } = useChronicleStore()
+  const { language, setLanguage } = useTranslation()
+  const open = uiState.sidebarOpen
 
-  const lifeCoreItems = [
-    {
-      id: 'memory',
-      label: t.memory,
-      icon: Calendar,
-      color: 'text-blue-400',
-      description: t.memoryDesc,
-    },
-    {
-      id: 'theory',
-      label: t.theory,
-      icon: Brain,
-      color: 'text-yellow-400',
-      description: t.theoryDesc,
-    },
-    {
-      id: 'chronicle',
-      label: t.chronicle,
-      icon: History,
-      color: 'text-primary-400',
-      description: t.chronicleDesc,
-    },
-    {
-      id: 'egonetics',
-      label: t.principles,
-      icon: Shield,
-      color: 'text-red-400',
-      description: t.egoneticsDesc,
-    },
-  ]
-
-  const otherItems = [
-    { id: 'tasks', label: t.tasks, icon: CheckSquare, color: 'text-green-400' },
-    { id: 'blog', label: '博客', icon: BookOpen, color: 'text-blue-400' },
-    { id: 'agents', label: t.agents, icon: Cpu, color: 'text-purple-400' },
-    { id: 'settings', label: t.settings, icon: Settings, color: 'text-neutral-400' },
-  ]
-
-  const handleVerifyChain = () => {
-    const result = verifyChain()
-    if (result.valid) {
-      alert('✅ Chronicle chain is valid and intact!')
-    } else {
-      alert(`❌ Chain broken at entry ${result.brokenAt}: ${result.error}`)
-    }
-  }
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'zh' ? 'en' : 'zh')
-  }
+  // 当前激活项：egonetics-detail 也高亮 egonetics
+  const activeId = uiState.currentView === 'egonetics-detail' ? 'egonetics'
+    : uiState.currentView === 'project-detail' ? 'tasks'
+    : uiState.currentView
 
   return (
     <aside
-      className={`glass-panel h-full flex flex-col transition-all duration-300 ${uiState.sidebarOpen ? 'w-64' : 'w-20'}`}
+      className={`
+        flex flex-col h-full
+        bg-[#111111] border-r border-white/[0.06]
+        transition-all duration-300 ease-in-out
+        ${open ? 'w-56' : 'w-[60px]'}
+      `}
     >
       {/* Logo */}
-      <div className="p-6 border-b border-white/10">
-        <div className="flex items-center space-x-3">
-          {/* 侧边栏 Logo：使用 bornfly_logo.png，自适应大小 */}
-          <img
-            src="/bornfly_logo.png"
-            alt="Bornfly Logo"
-            className="max-w-full max-h-16 object-contain app-logo"
-            style={{ maxHeight: '64px', width: 'auto', height: 'auto' }}
-          />
-          {uiState.sidebarOpen && (
-            <div className="flex-1 flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-bold gradient-text">Egonetics</h1>
-                <p className="text-xs text-neutral-400">{t.lifeCore}</p>
-              </div>
-              {/* Language Toggle Button */}
-              <button
-                onClick={toggleLanguage}
-                className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-md transition-colors"
-                title={language === 'zh' ? 'Switch to English' : '切换到中文'}
-              >
-                {language === 'zh' ? 'EN' : '中'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-4">
-        {/* Life Core Group */}
-        {uiState.sidebarOpen && (
-          <div className="mb-2">
-            <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-              {t.lifeCoreGroup}
-            </div>
-            <div className="space-y-1 ml-2">
-              {lifeCoreItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setUIState({ currentView: item.id as any })}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    uiState.currentView === item.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <item.icon className={`w-5 h-5 ${item.color}`} />
-                  {uiState.sidebarOpen && (
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs text-neutral-500">{item.description}</div>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
+      <div className={`shrink-0 flex items-center gap-3 px-4 h-14 border-b border-white/[0.06] ${!open && 'justify-center'}`}>
+        <img
+          src="/bornfly_logo.png"
+          alt="Bornfly"
+          className="app-logo shrink-0"
+          style={{ height: 28, width: 'auto' }}
+        />
+        {open && (
+          <div className="flex-1 min-w-0 flex items-center justify-between">
+            <span className="font-semibold text-white text-sm tracking-wide">Egonetics</span>
+            <button
+              onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
+              className="text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10"
+            >
+              {language === 'zh' ? 'EN' : '中'}
+            </button>
           </div>
         )}
+      </div>
 
-        {/* Other Items */}
-        <div className="space-y-1">
-          {otherItems.map((item) => (
+      {/* Nav */}
+      <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2 overflow-y-auto">
+        {NAV_ITEMS.map((item) => {
+          const active = activeId === item.id
+          return (
             <button
               key={item.id}
               onClick={() => setUIState({ currentView: item.id as any })}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                uiState.currentView === item.id
+              title={!open ? item.label : undefined}
+              className={`
+                flex items-center gap-3 rounded-lg
+                transition-all duration-150
+                ${open ? 'px-3 py-2' : 'px-0 py-2 justify-center'}
+                ${active
                   ? 'bg-white/10 text-white'
-                  : 'text-neutral-400 hover:text-white hover:bg-white/5'
-              }`}
+                  : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/[0.05]'
+                }
+              `}
             >
-              <item.icon className={`w-5 h-5 ${item.color}`} />
-              {uiState.sidebarOpen && <span className="font-medium">{item.label}</span>}
+              <item.icon className={`shrink-0 w-[18px] h-[18px] ${active ? item.color : ''}`} />
+              {open && (
+                <span className="text-sm font-medium truncate">{item.label}</span>
+              )}
             </button>
-          ))}
-        </div>
+          )
+        })}
       </nav>
 
-      {/* Stats & Actions */}
-      <div className="p-4 border-t border-white/10 space-y-4">
-        {uiState.sidebarOpen && (
-          <>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400">{t.entries}</span>
-                <span className="font-mono font-bold text-primary-300">{getEntryCount()}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400">{t.chainStatus}</span>
-                <span className="font-mono text-green-400">✓ Valid</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleVerifyChain}
-              className="w-full btn-secondary flex items-center justify-center space-x-2"
-            >
-              <Shield className="w-4 h-4" />
-              <span>{t.verifyChain}</span>
-            </button>
-          </>
-        )}
-
+      {/* Collapse toggle */}
+      <div className="shrink-0 px-2 pb-4">
         <button
           onClick={() => useChronicleStore.getState().toggleSidebar()}
-          className="w-full p-2 text-neutral-400 hover:text-white transition-colors"
+          className={`
+            w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-neutral-300
+            hover:bg-white/[0.05] transition-all duration-150
+            ${open ? 'px-3 gap-2' : 'justify-center'}
+          `}
         >
-          {uiState.sidebarOpen ? t.collapse : t.expand}
+          {open
+            ? <><ChevronLeft className="w-4 h-4" /><span className="text-xs">收起</span></>
+            : <ChevronRight className="w-4 h-4" />
+          }
         </button>
       </div>
     </aside>
