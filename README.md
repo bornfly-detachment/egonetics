@@ -63,6 +63,15 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - Block-level permission interface (`canEdit`, `canDelete`, `canAdd`, `canReorder`) with reserved fields for per-block and tag-based permissions
   - `BlockEditor.tsx` reduced by 886 lines (old rendering layer fully replaced)
   - All 4 consumer pages (`/memory`, `/chronicle`, `/tasks/:id`, `/theory`) zero-change migration
+- **Egonetics — Constitution Management System** *(2026-03-05)*
+  - `/egonetics` — Subject card grid: create subjects with agent/model metadata, hover-to-delete
+  - `/egonetics/:subjectId` — PageManager layout (read-only): left file tree + right block content
+  - Mirrors `~/.claude/constitution/` directory structure exactly (folders → folder pages, files → content pages)
+  - `PageManager` extended with `readOnly` prop: hides all edit/add/delete/drag controls, passes `readOnly` to `BlockEditor`
+  - New `egonetics_pages` + `egonetics_page_blocks` tables in `agents.db`; full CRUD API at `/api/egonetics/pages/*`
+  - `EgoneticsApiClient.ts` implements `ApiClient` interface scoped to a subject's page tree (write ops are no-ops in read-only mode)
+  - Import scripts in `scripts/`: `import_constitution_tree.py` seeds full directory tree into any subject
+  - Architecture design recorded in `chronicle-trace/events/`: directed semantic graph, version-DB forking, RL training data structure
 
 **In Progress**
 - Chronicle hash chain integrity verification
@@ -223,7 +232,8 @@ egonetics/
 | `/memory` | Memory: Annotation Boards + Session Library |
 | `/chronicle` | Chronicle Timeline (reopened for dev) |
 | `/theory` | Bornfly Theory (PageManager) |
-| `/egonetics` | Egonetics principles |
+| `/egonetics` | Egonetics — subject card grid |
+| `/egonetics/:subjectId` | Subject detail — read-only PageManager (constitution tree) |
 | `/tasks` | Task Kanban Board |
 | `/tasks/:taskId` | Task Detail Page |
 | `/blog` | Blog / knowledge base |
@@ -239,7 +249,7 @@ Four separate SQLite databases under `server/data/`:
 | `memory.db` | Chat sessions (sessions/rounds/steps), annotations, chronicle tables |
 | `tasks.db` | Projects, tasks, kanban columns, blocks, properties, versions |
 | `pages.db` | Page hierarchy, metadata (Theory/Task/Page pages) |
-| `agents.db` | Agents and relations |
+| `agents.db` | Agents, relations, egonetics subjects, constitution pages & blocks |
 
 ### Chronicle Design
 
@@ -352,6 +362,15 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - 块级权限接口（`canEdit`、`canDelete`、`canAdd`、`canReorder`），预留按块/按标签赋权扩展点
   - `BlockEditor.tsx` 精简 886 行（旧渲染层全量替换）
   - 四个消费页面（`/memory`、`/chronicle`、`/tasks/:id`、`/theory`）零改动迁移
+- **Egonetics — 宪法管理系统** *(2026-03-05)*
+  - `/egonetics` — 主题卡片网格：创建带 agent/model 元信息的主题，hover 显示删除按钮
+  - `/egonetics/:subjectId` — PageManager 布局（只读）：左侧文件树 + 右侧块内容展示
+  - 精确镜像 `~/.claude/constitution/` 目录结构（子目录 → folder page，文件 → content page）
+  - `PageManager` 新增 `readOnly` prop：隐藏所有编辑/新建/删除/拖拽控件，透传至 `BlockEditor`
+  - `agents.db` 新增 `egonetics_pages` + `egonetics_page_blocks` 表；完整 CRUD API `/api/egonetics/pages/*`
+  - `EgoneticsApiClient.ts` 实现 `ApiClient` 接口，作用域限定到单个 subject 的页面树（只读模式下写操作为 no-op）
+  - `scripts/import_constitution_tree.py` — 将 constitution 完整目录树导入指定 subject
+  - 架构设计记录于 `chronicle-trace/events/`：有向语义图、版本 DB 分叉、RL 训练数据结构
 
 **开发中**
 - Chronicle 哈希链完整性验证
@@ -512,7 +531,8 @@ egonetics/
 | `/memory` | 记忆：标注面板 + 会话库 |
 | `/chronicle` | Chronicle 时间轴（重新开发中） |
 | `/theory` | Bornfly 理论（PageManager） |
-| `/egonetics` | Egonetics 原则 |
+| `/egonetics` | Egonetics — 主题卡片网格 |
+| `/egonetics/:subjectId` | 主题详情 — 只读 PageManager（宪法目录树） |
 | `/tasks` | 任务看板 |
 | `/tasks/:taskId` | 任务详情页 |
 | `/blog` | 博客 / 知识库 |
@@ -528,7 +548,7 @@ egonetics/
 | `memory.db` | 聊天会话（sessions/rounds/steps）、标注、chronicle 表 |
 | `tasks.db` | 项目、任务、看板列、blocks、属性、版本 |
 | `pages.db` | 页面层级、元数据（Theory/Task/Page 页面） |
-| `agents.db` | 智能体及关系 |
+| `agents.db` | 智能体及关系、egonetics 主题、宪法页面树与块内容 |
 
 ### Chronicle 设计
 

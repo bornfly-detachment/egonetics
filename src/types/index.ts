@@ -52,6 +52,7 @@ export interface UIState {
     | 'theory'
     | 'chronicle'
     | 'egonetics'
+    | 'egonetics-detail'
     | 'tasks'
     | 'agents'
     | 'settings'

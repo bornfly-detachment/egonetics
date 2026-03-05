@@ -10,6 +10,7 @@ import {
 import Sidebar from './components/Sidebar'
 import MemoryView from './components/MemoryView'
 import EgoneticsView from './components/EgoneticsView'
+import EgoneticsSubjectPage from './components/EgoneticsSubjectPage'
 import KanbanBoard from './components/taskBoard/KanbanBoard'
 import TaskDetailPage from './components/taskBoard/TaskDetailPage'
 import ChronicleView from './components/ChronicleView'
@@ -44,6 +45,8 @@ const RouteSync: React.FC = () => {
       view = 'chronicle'
     } else if (path === '/egonetics') {
       view = 'egonetics'
+    } else if (path.startsWith('/egonetics/')) {
+      view = 'egonetics-detail'
     } else if (path === '/tasks') {
       view = 'tasks'
     } else if (path.startsWith('/tasks/')) {
@@ -93,6 +96,10 @@ const RouteSync: React.FC = () => {
         break
       case 'egonetics':
         targetPath = '/egonetics'
+        break
+      case 'egonetics-detail':
+        // keep current URL — detail page manages its own navigation
+        targetPath = location.pathname
         break
       case 'tasks':
         targetPath = '/tasks'
@@ -177,6 +184,7 @@ const AppContent: React.FC = () => {
               <Route path="/theory" element={<TheoryPageView />} />
               <Route path="/chronicle" element={<ChronicleView />} />
               <Route path="/egonetics" element={<EgoneticsView />} />
+              <Route path="/egonetics/:subjectId" element={<EgoneticsSubjectPage />} />
               <Route path="/tasks" element={<KanbanBoard />} />
               <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
               <Route path="/blog" element={<BlogPage />} />

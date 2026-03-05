@@ -210,6 +210,7 @@ interface SidebarNodeProps {
   onMovePage: (dragId: string, targetId: string, zone: 'before' | 'after' | 'inside') => void
   level: number
   archivedPages?: Record<string, { version_tag: string; entry_id: string }>
+  readOnly?: boolean
 }
 
 function SidebarNode({
@@ -225,6 +226,7 @@ function SidebarNode({
   onMovePage,
   level,
   archivedPages,
+  readOnly = false,
 }: SidebarNodeProps) {
   const isArchived = archivedPages ? !!archivedPages[page.id] : false
   const children = getPageChildren(allPages, page.id)
@@ -349,17 +351,19 @@ function SidebarNode({
 
         {/* 操作按钮 */}
         <div className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onAddChild(page.id)
-            }}
-            className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/15 text-neutral-500 hover:text-neutral-200"
-            title="添加子页面"
-          >
-            <Plus size={10} />
-          </button>
-          <div className="relative">
+          {!readOnly && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddChild(page.id)
+              }}
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/15 text-neutral-500 hover:text-neutral-200"
+              title="添加子页面"
+            >
+              <Plus size={10} />
+            </button>
+          )}
+          {!readOnly && <div className="relative">
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -397,13 +401,15 @@ function SidebarNode({
                 </button>
               </div>
             )}
-          </div>
-          <div
-            className="cursor-grab active:cursor-grabbing"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <GripVertical size={10} className="text-neutral-600 hover:text-neutral-400" />
-          </div>
+          </div>}
+          {!readOnly && (
+            <div
+              className="cursor-grab active:cursor-grabbing"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <GripVertical size={10} className="text-neutral-600 hover:text-neutral-400" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -424,6 +430,7 @@ function SidebarNode({
             onMovePage={onMovePage}
             level={level + 1}
             archivedPages={archivedPages}
+            readOnly={readOnly}
           />
         ))}
     </div>
@@ -486,6 +493,7 @@ interface PageManagerProps {
   defaultPageId?: string
   archivedPages?: Record<string, { version_tag: string; entry_id: string }>
   onArchivePage?: (page: PageMeta, blocks: Block[]) => void
+  readOnly?: boolean // 只读模式：禁用编辑、新建、删除
 }
 
 export default function PageManager({
@@ -493,6 +501,7 @@ export default function PageManager({
   defaultPageId,
   archivedPages,
   onArchivePage,
+  readOnly = false,
 }: PageManagerProps) {
   const api = apiProp ?? createMockApiClient()
 
@@ -779,13 +788,15 @@ export default function PageManager({
                 <span className="text-xs font-semibold text-neutral-600 uppercase tracking-widest">
                   页面
                 </span>
-                <button
-                  onClick={() => createPage(null)}
-                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors"
-                  title="新建根页面"
-                >
-                  <Plus size={13} />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => createPage(null)}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-neutral-600 hover:text-neutral-300 transition-colors"
+                    title="新建根页面"
+                  >
+                    <Plus size={13} />
+                  </button>
+                )}
               </div>
 
               {/* 页面树 */}
@@ -810,6 +821,7 @@ export default function PageManager({
                       onMovePage={movePage}
                       level={0}
                       archivedPages={archivedPages}
+                      readOnly={readOnly}
                     />
                   ))
                 )}
@@ -924,9 +936,10 @@ export default function PageManager({
                   key={activePageId}
                   pageId={activePageId}
                   initialBlocks={currentBlocks}
-                  onChange={handleBlocksChange}
+                  onChange={readOnly ? undefined : handleBlocksChange}
+                  readOnly={readOnly}
                   onNavigate={activatePage}
-                  onCreateSubpage={handleCreateSubpage}
+                  onCreateSubpage={readOnly ? undefined : handleCreateSubpage}
                 />
               </div>
             ) : (

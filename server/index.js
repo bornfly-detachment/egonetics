@@ -7,8 +7,9 @@ const tasksRouter    = require('./routes/tasks');
 const pagesRouter    = require('./routes/pages');
 const memoryRouter   = require('./routes/memory');
 const chronicleRouter = require('./routes/chronicle');
-const agentsRouter   = require('./routes/agents');
-const mediaRouter    = require('./routes/media');
+const agentsRouter      = require('./routes/agents');
+const egoneticsRouter   = require('./routes/egonetics');
+const mediaRouter       = require('./routes/media');
 
 const app = express();
 const PORT = 3002;
@@ -31,6 +32,7 @@ app.use('/api', pagesRouter.init({ pagesDb, tasksDb }));
 app.use('/api', memoryRouter.init(memoryDb));
 app.use('/api', chronicleRouter.init(memoryDb));
 app.use('/api', agentsRouter.init(agentsDb));
+app.use('/api', egoneticsRouter.init(agentsDb));
 app.use('/api', mediaRouter.init());
 
 app.listen(PORT, () => {
