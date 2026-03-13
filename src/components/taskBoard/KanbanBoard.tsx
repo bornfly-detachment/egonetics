@@ -11,6 +11,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, GripVertical, Search, Palette, Calendar, MoreHorizontal } from 'lucide-react'
+import { getToken, removeToken } from '@/lib/http'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,9 +48,22 @@ interface Column {
 
 const API = '/api'
 
+function authHeaders(): Record<string, string> {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function handle401(res: Response) {
+  if (res.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+  }
+}
+
 async function fetchKanban(): Promise<Column[] | null> {
   try {
-    const res = await fetch(`${API}/kanban`)
+    const res = await fetch(`${API}/kanban`, { headers: authHeaders() })
+    handle401(res)
     if (!res.ok) return null
     const data = await res.json()
     return data.columns.map((col: Column) => ({
@@ -65,9 +79,10 @@ async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
   try {
     const res = await fetch(`${API}/kanban/tasks/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(fields),
     })
+    handle401(res)
     return res.ok
   } catch {
     return false
@@ -76,7 +91,8 @@ async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
 
 async function deleteTask(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API}/kanban/tasks/${id}`, { method: 'DELETE' })
+    const res = await fetch(`${API}/kanban/tasks/${id}`, { method: 'DELETE', headers: authHeaders() })
+    handle401(res)
     return res.ok
   } catch {
     return false
@@ -87,9 +103,10 @@ async function createTask(task: Partial<Task>): Promise<Task | null> {
   try {
     const res = await fetch(`${API}/kanban/tasks`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(task),
     })
+    handle401(res)
     if (!res.ok) return null
     return await res.json()
   } catch {
@@ -99,11 +116,12 @@ async function createTask(task: Partial<Task>): Promise<Task | null> {
 
 async function saveColumns(columns: Column[]): Promise<void> {
   const colsData = columns.map(({ tasks: _t, ...c }) => c)
-  await fetch(`${API}/kanban/columns`, {
+  const res = await fetch(`${API}/kanban/columns`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(colsData),
   })
+  handle401(res)
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────

@@ -28,6 +28,7 @@ import {
   Calendar,
   User,
 } from 'lucide-react'
+import { getToken, removeToken } from '@/lib/http'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,9 +65,19 @@ interface Column {
 
 const API_BASE = '/api'
 
+function authHeaders(): Record<string, string> {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function handle401(res: Response) {
+  if (res.status === 401) { removeToken(); window.location.href = '/login' }
+}
+
 async function fetchKanban(): Promise<Column[] | null> {
   try {
-    const res = await fetch(`${API_BASE}/kanban`)
+    const res = await fetch(`${API_BASE}/kanban`, { headers: authHeaders() })
+    handle401(res)
     if (!res.ok) return null
     const data = await res.json()
     return data.columns.map((col: Column) => ({
@@ -90,12 +101,12 @@ function scheduleSave(columns: Column[]) {
       await Promise.all([
         fetch(`${API_BASE}/kanban/columns`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(colsData),
         }),
         fetch(`${API_BASE}/kanban/tasks`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(tasksData),
         }),
       ])

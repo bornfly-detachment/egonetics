@@ -24,10 +24,20 @@ import {
 } from 'lucide-react'
 import BlockEditor from './BlockEditor'
 import type { Block, BlockType, RichTextSegment } from './types'
+import { getToken, removeToken } from '@/lib/http'
 
 const API = '/api'
 const apiFetch = async (path: string, opts?: RequestInit) => {
-  const r = await fetch(`${API}${path}`, opts)
+  const token = getToken()
+  const headers = {
+    ...opts?.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+  const r = await fetch(`${API}${path}`, { ...opts, headers })
+  if (r.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+  }
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
   return r.json()
 }
@@ -421,7 +431,7 @@ function BoardPanel() {
 
   const deleteBoard = async (boardId: string) => {
     if (!window.confirm('删除此面板及所有块？')) return
-    await fetch(`${API}/memory/boards/${boardId}`, { method: 'DELETE' }).catch(console.error)
+    await apiFetch(`/memory/boards/${boardId}`, { method: 'DELETE' }).catch(console.error)
     setBoards((prev) => {
       const next = prev.filter((b) => b.id !== boardId)
       setActiveBoardId(next.length ? next[0].id : null)
@@ -947,7 +957,7 @@ function SessionLibrary() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`${API}/memory/sessions/${id}`, { method: 'DELETE' })
+      await apiFetch(`/memory/sessions/${id}`, { method: 'DELETE' })
       setSessions((prev) => prev.filter((s) => s.id !== id))
       setTotal((prev) => prev - 1)
     } catch (e) {

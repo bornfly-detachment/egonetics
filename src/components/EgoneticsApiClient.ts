@@ -3,14 +3,25 @@
 // saveBlocks / createPage / updatePage / deletePage / movePage 在只读模式下为 no-op
 
 import type { ApiClient, PageMeta, Block, CreatePageInput, MovePageInput } from './types'
+import { getToken, removeToken } from '@/lib/http'
 
 const BASE = '/api'
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken()
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
+    headers,
   })
+  if (res.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+  }
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json() as Promise<T>
 }

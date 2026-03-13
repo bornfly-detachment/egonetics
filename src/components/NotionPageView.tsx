@@ -4,6 +4,7 @@ import PageLayout from './PageLayout'
 import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
 import type { ApiClient, PageMeta, Block, CreatePageInput } from './types'
+import { getToken, removeToken } from '@/lib/http'
 
 const KANBAN_API_BASE = '/api'
 
@@ -29,7 +30,15 @@ interface Task {
 // 获取单个 task
 async function fetchTask(taskId: string): Promise<Task | null> {
   try {
-    const res = await fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`)
+    const token = getToken()
+    const res = await fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    if (res.status === 401) {
+      removeToken()
+      window.location.href = '/login'
+      return null
+    }
     if (!res.ok) return null
     return await res.json()
   } catch (e) {

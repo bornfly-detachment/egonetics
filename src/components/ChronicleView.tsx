@@ -30,12 +30,22 @@ import {
 } from 'lucide-react'
 import BlockEditor from './BlockEditor'
 import type { Block } from './BlockEditor'
+import { getToken, removeToken } from '@/lib/http'
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 const API = '/api'
 const apiFetch = async (path: string, opts?: RequestInit) => {
-  const r = await fetch(`${API}${path}`, opts)
+  const token = getToken()
+  const headers = {
+    ...opts?.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+  const r = await fetch(`${API}${path}`, { ...opts, headers })
+  if (r.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+  }
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
   return r.json()
 }

@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, Trash2, Link, X, Send, Bot, Zap, RefreshCw, ChevronDown } from 'lucide-react'
+import { getToken, removeToken } from '@/lib/http'
 
 // ── API ────────────────────────────────────────────────────
 const apiFetch = async (path: string, opts?: RequestInit) => {
-  const r = await fetch(`/api${path}`, opts)
+  const token = getToken()
+  const headers = {
+    ...opts?.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+  const r = await fetch(`/api${path}`, { ...opts, headers })
+  if (r.status === 401) {
+    removeToken()
+    window.location.href = '/login'
+  }
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
   return r.json()
 }

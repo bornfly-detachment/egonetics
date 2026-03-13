@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
 import type { ApiClient, PageMeta } from './types'
+import { getToken, removeToken } from '@/lib/http'
 
 const KANBAN_API_BASE = '/api'
 
@@ -54,8 +55,19 @@ const TaskPageView: React.FC = () => {
   useEffect(() => {
     if (!taskId) return
 
-    fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`)
-      .then((res) => res.json())
+    fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`, {
+      headers: {
+        Authorization: `Bearer ${getToken() || ''}`
+      }
+    })
+      .then((res) => {
+        if (res.status === 401) {
+          removeToken()
+          window.location.href = '/login'
+          throw new Error('Unauthorized')
+        }
+        return res.json()
+      })
       .then((data) => {
         if (data.name) {
           setTaskName(data.name)
