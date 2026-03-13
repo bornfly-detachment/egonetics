@@ -7,7 +7,7 @@
  * 路由: /tasks/:taskId
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -20,6 +20,8 @@ import {
   BookMarked,
 } from 'lucide-react'
 import BlockEditor from '../BlockEditor'
+import PageManager from '../PageManager'
+import { createApiClient } from '../apiClient'
 import type { Block } from '../BlockEditor'
 import { getToken, removeToken } from '@/lib/http'
 
@@ -314,6 +316,12 @@ export default function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
 
+  // 创建任务专属的 API 客户端 - 只显示和当前任务关联的页面
+  const taskApiClient = useMemo(() => {
+    if (!taskId) return null
+    return createApiClient('task', taskId)
+  }, [taskId])
+
   const [task, setTask] = useState<Task | null>(null)
   const [columns, setColumns] = useState<Column[]>([])
   const [initialBlocks, setInitialBlocks] = useState<Block[]>([])
@@ -413,18 +421,21 @@ export default function TaskDetailPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#0d0d0d] flex flex-col"
+      className="h-screen bg-[#191919] flex flex-col"
       style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}
     >
-      {/* Header */}
-      <div className="shrink-0 h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-6 justify-between">
-        <button
-          onClick={() => navigate('/tasks')}
-          className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-        >
-          <ArrowLeft size={16} />
-          <span className="text-sm">返回看板</span>
-        </button>
+      {/* 顶部导航栏（和博客页风格一致） */}
+      <div className="shrink-0 h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/tasks')}
+            className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <span className="text-xl">{task?.icon || '📝'}</span>
+          <span className="text-white font-medium">{task?.name || '任务详情'}</span>
+        </div>
         <div className="flex items-center gap-2">
           {saving && <Loader size={14} className="animate-spin text-white/30" />}
           {isArchived ? (
@@ -449,157 +460,9 @@ export default function TaskDetailPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto px-6 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Icon + Title */}
-          <div className="flex items-start gap-4 mb-6">
-            <span className="text-5xl mt-1">{task.icon}</span>
-            <div className="flex-1 min-w-0">
-              <h1
-                className="text-3xl font-bold text-white break-words mb-1 cursor-text hover:bg-white/5 rounded px-1 -mx-1 transition-colors"
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(e) => {
-                  const v = e.currentTarget.textContent?.trim() ?? ''
-                  if (v && v !== task.name) save({ name: v })
-                  else e.currentTarget.textContent = task.name
-                }}
-              >
-                {task.name}
-              </h1>
-            </div>
-          </div>
-
-          {/* Property Bar */}
-          <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-4 mb-8 space-y-3">
-            {/* Status */}
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-white/35 w-16 shrink-0">状态</span>
-              <select
-                value={task.columnId ?? task.status}
-                onChange={(e) => save({ columnId: e.target.value, status: e.target.value })}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20 transition-colors"
-              >
-                {columns.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-                {!columns.find((c) => c.id === (task.columnId ?? task.status)) && (
-                  <option value={task.columnId ?? task.status}>{colLabel}</option>
-                )}
-              </select>
-            </div>
-
-            {/* Priority */}
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-white/35 w-16 shrink-0">优先级</span>
-              <select
-                value={task.priority}
-                onChange={(e) => save({ priority: e.target.value as Priority })}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20 transition-colors"
-              >
-                {(Object.entries(PRI) as [Priority, (typeof PRI)[Priority]][]).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-              <span
-                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${p.cls}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.dot }} />
-                {p.label}
-              </span>
-            </div>
-
-            {/* Assignee */}
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
-                <User size={10} /> 负责人
-              </span>
-              <InlineText
-                value={task.assignee ?? ''}
-                placeholder="添加负责人…"
-                onSave={(v) => save({ assignee: v || undefined })}
-              />
-            </div>
-
-            {/* Start Date */}
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
-                <Calendar size={10} /> 开始
-              </span>
-              <input
-                type="date"
-                value={task.startDate ?? ''}
-                onChange={(e) => save({ startDate: e.target.value || undefined })}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20"
-              />
-            </div>
-
-            {/* Due Date */}
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
-                <Calendar size={10} /> 截止
-              </span>
-              <input
-                type="date"
-                value={task.dueDate ?? ''}
-                onChange={(e) => save({ dueDate: e.target.value || undefined })}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/25 [color-scheme:dark] cursor-pointer hover:border-white/20"
-              />
-            </div>
-
-            {/* Project */}
-            {task.project && (
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-white/35 w-16 shrink-0">项目</span>
-                <div className="flex items-center gap-2">
-                  {task.projectIcon && <span>{task.projectIcon}</span>}
-                  <span className="text-sm text-white/70">{task.project}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Tags */}
-            {task.tags && task.tags.length > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-white/35 w-16 shrink-0 flex items-center gap-1">
-                  <Tag size={10} /> 标签
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {task.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/8"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Timestamps */}
-          <div className="mb-6">
-            <div className="text-[11px] text-white/25 space-y-1">
-              <p>创建于 {fmtDateTime(task.created_at)}</p>
-              <p>更新于 {fmtDateTime(task.updated_at)}</p>
-            </div>
-          </div>
-
-          {/* Body — BlockEditor */}
-          <div className="border-t border-white/8 pt-6">
-            <BlockEditor
-              pageId={task.id}
-              initialBlocks={initialBlocks}
-              onChange={handleBlocksChange}
-            />
-          </div>
-        </div>
+      {/* PageManager 内容区（和博客页完全一致） */}
+      <div className="flex-1 overflow-hidden">
+        {taskApiClient && <PageManager api={taskApiClient} />}
       </div>
 
       {showPublish && (
