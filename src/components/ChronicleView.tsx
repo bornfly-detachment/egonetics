@@ -139,6 +139,18 @@ interface CollectionLink {
   created_at: string
 }
 
+interface EntryLink {
+  id: string
+  from_id: string
+  to_id: string
+  relation_hint: string
+  draft_content: string
+  content: string
+  current_content_id: string
+  created_at: string
+  updated_at: string
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const ENTRY_ICONS: Record<string, React.ReactNode> = {
@@ -1178,6 +1190,485 @@ function CreateCollectionModal({
   )
 }
 
+// ── Chronicle Graph View ──────────────────────────────────────────────────────
+
+const TYPE_COLOR: Record<string, string> = {
+  memory: '#22c55e',
+  task: '#3b82f6',
+  theory: '#f97316',
+}
+
+interface NodePos { x: number; y: number }
+
+const COLS_PER_ROW = 5
+const NODE_SPACING_X = 140
+const NODE_SPACING_Y = 120
+const BAND_PADDING = 50
+
+function computeInitialLayout(
+  entries: ChronicleEntry[],
+  milestones: Milestone[]
+): Record<string, NodePos> {
+  const positions: Record<string, NodePos> = {}
+  const msIds = milestones.map((m) => m.id)
+  const groups: Record<string, ChronicleEntry[]> = { _none: [] }
+  msIds.forEach((id) => { groups[id] = [] })
+  entries.forEach((e) => {
+    const key = e.milestone_id && groups[e.milestone_id] ? e.milestone_id : '_none'
+    groups[key].push(e)
+  })
+
+  let yOffset = 60
+  const orderedKeys = [...msIds, '_none']
+  orderedKeys.forEach((msId) => {
+    const group = groups[msId] || []
+    if (!group.length) return
+    const rows = Math.ceil(group.length / COLS_PER_ROW)
+    group.forEach((e, i) => {
+      const col = i % COLS_PER_ROW
+      const row = Math.floor(i / COLS_PER_ROW)
+      positions[e.id] = {
+        x: BAND_PADDING + col * NODE_SPACING_X + NODE_SPACING_X / 2,
+        y: yOffset + row * NODE_SPACING_Y + NODE_SPACING_Y / 2,
+      }
+    })
+    yOffset += rows * NODE_SPACING_Y + BAND_PADDING
+  })
+  return positions
+}
+
+function ChronicleGraphView({
+  entries,
+  milestones,
+  collectionItems,
+  collectionLinks,
+  entryLinks = [],
+  onEntryOpen,
+  onDataChange,
+}: {
+  entries: ChronicleEntry[]
+  milestones: Milestone[]
+  collectionItems: Record<string, CollectionItem[]>
+  collectionLinks: CollectionLink[]
+  entryLinks?: EntryLink[]
+  onEntryOpen: (e: ChronicleEntry) => void
+  onDataChange?: () => void
+}) {
+  const [positions, setPositions] = useState<Record<string, NodePos>>(() =>
+    computeInitialLayout(entries, milestones)
+  )
+  const [transform, setTransform] = useState({ x: 40, y: 20, scale: 1 })
+  const [dragging, setDragging] = useState<{ id: string; ox: number; oy: number } | null>(null)
+  const [draggingEdge, setDraggingEdge] = useState<{ fromId: string; start: NodePos; current: NodePos } | null>(null)
+  const [panning, setPanning] = useState<{ sx: number; sy: number; tx: number; ty: number } | null>(null)
+  const [hoverId, setHoverId] = useState<string | null>(null)
+  const [hoverEdgeId, setHoverEdgeId] = useState<string | null>(null)
+  const [creatingEdge, setCreatingEdge] = useState<{ fromId: string; toId: string } | null>(null)
+  const svgRef = React.useRef<SVGSVGElement>(null)
+
+  useEffect(() => {
+    setPositions(computeInitialLayout(entries, milestones))
+  }, [entries.length, milestones.length])
+
+  const createEntryLink = async (from_id: string, to_id: string, relation_hint: string) => {
+    try {
+      await post('/chronicle/entry-links', { from_id, to_id, relation_hint })
+      onDataChange?.()
+    } catch { /* ignore */ }
+  }
+
+  const deleteEntryLink = async (id: string) => {
+    if (!window.confirm('删除此关联？')) return
+    try {
+      await del(`/chronicle/entry-links/${id}`)
+      onDataChange?.()
+    } catch { /* ignore */ }
+  }
+
+  const handleEdgeAnchorMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    const pos = positions[id]
+    if (!pos) return
+    const svgXY = toSvgXY(e.clientX, e.clientY)
+    setDraggingEdge({ fromId: id, start: { x: pos.x, y: pos.y }, current: svgXY })
+  }
+
+  const handleEdgeDragEnd = () => {
+    if (!draggingEdge || !hoverId || hoverId === draggingEdge.fromId) {
+      setDraggingEdge(null)
+      return
+    }
+    setCreatingEdge({ fromId: draggingEdge.fromId, toId: hoverId })
+    setDraggingEdge(null)
+  }
+
+  // Build edges from collection memberships + collection links + entry_links
+  const edges = useMemo(() => {
+    const result: Array<{ id?: string; from: string; to: string; label?: string; isEntryLink?: boolean }> = []
+    // Collection links (explicit)
+    collectionLinks.forEach((link) => {
+      if (positions[link.from_id] && positions[link.to_id]) {
+        result.push({ id: link.id, from: link.from_id, to: link.to_id, label: link.label || undefined })
+      }
+    })
+    // Entry links (graph relation)
+    entryLinks.forEach((link) => {
+      if (positions[link.from_id] && positions[link.to_id]) {
+        result.push({ id: link.id, from: link.from_id, to: link.to_id, label: link.relation_hint || undefined, isEntryLink: true })
+      }
+    })
+    // Sequential edges within each collection (item chain)
+    Object.values(collectionItems).forEach((items) => {
+      for (let i = 0; i < items.length - 1; i++) {
+        const a = items[i].entry_id
+        const b = items[i + 1].entry_id
+        if (positions[a] && positions[b]) result.push({ from: a, to: b })
+      }
+    })
+    return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionLinks, entryLinks, collectionItems, positions])
+
+  const toSvgXY = (clientX: number, clientY: number) => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (!rect) return { x: 0, y: 0 }
+    return {
+      x: (clientX - rect.left - transform.x) / transform.scale,
+      y: (clientY - rect.top - transform.y) / transform.scale,
+    }
+  }
+
+  const handleNodeMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    const svgXY = toSvgXY(e.clientX, e.clientY)
+    const pos = positions[id] || { x: 0, y: 0 }
+    setDragging({ id, ox: svgXY.x - pos.x, oy: svgXY.y - pos.y })
+  }
+
+  const handleSvgMouseDown = (e: React.MouseEvent) => {
+    if (dragging) return
+    setPanning({ sx: e.clientX, sy: e.clientY, tx: transform.x, ty: transform.y })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (dragging) {
+      const svgXY = toSvgXY(e.clientX, e.clientY)
+      setPositions((prev) => ({
+        ...prev,
+        [dragging.id]: { x: svgXY.x - dragging.ox, y: svgXY.y - dragging.oy },
+      }))
+    } else if (draggingEdge) {
+      const svgXY = toSvgXY(e.clientX, e.clientY)
+      setDraggingEdge((prev) => prev ? { ...prev, current: svgXY } : null)
+    } else if (panning) {
+      setTransform((prev) => ({
+        ...prev,
+        x: panning.tx + (e.clientX - panning.sx),
+        y: panning.ty + (e.clientY - panning.sy),
+      }))
+    }
+  }
+
+  const handleMouseUp = () => {
+    setDragging(null)
+    handleEdgeDragEnd()
+    setPanning(null)
+  }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const factor = e.deltaY > 0 ? 0.9 : 1.1
+    setTransform((prev) => ({
+      ...prev,
+      scale: Math.max(0.25, Math.min(3, prev.scale * factor)),
+    }))
+  }
+
+  if (!entries.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-60 text-neutral-600">
+        <Network size={32} className="mb-3 opacity-30" />
+        <p className="text-sm">Chronicle 为空</p>
+        <p className="text-xs mt-1">发布条目后图谱开始构建</p>
+      </div>
+    )
+  }
+
+  const NODE_R = 18
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Controls */}
+      <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
+        <button
+          onClick={() => setTransform({ x: 40, y: 20, scale: 1 })}
+          className="px-2.5 py-1 text-xs text-neutral-500 hover:text-neutral-300 bg-white/5 hover:bg-white/10 rounded transition-colors border border-white/10"
+        >
+          重置
+        </button>
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-3 left-3 z-10 flex items-center gap-4 text-[10px] text-neutral-600">
+        {(['memory', 'task', 'theory'] as const).map((t) => (
+          <div key={t} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TYPE_COLOR[t] }} />
+            <span>{t}</span>
+          </div>
+        ))}
+        <span className="text-neutral-700 ml-1">· 拖拽节点 · 滚轮缩放 · 拖拽背景平移</span>
+      </div>
+
+      <svg
+        ref={svgRef}
+        className="w-full h-full"
+        style={{ cursor: dragging ? 'grabbing' : draggingEdge ? 'crosshair' : panning ? 'grabbing' : 'grab' }}
+        onMouseDown={handleSvgMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+      >
+        <defs>
+          <marker id="cg-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="#374151" />
+          </marker>
+          <marker id="cg-arrow-active" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="#4f46e5" />
+          </marker>
+        </defs>
+
+        <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
+
+          {/* Milestone background bands */}
+          {milestones.map((ms, idx) => {
+            const msEntries = entries.filter((e) => e.milestone_id === ms.id)
+            if (!msEntries.length) return null
+            const pos = msEntries.map((e) => positions[e.id]).filter(Boolean)
+            if (!pos.length) return null
+            const xs = pos.map((p) => p.x)
+            const ys = pos.map((p) => p.y)
+            const pad = 36
+            const minX = Math.min(...xs) - pad
+            const maxX = Math.max(...xs) + pad
+            const minY = Math.min(...ys) - pad
+            const maxY = Math.max(...ys) + pad
+            const hue = (idx * 53) % 360
+            return (
+              <g key={ms.id}>
+                <rect
+                  x={minX} y={minY}
+                  width={maxX - minX} height={maxY - minY}
+                  rx={10}
+                  fill={`hsla(${hue},30%,20%,0.18)`}
+                  stroke={`hsla(${hue},40%,55%,0.25)`}
+                  strokeWidth={1}
+                  strokeDasharray="4,3"
+                />
+                <text
+                  x={minX + 10} y={minY + 14}
+                  fontSize={9}
+                  fill={`hsla(${hue},50%,65%,0.55)`}
+                  style={{ userSelect: 'none' }}
+                >
+                  {ms.title}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Dragging edge */}
+          {draggingEdge && (
+            <line
+              x1={draggingEdge.start.x}
+              y1={draggingEdge.start.y}
+              x2={draggingEdge.current.x}
+              y2={draggingEdge.current.y}
+              stroke="#4f46e5"
+              strokeWidth={1.5}
+              strokeDasharray="4,2"
+              markerEnd="url(#cg-arrow-active)"
+            />
+          )}
+
+          {/* Edges */}
+          {edges.map((edge, i) => {
+            const from = positions[edge.from]
+            const to = positions[edge.to]
+            if (!from || !to) return null
+            // offset endpoints to stop at node radius
+            const dx = to.x - from.x
+            const dy = to.y - from.y
+            const len = Math.sqrt(dx * dx + dy * dy) || 1
+            const ux = dx / len
+            const uy = dy / len
+            const midX = (from.x + to.x) / 2
+            const midY = (from.y + to.y) / 2
+            const isHovered = hoverEdgeId === edge.id && edge.isEntryLink
+            const strokeColor = edge.isEntryLink ? '#4f46e5' : '#374151'
+            return (
+              <g key={edge.id || i}>
+                <line
+                  x1={from.x + ux * NODE_R} y1={from.y + uy * NODE_R}
+                  x2={to.x - ux * (NODE_R + 5)} y2={to.y - uy * (NODE_R + 5)}
+                  stroke={isHovered ? '#6366f1' : strokeColor}
+                  strokeWidth={isHovered ? 2 : 1}
+                  strokeDasharray={edge.isEntryLink ? 'none' : '3,3'}
+                  markerEnd={isHovered ? 'url(#cg-arrow-active)' : 'url(#cg-arrow)'}
+                  onMouseEnter={() => edge.id && setHoverEdgeId(edge.id)}
+                  onMouseLeave={() => setHoverEdgeId(null)}
+                />
+                {edge.label && (
+                  <text
+                    x={midX}
+                    y={midY - 4}
+                    textAnchor="middle"
+                    fontSize={8}
+                    fill={isHovered ? '#a5b4fc' : '#4b5563'}
+                    style={{ userSelect: 'none' }}
+                  >
+                    {edge.label}
+                  </text>
+                )}
+                {isHovered && (
+                  <circle
+                    cx={midX}
+                    cy={midY + 4}
+                    r={6}
+                    fill="#ef4444"
+                    stroke="#dc2626"
+                    strokeWidth={1}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      edge.id && deleteEntryLink(edge.id)
+                    }}
+                  >
+                    <title>删除关联</title>
+                  </circle>
+                )}
+              </g>
+            )
+          })}
+
+          {/* Nodes */}
+          {entries.map((e) => {
+            const pos = positions[e.id]
+            if (!pos) return null
+            const color = TYPE_COLOR[e.type] || '#6b7280'
+            const isHovered = hoverId === e.id
+            const isDragging = dragging?.id === e.id
+            const label = e.title.length > 14 ? e.title.slice(0, 14) + '…' : e.title
+            const emoji = e.type === 'memory' ? '🧠' : e.type === 'task' ? '✅' : '📖'
+            return (
+              <g
+                key={e.id}
+                transform={`translate(${pos.x},${pos.y})`}
+                onMouseDown={(ev) => handleNodeMouseDown(ev, e.id)}
+                onMouseEnter={() => setHoverId(e.id)}
+                onMouseLeave={() => setHoverId(null)}
+                onClick={(ev) => {
+                  if (!isDragging && !draggingEdge) { ev.stopPropagation(); onEntryOpen(e) }
+                }}
+                style={{ cursor: isDragging ? 'grabbing' : draggingEdge ? 'crosshair' : 'pointer' }}
+              >
+                {/* Glow ring on hover */}
+                {isHovered && (
+                  <circle r={NODE_R + 8} fill={`${color}18`} stroke={`${color}40`} strokeWidth={1} />
+                )}
+                <circle
+                  r={NODE_R}
+                  fill={`${color}22`}
+                  stroke={color}
+                  strokeWidth={isHovered ? 2 : 1.5}
+                />
+                <text
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={13}
+                  style={{ userSelect: 'none' }}
+                >
+                  {emoji}
+                </text>
+                <text
+                  y={NODE_R + 13}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill={isHovered ? '#d1d5db' : '#6b7280'}
+                  style={{ userSelect: 'none' }}
+                >
+                  {label}
+                </text>
+                {/* Locked badge */}
+                {e.is_locked ? (
+                  <circle cx={NODE_R - 5} cy={-NODE_R + 5} r={4} fill="#292524" stroke="#78716c" strokeWidth={1} />
+                ) : null}
+                {/* Connection anchor point (visible on hover) */}
+                {isHovered && !dragging && (
+                  <circle
+                    cx={NODE_R * Math.cos(Math.PI / 4)}
+                    cy={NODE_R * Math.sin(Math.PI / 4)}
+                    r={4}
+                    fill="#4f46e5"
+                    stroke="#818cf8"
+                    strokeWidth={1.5}
+                    style={{ cursor: 'crosshair' }}
+                    onMouseDown={(ev) => handleEdgeAnchorMouseDown(ev, e.id)}
+                  />
+                )}
+              </g>
+            )
+          })}
+
+        </g>
+      </svg>
+
+      {/* Create edge modal */}
+      {creatingEdge && (
+        <div className="absolute inset-0 z-20 bg-black/40 flex items-center justify-center">
+          <div className="bg-[#1e1e1e] border border-white/15 rounded-xl p-4 w-80 shadow-2xl">
+            <h3 className="text-sm font-semibold text-white mb-3">新建关联</h3>
+            <div className="text-xs text-neutral-400 mb-3">
+              从 <span className="text-blue-400">{entries.find((e) => e.id === creatingEdge.fromId)?.title || '?'}</span>
+              {' → '}
+              到 <span className="text-blue-400">{entries.find((e) => e.id === creatingEdge.toId)?.title || '?'}</span>
+            </div>
+            <input
+              autoFocus
+              placeholder="关系描述（可选）"
+              className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-xs text-white mb-4 outline-none focus:border-blue-500"
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter') {
+                  await createEntryLink(creatingEdge.fromId, creatingEdge.toId, e.currentTarget.value)
+                  setCreatingEdge(null)
+                }
+              }}
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setCreatingEdge(null)}
+                className="px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  const input = document.querySelector('input[placeholder="关系描述（可选）"]') as HTMLInputElement
+                  await createEntryLink(creatingEdge.fromId, creatingEdge.toId, input?.value || '')
+                  setCreatingEdge(null)
+                }}
+                className="px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                确认
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Chronicle View ───────────────────────────────────────────────────────
 
 interface ChronicleData {
@@ -1185,6 +1676,7 @@ interface ChronicleData {
   entries: ChronicleEntry[]
   collections: Collection[]
   collection_links: CollectionLink[]
+  entry_links: EntryLink[]
 }
 
 export default function ChronicleView() {
@@ -1343,7 +1835,7 @@ export default function ChronicleView() {
       {/* Main content */}
       <div className="flex-1 overflow-hidden flex">
         {/* Timeline / Workflow */}
-        <div className="flex-1 overflow-auto px-6 py-5">
+        <div className={`flex-1 overflow-hidden ${view === 'timeline' ? 'overflow-auto px-6 py-5' : ''}`}>
           {view === 'timeline' ? (
             <>
               {/* Milestones in chronological order */}
@@ -1402,12 +1894,15 @@ export default function ChronicleView() {
               )}
             </>
           ) : (
-            <div className="flex items-center justify-center h-60 text-neutral-600">
-              <div className="text-center">
-                <Network size={32} className="mb-3 opacity-30 mx-auto" />
-                <p className="text-sm">Workflow 视图（开发中）</p>
-              </div>
-            </div>
+            <ChronicleGraphView
+              entries={entries}
+              milestones={milestones}
+              collectionItems={colItems}
+              collectionLinks={data?.collection_links || []}
+              entryLinks={data?.entry_links || []}
+              onEntryOpen={openEntry}
+              onDataChange={loadData}
+            />
           )}
         </div>
 

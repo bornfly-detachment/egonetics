@@ -83,6 +83,35 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - Import scripts in `scripts/`: `import_constitution_tree.py` seeds full directory tree into any subject
   - Architecture design recorded in `chronicle-trace/events/`: directed semantic graph, version-DB forking, RL training data structure
 
+- **Abstract Cognitive Network — Free Canvas** *(2026-03-14)*
+  - `/egonetics` redesigned as a **free-form canvas system** (XMind/Miro style) for building knowledge networks
+  - Multiple named canvases, each persistable. Canvas list at `/egonetics`; open canvas at `/egonetics/canvas/:id`
+  - **Left sidebar**: all Tasks + Pages listed by type, click to add entity card to canvas, added items shown as ✓
+  - **Canvas**: dot-grid background, mouse-drag pan, scroll-wheel zoom (centered on cursor), absolute-positioned entity cards
+  - **Drag cards**: drag-to-reposition with 400ms debounced position persistence to DB
+  - **L1–L4 expansion**: title only → +status → +relation list → (future: content preview)
+  - **SVG bezier edges**: labeled with `relation.title`, drawn between all entity pairs that have relations AND are both on canvas; clicking edge navigates to `/relations/:id`
+  - **Connection mode**: click ↗ on a card to enter connect mode → click target card → fill Relation form (title + description) → creates relation and immediately renders edge
+  - **Relation detail page** at `/relations/:id`: edit title/description, extensible key-value properties, version history panel
+  - **DB additions in `pages.db`**: `canvases` table (id/title/description/creator), `canvas_nodes` table (canvas_id/entity_type/entity_id/x/y/expanded_level)
+  - **Relations enhanced**: `properties TEXT DEFAULT '{}'` column added; `GET/PUT /relations/:id/blocks` endpoints for rich block content; `relation_blocks` table with same schema as `blocks`
+  - **New files**: `server/routes/canvases.js`, `server/scripts/migrate-blocks-v4.js`, `src/lib/canvas-api.ts`, `src/components/CanvasView.tsx`, `src/components/RelationDetailView.tsx`
+  - **Migration**: `cd server && npm run migrate-v4`
+
+- **Block v2 — Process Versions & Relations** *(2026-03-14)*
+  - Every block gains a collapsible header (visible on hover or when title is set): **title** input, **creator** label, **creation timestamp**, **Publish** button, **Memory** panel, **Relations** panel
+  - **Process versions (过程记忆)**: clicking Publish creates an append-only snapshot in `process_versions` — records `start_time` (when editing began after last publish), `publish_time`, `publisher` (`human:username` / `ai:model`), full content snapshot, and explanation text. No publish = no history, just normal editing
+  - **Publish panel**: inline content block (not a floating popover) — full-width textarea for recording intent, **Save Draft** persists explanation to DB (`blocks.draft_explanation`), survives page refresh and cross-device; draft indicator dot shown on Publish button when draft exists; draft auto-cleared after confirmed publish
+  - **Relations**: open-description cross-entity edges. Source/target can be any of `block | task | memory | theory | label | label_system`. Each relation has a title + free-text description (not an enum). Relations also support publish/version history via `process_versions`. Stored in the `relations` table
+  - **DB schema additions** in `pages.db`:
+    - `blocks` table: added `title`, `creator`, `edit_start_time`, `draft_explanation` columns
+    - New `process_versions` table: `entity_id`, `entity_type` ('block'|'relation'), `version_num`, `start_time`, `publish_time`, `publisher`, `title_snapshot`, `content_snapshot` (JSON), `explanation`
+    - New `relations` table: `source_type/id`, `target_type/id`, `title`, `description`, `creator`, timestamps
+  - **Bug fix**: `PUT /pages/:id/blocks` full-replace now preserves `created_at` via `COALESCE(?, CURRENT_TIMESTAMP)`
+  - **New API endpoints**: `PATCH /blocks/:id/meta`, `POST /blocks/:id/publish`, `GET /blocks/:id/versions`; full CRUD + versioning under `/relations/*`
+  - **New files**: `server/routes/relations.js`, `server/scripts/migrate-blocks-v2.js`, `server/scripts/migrate-blocks-v3.js`, `src/lib/block-graph-api.ts`
+  - **Migrations**: `cd server && npm run migrate-v2` (schema) → `npm run migrate-v3` (draft_explanation)
+
 **In Progress**
 - Chronicle hash chain integrity verification
 - Theory page locking & versioning
@@ -176,6 +205,9 @@ npm run preview   # Preview production build
 npm start         # Start without hot reload
 npm run import    # Import JSONL sessions
 npm run migrate   # Chronicle migration script
+npm run migrate-v2     # Add process_versions + relations tables + block columns (title/creator/edit_start_time)
+npm run migrate-v3     # Add draft_explanation column to blocks
+npm run migrate-v4     # Add canvases + canvas_nodes + relation_blocks tables; relations.properties
 npm run backup    # Backup Claude Code projects (~/.claude/projects/) to memory.db
 npm run backup:daemon  # Run backup every hour (daemon mode)
 npm run backup:dry     # Preview backup without importing
@@ -212,6 +244,9 @@ egonetics/
 │   │   │       ├── paragraph/{Editor,Preview}
 │   │   │       ├── heading/{Editor,Preview}
 │   │   │       └── code/{Editor,Preview}  # CodeMirror + hljs + Prettier
+│   │   ├── EgoneticsView.tsx   # Canvas list (new)
+│   │   ├── CanvasView.tsx      # Free-form canvas editor (new)
+│   │   ├── RelationDetailView.tsx  # Relation detail + properties + versions (new)
 │   │   ├── AgentsView.tsx      # SVG node graph
 │   │   ├── taskBoard/          # Kanban board components
 │   │   └── apiClient.ts        # Theory/Pages API client
@@ -219,6 +254,8 @@ egonetics/
 │   │   ├── chronicle.ts        # BornflyChronicle class (hash chain)
 │   │   ├── api.ts              # Memory/sessions API client
 │   │   ├── tasks-api.ts        # Tasks/projects REST API client
+│   │   ├── block-graph-api.ts  # Block meta / publish / relations API client
+│   │   ├── canvas-api.ts       # Canvas + canvas nodes API client (new)
 │   │   ├── formatCode.ts       # Prettier 3 standalone — format on save
 │   │   └── translations.ts     # i18n (zh/en)
 │   ├── stores/
@@ -234,7 +271,9 @@ egonetics/
 │   ├── routes/                 # Modular route handlers
 │   │   ├── memory.js           # /api/memory/* (sessions, annotations, boards)
 │   │   ├── tasks.js            # /api/tasks/* + /api/kanban/*
-│   │   ├── pages.js            # /api/pages/* + /api/notion/*
+│   │   ├── pages.js            # /api/pages/* + /api/blocks/* + /api/notion/*
+│   │   ├── relations.js        # /api/relations/* (cross-entity edges + blocks + versioning)
+│   │   ├── canvases.js         # /api/canvases/* (canvas CRUD + node management) (new)
 │   │   ├── chronicle.js        # /api/chronicle/*
 │   │   ├── agents.js           # /api/agents/*
 │   │   └── media.js            # /api/media/*
@@ -245,6 +284,9 @@ egonetics/
 │   │   ├── init-agents-db.js
 │   │   ├── import-jsonl.js
 │   │   ├── migrate-chronicle.js
+│   │   ├── migrate-blocks-v2.js   # process_versions + relations tables + block columns
+│   │   ├── migrate-blocks-v3.js   # draft_explanation column
+│   │   ├── migrate-blocks-v4.js   # canvases + canvas_nodes + relation_blocks; relations.properties
 │   │   └── tasks_schema.sql
 │   ├── data/                   # SQLite databases (gitignored)
 │   │   ├── memory.db
@@ -265,8 +307,10 @@ egonetics/
 |---|---|:---:|:---:|:---:|
 | `/login` | Login / Register | public | public | public |
 | `/home` | Home | ✓ | ✓ | ✓ |
-| `/egonetics` | Constitution subjects | ✓ | ✓ | ✓ |
-| `/egonetics/:id` | Subject detail (read-only) | ✓ | ✓ | ✓ |
+| `/egonetics` | Abstract Cognitive Network — canvas list | ✓ | ✓ | ✓ |
+| `/egonetics/canvas/:id` | Free-form canvas editor | ✓ | ✓ | ✓ |
+| `/egonetics/:id` | Subject detail (read-only, legacy) | ✓ | ✓ | ✓ |
+| `/relations/:id` | Relation detail + properties + versions | — | — | ✓ |
 | `/tasks` | Task Kanban Board | read | read+write | ✓ |
 | `/tasks/:taskId` | Task Detail | read | read+write | ✓ |
 | `/blog` | Blog / knowledge base | ✓ | ✓ | ✓ |
@@ -325,11 +369,32 @@ Five separate SQLite databases under `server/data/`:
 - `GET/PUT /kanban` — Kanban columns
 - `GET/POST/PUT/PATCH/DELETE /kanban/tasks` — Kanban tasks
 
-**Pages** (`/api/pages/*`, `/api/notion/*`)
+**Pages & Blocks** (`/api/pages/*`, `/api/blocks/*`, `/api/notion/*`)
 - `GET/POST /pages` — List/create pages
 - `PATCH/DELETE /pages/:id` — Update/delete page
-- `GET/PUT /pages/:id/blocks` — Page blocks
-- `GET/PUT /notion/blocks` — Notion-compatible API
+- `POST /pages/:id/move` — Move page in hierarchy
+- `GET/PUT /pages/:id/blocks` — Get/save page blocks (full replace, preserves `created_at`)
+- `PATCH /blocks/:id/meta` — Update block title / creator / editStartTime / draftExplanation
+- `POST /blocks/:id/publish` — Publish process version snapshot; clears editStartTime + draftExplanation
+- `GET /blocks/:id/versions` — List process versions for a block
+- `GET/PUT /notion/blocks` — Notion-compatible API (legacy)
+
+**Relations** (`/api/relations/*`)
+- `GET /relations` — Query relations by source_id / target_id / source_type / target_type
+- `POST /relations` — Create relation (source + target entity ref + title + description)
+- `GET/PATCH/DELETE /relations/:id` — Relation CRUD (`properties` JSON field extensible)
+- `POST /relations/:id/publish` — Publish relation version snapshot
+- `GET /relations/:id/versions` — List process versions for a relation
+- `GET/PUT /relations/:id/blocks` — Relation rich block content (same schema as page blocks)
+
+**Canvases** (`/api/canvases/*`)
+- `GET /canvases` — List all canvases (with `node_count`)
+- `POST /canvases` — Create canvas (title + description)
+- `GET/PATCH/DELETE /canvases/:id` — Canvas CRUD
+- `GET /canvases/:id/nodes` — Get all entity nodes on canvas
+- `POST /canvases/:id/nodes` — Add entity to canvas (entity_type + entity_id + x/y + expanded_level)
+- `PATCH /canvases/:id/nodes/:nodeId` — Update node position / expanded level
+- `DELETE /canvases/:id/nodes/:nodeId` — Remove node from canvas
 
 **Chronicle** (`/api/chronicle/*`)
 - `GET /chronicle` — Full timeline (entries, milestones, collections)
@@ -417,6 +482,35 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - `EgoneticsApiClient.ts` 实现 `ApiClient` 接口，作用域限定到单个 subject 的页面树（只读模式下写操作为 no-op）
   - `scripts/import_constitution_tree.py` — 将 constitution 完整目录树导入指定 subject
   - 架构设计记录于 `chronicle-trace/events/`：有向语义图、版本 DB 分叉、RL 训练数据结构
+
+- **抽象认知网络 — 自由画布** *(2026-03-14)*
+  - `/egonetics` 重新设计为**自由画布系统**（XMind/Miro 风格），用于构建跨实体知识网络
+  - 支持多画布，每个画布独立持久化。画布列表入口 `/egonetics`；画布编辑 `/egonetics/canvas/:id`
+  - **左侧栏**：所有 Task + Page 按类型分组列出，点击即将实体卡片添加到画布，已在画布上的条目显示 ✓ 变灰
+  - **画布交互**：点网格背景；拖拽背景平移（pan）；滚轮缩放（以鼠标为中心）；实体卡片绝对定位
+  - **卡片拖拽**：拖动重新定位，400ms debounce 后持久化坐标到 DB
+  - **L1–L4 展开级别**：仅标题 → +状态 → +关系列表 → （未来：内容预览）
+  - **SVG 贝塞尔曲线边**：以 `relation.title` 为标签，在同时存在于画布且有关系的实体对之间绘制；点击边跳转 `/relations/:id`
+  - **连接模式**：点击卡片上 ↗ 进入连接模式 → 点击目标卡片 → 填写 Relation 表单（标题 + 描述）→ 创建关系并即时渲染边
+  - **关系详情页** `/relations/:id`：编辑标题/描述、可扩展键值属性、版本历史面板
+  - **`pages.db` 新增表**：`canvases`（id/title/description/creator）、`canvas_nodes`（canvas_id/entity_type/entity_id/x/y/expanded_level）
+  - **关系增强**：新增 `properties TEXT DEFAULT '{}'` 字段；新增 `GET/PUT /relations/:id/blocks` 端点支持富文本内容；`relation_blocks` 表结构与 `blocks` 表一致
+  - **新增文件**：`server/routes/canvases.js`、`server/scripts/migrate-blocks-v4.js`、`src/lib/canvas-api.ts`、`src/components/CanvasView.tsx`、`src/components/RelationDetailView.tsx`
+  - **迁移命令**：`cd server && npm run migrate-v4`
+
+- **Block v2 — 过程版本与关系系统** *(2026-03-14)*
+  - 每个块新增可折叠头部（hover 显示，设有标题时常驻）：**标题**输入框、**创建人**标签、**创建时间**、**发布**按钮、**记忆**面板、**关系**面板
+  - **过程记忆**：点击发布后在 `process_versions` 表追加快照 — 记录 `start_time`（上次发布后首次编辑时间）、`publish_time`、`publisher`（`human:username` / `ai:model`）、完整内容快照和发布说明。未发布=无历史，与原有编辑逻辑一致
+  - **发布面板**：内联内容块（非浮层弹窗）— 全宽 textarea 用于记录意图；**存草稿**将说明文字持久化到 DB（`blocks.draft_explanation`），刷新页面、跨设备均可恢复；有草稿时发布按钮显示蓝色小圆点提示；确认发布后服务端自动清空草稿
+  - **关系**：开放描述的跨实体边，起点/终点可为 `block | task | memory | theory | label | label_system` 任意组合。每条关系有标题 + 自由文本描述（非枚举）。关系同样支持发布/版本历史（写入 `process_versions`），独立存储于 `relations` 表
+  - **`pages.db` 结构扩展**：
+    - `blocks` 表新增列：`title`、`creator`、`edit_start_time`、`draft_explanation`
+    - 新增 `process_versions` 表：`entity_id`、`entity_type`（'block'|'relation'）、`version_num`、`start_time`、`publish_time`、`publisher`、`title_snapshot`、`content_snapshot`（JSON）、`explanation`
+    - 新增 `relations` 表：`source_type/id`、`target_type/id`、`title`、`description`、`creator`、时间戳
+  - **Bug 修复**：`PUT /pages/:id/blocks` 全量替换时通过 `COALESCE(?, CURRENT_TIMESTAMP)` 保留 `created_at`，防止创建时间被重置
+  - **新增 API**：`PATCH /blocks/:id/meta`、`POST /blocks/:id/publish`、`GET /blocks/:id/versions`；`/relations/*` 完整 CRUD + 发布/版本历史
+  - **新增文件**：`server/routes/relations.js`、`server/scripts/migrate-blocks-v2.js`、`server/scripts/migrate-blocks-v3.js`、`src/lib/block-graph-api.ts`
+  - **迁移命令**：`cd server && npm run migrate-v2`（建表）→ `npm run migrate-v3`（draft_explanation 列）
 
 **开发中**
 - Chronicle 哈希链完整性验证
@@ -511,6 +605,9 @@ npm run preview   # 预览生产构建
 npm start         # 不含热重载的启动
 npm run import    # 导入 JSONL 会话
 npm run migrate   # Chronicle 迁移脚本
+npm run migrate-v2     # 新增 process_versions + relations 表 + block 元数据列
+npm run migrate-v3     # 新增 draft_explanation 列
+npm run migrate-v4     # 新增 canvases + canvas_nodes + relation_blocks 表；relations.properties 字段
 npm run backup    # 备份 Claude Code 项目（~/.claude/projects/）到 memory.db
 npm run backup:daemon  # 每小时备份一次（后台模式）
 npm run backup:dry     # 预览备份（不实际导入）
@@ -547,6 +644,9 @@ egonetics/
 │   │   │       ├── paragraph/{Editor,Preview}
 │   │   │       ├── heading/{Editor,Preview}
 │   │   │       └── code/{Editor,Preview}  # CodeMirror + hljs + Prettier
+│   │   ├── EgoneticsView.tsx   # 画布列表（新）
+│   │   ├── CanvasView.tsx      # 自由画布编辑器（新）
+│   │   ├── RelationDetailView.tsx  # 关系详情 + 属性 + 版本历史（新）
 │   │   ├── AgentsView.tsx      # SVG 节点图
 │   │   ├── taskBoard/          # 看板组件
 │   │   └── apiClient.ts        # Theory/Pages API 客户端
@@ -554,6 +654,8 @@ egonetics/
 │   │   ├── chronicle.ts        # BornflyChronicle 类（哈希链）
 │   │   ├── api.ts              # 记忆/会话 API 客户端
 │   │   ├── tasks-api.ts        # 任务/项目 REST API 客户端
+│   │   ├── block-graph-api.ts  # 块元信息 / 发布 / 关系 API 客户端
+│   │   ├── canvas-api.ts       # 画布 + 节点 API 客户端（新）
 │   │   ├── formatCode.ts       # Prettier 3 standalone — 保存时格式化
 │   │   └── translations.ts     # 国际化（中/英）
 │   ├── stores/
@@ -569,7 +671,9 @@ egonetics/
 │   ├── routes/                 # 模块化路由处理器
 │   │   ├── memory.js           # /api/memory/*（会话、标注、面板）
 │   │   ├── tasks.js            # /api/tasks/* + /api/kanban/*
-│   │   ├── pages.js            # /api/pages/* + /api/notion/*
+│   │   ├── pages.js            # /api/pages/* + /api/blocks/* + /api/notion/*
+│   │   ├── relations.js        # /api/relations/*（跨实体关系边 + 富文本块 + 版本历史）
+│   │   ├── canvases.js         # /api/canvases/*（画布 CRUD + 节点管理）（新）
 │   │   ├── chronicle.js        # /api/chronicle/*
 │   │   ├── agents.js           # /api/agents/*
 │   │   └── media.js            # /api/media/*
@@ -580,6 +684,9 @@ egonetics/
 │   │   ├── init-agents-db.js
 │   │   ├── import-jsonl.js
 │   │   ├── migrate-chronicle.js
+│   │   ├── migrate-blocks-v2.js   # process_versions + relations 表 + block 新列
+│   │   ├── migrate-blocks-v3.js   # draft_explanation 列
+│   │   ├── migrate-blocks-v4.js   # canvases + canvas_nodes + relation_blocks；relations.properties
 │   │   └── tasks_schema.sql
 │   ├── data/                   # SQLite 数据库（git 忽略）
 │   │   ├── memory.db
@@ -600,8 +707,10 @@ egonetics/
 |---|---|:---:|:---:|:---:|
 | `/login` | 登录 / 注册 | 公开 | 公开 | 公开 |
 | `/home` | 主页 | ✓ | ✓ | ✓ |
-| `/egonetics` | 宪法主题网格 | ✓ | ✓ | ✓ |
-| `/egonetics/:id` | 主题详情（只读） | ✓ | ✓ | ✓ |
+| `/egonetics` | 抽象认知网络 — 画布列表 | ✓ | ✓ | ✓ |
+| `/egonetics/canvas/:id` | 自由画布编辑器 | ✓ | ✓ | ✓ |
+| `/egonetics/:id` | 主题详情（只读，旧版） | ✓ | ✓ | ✓ |
+| `/relations/:id` | 关系详情 + 属性 + 版本历史 | — | — | ✓ |
 | `/tasks` | 任务看板 | 只读 | 读写 | ✓ |
 | `/tasks/:taskId` | 任务详情 | 只读 | 读写 | ✓ |
 | `/blog` | 博客 / 知识库 | ✓ | ✓ | ✓ |
@@ -660,11 +769,32 @@ egonetics/
 - `GET/PUT /kanban` — 看板列
 - `GET/POST/PUT/PATCH/DELETE /kanban/tasks` — 看板任务
 
-**页面** (`/api/pages/*`, `/api/notion/*`)
+**页面与块** (`/api/pages/*`, `/api/blocks/*`, `/api/notion/*`)
 - `GET/POST /pages` — 列表/创建页面
 - `PATCH/DELETE /pages/:id` — 更新/删除页面
-- `GET/PUT /pages/:id/blocks` — 页面块
-- `GET/PUT /notion/blocks` — Notion 兼容 API
+- `POST /pages/:id/move` — 移动页面层级位置
+- `GET/PUT /pages/:id/blocks` — 获取/保存页面块（全量替换，保留 `created_at`）
+- `PATCH /blocks/:id/meta` — 更新块标题 / 创建人 / editStartTime / draftExplanation
+- `POST /blocks/:id/publish` — 发布过程版本快照；自动清空 editStartTime + draftExplanation
+- `GET /blocks/:id/versions` — 获取块的过程版本列表
+- `GET/PUT /notion/blocks` — Notion 兼容 API（遗留）
+
+**关系** (`/api/relations/*`)
+- `GET /relations` — 按 source_id / target_id / source_type / target_type 查询
+- `POST /relations` — 创建关系（源/目标实体引用 + 标题 + 描述）
+- `GET/PATCH/DELETE /relations/:id` — 关系 CRUD（`properties` JSON 字段可自由扩展）
+- `POST /relations/:id/publish` — 发布关系版本快照
+- `GET /relations/:id/versions` — 获取关系的过程版本列表
+- `GET/PUT /relations/:id/blocks` — 关系富文本块（与页面块结构一致）
+
+**画布** (`/api/canvases/*`)
+- `GET /canvases` — 画布列表（含 `node_count`）
+- `POST /canvases` — 创建画布（title + description）
+- `GET/PATCH/DELETE /canvases/:id` — 画布 CRUD
+- `GET /canvases/:id/nodes` — 获取画布上的所有实体节点
+- `POST /canvases/:id/nodes` — 添加实体到画布（entity_type + entity_id + x/y + expanded_level）
+- `PATCH /canvases/:id/nodes/:nodeId` — 更新节点位置 / 展开级别
+- `DELETE /canvases/:id/nodes/:nodeId` — 从画布移除节点
 
 **Chronicle** (`/api/chronicle/*`)
 - `GET /chronicle` — 完整时间轴（条目、里程碑、集合）

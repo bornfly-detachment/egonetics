@@ -138,7 +138,7 @@ export interface Block {
   content: {
     rich_text: RichTextSegment[]
     language?: string
-    viewMode?: 'edit' | 'preview' // 新增：预览/编辑模式
+    viewMode?: 'edit' | 'preview'
     tableRows?: TableCell[][]
     tableColCount?: number
     tableHasHeader?: boolean
@@ -148,16 +148,67 @@ export interface Block {
     fileName?: string
     imageWidth?: number // 图片宽度百分比 1-100，undefined = 100%
     // subpage 块专用
-    subpageId?: string // 指向的子页面 id
-    subpageTitle?: string // 冗余存一份标题，避免跨页查询
+    subpageId?: string
+    subpageTitle?: string
     subpageIcon?: string
+    // 可扩展字段
+    extensions?: Record<string, unknown>
   }
   position: number
   metadata?: {
-    tags?: BlockTagRef[] // 块级标签
-    [key: string]: any
+    tags?: BlockTagRef[]
+    [key: string]: unknown
   }
   collapsed?: boolean
+
+  // ── 可视化元信息（v2）──────────────────────────────────────
+  title?: string              // block 级标题，独立于 content（可视化用）
+  creator?: string            // 'human:username' | 'ai:model-name'
+  editStartTime?: string      // 上次发布后首次编辑的时间（ISO）
+  draftExplanation?: string   // 未发布的草稿说明（持久化到 DB）
+  createdAt?: string          // ISO
+  updatedAt?: string          // ISO
+}
+
+// ── 过程版本记录 ──────────────────────────────────────────────
+
+export interface ProcessVersion {
+  id: string
+  entity_id: string
+  entity_type: 'block' | 'relation'
+  version_num: number
+  start_time: string | null   // 编辑开始时间
+  publish_time: string         // 发布时间
+  publisher: string            // 'human:bornfly' | 'ai:claude-sonnet-4-6'
+  title_snapshot: string
+  content_snapshot: Block['content'] | Record<string, unknown>
+  explanation: string
+  created_at: string
+}
+
+// ── 关系边（跨实体类型）──────────────────────────────────────
+
+// 实体类型（开放，可扩展）
+export type EntityType =
+  | 'block'
+  | 'memory'
+  | 'task'
+  | 'theory'
+  | 'label'
+  | 'label_system'
+  | string
+
+export interface Relation {
+  id: string
+  title: string
+  source_type: EntityType
+  source_id: string
+  target_type: EntityType
+  target_id: string
+  description: string   // 开放描述，不写死枚举
+  creator: string
+  created_at: string
+  updated_at: string
 }
 
 // 块级权限（文档级或块级覆盖均使用此类型）

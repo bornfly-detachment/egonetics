@@ -82,49 +82,127 @@ function TablePreview({ block, onTableCommit, isEditing }: {
   onTableCommit?: (rows: TableCell[][]) => void
   isEditing?: boolean
 }) {
-  const rows = block.content.tableRows ?? []
-  const cols = block.content.tableColCount ?? 3
+  const [localRows, setLocalRows] = React.useState<TableCell[][]>(() => block.content.tableRows ?? [])
   const hasHeader = block.content.tableHasHeader ?? true
+  const colCount = localRows[0]?.length ?? block.content.tableColCount ?? 3
+
+  React.useEffect(() => {
+    setLocalRows(block.content.tableRows ?? [])
+  }, [block.content.tableRows])
+
+  const emptyRow = () => Array.from({ length: colCount }, () => ({ rich_text: [] as { text: string }[] }))
+  const emptyCell = () => ({ rich_text: [] as { text: string }[] })
+
+  const updateCell = (ri: number, ci: number, text: string) => {
+    const next = localRows.map((r, rIdx) =>
+      rIdx === ri ? r.map((c, cIdx) => cIdx === ci ? { rich_text: [{ text }] } : c) : r
+    )
+    setLocalRows(next)
+    onTableCommit?.(next)
+  }
+
+  const addRow = () => {
+    const next = [...localRows, emptyRow()]
+    setLocalRows(next)
+    onTableCommit?.(next)
+  }
+
+  const deleteRow = (ri: number) => {
+    if (localRows.length <= 1) return
+    const next = localRows.filter((_, i) => i !== ri)
+    setLocalRows(next)
+    onTableCommit?.(next)
+  }
+
+  const addCol = () => {
+    const next = localRows.map(r => [...r, emptyCell()])
+    setLocalRows(next)
+    onTableCommit?.(next)
+  }
+
+  const deleteCol = (ci: number) => {
+    if (colCount <= 1) return
+    const next = localRows.map(r => r.filter((_, i) => i !== ci))
+    setLocalRows(next)
+    onTableCommit?.(next)
+  }
+
   return (
-    <div className="overflow-x-auto my-1">
-      <table className="w-full border-collapse text-sm">
-        <tbody>
-          {rows.map((row, ri) => (
-            <tr key={ri}>
-              {Array.from({ length: cols }).map((_, ci) => {
-                const cell = row[ci] ?? { rich_text: [] }
-                const Tag = hasHeader && ri === 0 ? 'th' : 'td'
-                return (
-                  <Tag
-                    key={ci}
-                    className={`border border-neutral-700 px-3 py-1.5 text-left ${hasHeader && ri === 0 ? 'bg-neutral-800/80 font-semibold text-neutral-200' : 'text-neutral-300'}`}
-                  >
-                    {isEditing ? (
-                      <input
-                        className="bg-transparent outline-none w-full min-w-[60px]"
-                        defaultValue={cell.rich_text.map((s) => s.text).join('')}
-                        onBlur={(e) =>
-                          onTableCommit?.(
-                            rows.map((r, rIdx) =>
-                              rIdx === ri
-                                ? r.map((c, cIdx) =>
-                                    cIdx === ci ? { rich_text: [{ text: e.target.value }] } : c
-                                  )
-                                : r
-                            )
-                          )
-                        }
-                      />
-                    ) : (
-                      <RichText segments={cell.rich_text} placeholder="" />
-                    )}
-                  </Tag>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="overflow-x-auto my-1 group/table">
+      <div className="inline-flex flex-col min-w-full">
+        <table className="border-collapse text-sm">
+          <tbody>
+            {localRows.map((row, ri) => (
+              <tr key={ri} className="group/row">
+                {Array.from({ length: colCount }).map((_, ci) => {
+                  const cell = row[ci] ?? { rich_text: [] }
+                  const Tag = hasHeader && ri === 0 ? 'th' : 'td'
+                  return (
+                    <Tag
+                      key={ci}
+                      className={`relative border border-neutral-700 px-3 py-1.5 text-left ${hasHeader && ri === 0 ? 'bg-neutral-800/80 font-semibold text-neutral-200' : 'text-neutral-300'}`}
+                    >
+                      {isEditing ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            className="bg-transparent outline-none w-full min-w-[60px]"
+                            defaultValue={cell.rich_text.map((s: { text: string }) => s.text).join('')}
+                            onBlur={(e) => updateCell(ri, ci, e.target.value)}
+                          />
+                          {/* 删除列按钮（仅首行显示） */}
+                          {ri === 0 && colCount > 1 && (
+                            <button
+                              onMouseDown={(e) => { e.preventDefault(); deleteCol(ci) }}
+                              className="opacity-0 group-hover/row:opacity-100 shrink-0 text-neutral-600 hover:text-red-400 transition-opacity"
+                              title="删除此列"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.5"/></svg>
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <RichText segments={cell.rich_text} placeholder="" />
+                      )}
+                    </Tag>
+                  )
+                })}
+                {/* 删除行按钮 */}
+                {isEditing && localRows.length > 1 && (
+                  <td className="border-0 pl-1 align-middle">
+                    <button
+                      onMouseDown={(e) => { e.preventDefault(); deleteRow(ri) }}
+                      className="opacity-0 group-hover/row:opacity-100 text-neutral-600 hover:text-red-400 transition-opacity"
+                      title="删除此行"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.5"/></svg>
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* 底部操作栏：加行 + 加列 */}
+        {isEditing && (
+          <div className="flex gap-2 mt-1">
+            <button
+              onMouseDown={(e) => { e.preventDefault(); addRow() }}
+              className="flex items-center gap-1 px-2 py-0.5 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-white/5 rounded transition-colors"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10"><line x1="5" y1="1" x2="5" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" strokeWidth="1.5"/></svg>
+              加行
+            </button>
+            <button
+              onMouseDown={(e) => { e.preventDefault(); addCol() }}
+              className="flex items-center gap-1 px-2 py-0.5 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-white/5 rounded transition-colors"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10"><line x1="5" y1="1" x2="5" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" strokeWidth="1.5"/></svg>
+              加列
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

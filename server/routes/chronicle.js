@@ -22,6 +22,19 @@ function init(db) {
     created_at TEXT DEFAULT (datetime('now'))
   )`);
 
+  // Auto-create entry_links table
+  memoryDb.run(`CREATE TABLE IF NOT EXISTS chronicle_entry_links (
+    id                  TEXT PRIMARY KEY,
+    from_id             TEXT NOT NULL,
+    to_id               TEXT NOT NULL,
+    relation_hint       TEXT DEFAULT '',
+    draft_content       TEXT DEFAULT '',
+    content             TEXT DEFAULT '[]',
+    current_content_id  TEXT DEFAULT '',
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+  )`);
+
   // Ensure new columns exist — must use callback to catch async sqlite3 errors
   const newCols = [
     `ALTER TABLE chronicle_collections ADD COLUMN color TEXT DEFAULT '#6366f1'`,
@@ -46,10 +59,10 @@ function genId(prefix) {
 
 // ── 时间轴 ─────────────────────────────────────────────────
 
-// GET /api/chronicle → { milestones, entries, collections, collection_links }（合并时间轴）
+// GET /api/chronicle → { milestones, entries, collections, collection_links, entry_links }
 router.get('/chronicle', (req, res) => {
-  const result = { milestones: [], entries: [], collections: [], collection_links: [] };
-  let pending = 4;
+  const result = { milestones: [], entries: [], collections: [], collection_links: [], entry_links: [] };
+  let pending = 5;
 
   const done = (err) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -73,6 +86,11 @@ router.get('/chronicle', (req, res) => {
 
   memoryDb.all('SELECT * FROM chronicle_collection_links ORDER BY created_at', [], (err, rows) => {
     result.collection_links = rows || [];
+    done(err);
+  });
+
+  memoryDb.all('SELECT * FROM chronicle_entry_links ORDER BY created_at', [], (err, rows) => {
+    result.entry_links = rows || [];
     done(err);
   });
 });
@@ -510,6 +528,94 @@ router.delete('/chronicle/collection-links/:id', (req, res) => {
   memoryDb.run('DELETE FROM chronicle_collection_links WHERE id = ?', [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: '连线不存在' });
+    res.json({ success: true });
+  });
+});
+
+// ── Entry Links ──────────────────────────────────────────────
+
+// GET /api/chronicle/entry-links
+router.get('/chronicle/entry-links', (req, res) => {
+  memoryDb.all('SELECT * FROM chronicle_entry_links ORDER BY created_at', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ links: rows || [] });
+  });
+});
+
+// POST /api/chronicle/entry-links  { from_id, to_id, relation_hint, draft_content }
+router.post('/chronicle/entry-links', (req, res) => {
+  const { from_id, to_id, relation_hint = '', draft_content = '' } = req.body;
+  if (!from_id || !to_id) return res.status(400).json({ error: 'from_id 和 to_id 必填' });
+  const id = genId('el');
+  const ts = new Date().toISOString();
+  memoryDb.run(
+    `INSERT INTO chronicle_entry_links
+      (id, from_id, to_id, relation_hint, draft_content, content, current_content_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, '[]', '', ?, ?)`,
+    [id, from_id, to_id, relation_hint, draft_content, ts, ts],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ id, from_id, to_id, relation_hint, draft_content, content: [], created_at: ts });
+    }
+  );
+});
+
+// GET /api/chronicle/entry-links/:id
+router.get('/chronicle/entry-links/:id', (req, res) => {
+  memoryDb.get('SELECT * FROM chronicle_entry_links WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: '边不存在' });
+    try { row.content = JSON.parse(row.content || '[]'); } catch { row.content = []; }
+    res.json(row);
+  });
+});
+
+// PATCH /api/chronicle/entry-links/:id  { relation_hint?, draft_content? }
+router.patch('/chronicle/entry-links/:id', (req, res) => {
+  const { relation_hint, draft_content } = req.body;
+  const sets = ['updated_at = ?'];
+  const params = [new Date().toISOString()];
+  if (relation_hint !== undefined) { sets.push('relation_hint = ?'); params.push(relation_hint); }
+  if (draft_content !== undefined) { sets.push('draft_content = ?'); params.push(draft_content); }
+  params.push(req.params.id);
+  memoryDb.run(`UPDATE chronicle_entry_links SET ${sets.join(', ')} WHERE id = ?`, params, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// POST /api/chronicle/entry-links/:id/publish  { explain? }
+router.post('/chronicle/entry-links/:id/publish', (req, res) => {
+  memoryDb.get('SELECT * FROM chronicle_entry_links WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: '边不存在' });
+    let list = [];
+    try { list = JSON.parse(row.content || '[]'); } catch { list = []; }
+    const startAt = list.length ? list[list.length - 1].timestamp.end : row.created_at;
+    const ts = new Date().toISOString();
+    const entry = {
+      id: genId('ce'),
+      content: row.draft_content,
+      explain: req.body.explain || '',
+      timestamp: { start: startAt, end: ts }
+    };
+    list.push(entry);
+    memoryDb.run(
+      'UPDATE chronicle_entry_links SET content = ?, current_content_id = ?, updated_at = ? WHERE id = ?',
+      [JSON.stringify(list), entry.id, ts, req.params.id],
+      function(e) {
+        if (e) return res.status(500).json({ error: e.message });
+        res.json({ success: true, entry });
+      }
+    );
+  });
+});
+
+// DELETE /api/chronicle/entry-links/:id
+router.delete('/chronicle/entry-links/:id', (req, res) => {
+  memoryDb.run('DELETE FROM chronicle_entry_links WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '边不存在' });
     res.json({ success: true });
   });
 });

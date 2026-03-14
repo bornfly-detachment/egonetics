@@ -2,7 +2,10 @@
 //  BlockEditor.tsx  —  块编辑器（含 subpage 块类型）
 //  依赖: react-dnd, react-dnd-html5-backend, lucide-react
 // ============================================================
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, memo } from 'react'
+import { updateBlockMeta, publishBlock, getBlockVersions } from '@/lib/block-graph-api'
+import type { ProcessVersion } from './types'
+import { useAuthStore } from '@/stores/useAuthStore'
 import {
   Plus,
   Trash2,
@@ -462,6 +465,354 @@ function SlashMenu({
   )
 }
 
+// ─── BlockHeader ──────────────────────────────────────────────────────────────
+// 每个 block 顶部的元信息行：标题 / 创建人 / 创建时间 / 发布 / 过程记忆 / 关系
+// 无 title 时高度折叠为 0，hover 时展开
+const BlockHeader = memo(function BlockHeader({
+  block,
+  onUpdate,
+  canEdit,
+}: {
+  block: Block
+  onUpdate: (updates: Partial<Block>) => void
+  canEdit: boolean
+}) {
+  const { user } = useAuthStore()
+  const [activePanel, setActivePanel] = useState<'publish' | 'memory' | 'relations' | null>(null)
+  const [versions, setVersions]       = useState<ProcessVersion[]>([])
+  const [loadingV, setLoadingV]       = useState(false)
+  const [publishing, setPublishing]   = useState(false)
+  const [draftSaved, setDraftSaved]   = useState(false)
+  const [explanation, setExplanation] = useState(block.draftExplanation ?? '')
+  const [relations, setRelations]     = useState<import('./types').Relation[]>([])
+  const [loadingR, setLoadingR]       = useState(false)
+  const [showRelForm, setShowRelForm] = useState(false)
+  const [relForm, setRelForm]         = useState({ target_type: 'block', target_id: '', description: '', title: '' })
+  const titleDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasTitle = !!(block.title?.trim())
+
+  // ── 标题 ──────────────────────────────────────────────────────
+  const handleTitleChange = (val: string) => {
+    onUpdate({ title: val })
+    if (!block.editStartTime) {
+      const t = new Date().toISOString()
+      onUpdate({ editStartTime: t })
+      updateBlockMeta(block.id, { editStartTime: t }).catch(() => {})
+    }
+    if (titleDebounce.current) clearTimeout(titleDebounce.current)
+    titleDebounce.current = setTimeout(() => {
+      updateBlockMeta(block.id, { title: val }).catch(() => {})
+    }, 400)
+  }
+
+  // ── 发布 ──────────────────────────────────────────────────────
+  const handlePublish = async () => {
+    setPublishing(true)
+    try {
+      if (!block.creator && user) {
+        const creator = `human:${user.username}`
+        onUpdate({ creator })
+        await updateBlockMeta(block.id, { creator }).catch(() => {})
+      }
+      await publishBlock(block.id, explanation)
+      onUpdate({ editStartTime: undefined, draftExplanation: '' })
+      setActivePanel(null)
+      setExplanation('')
+      setVersions([])
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    await updateBlockMeta(block.id, { draftExplanation: explanation }).catch(() => {})
+    onUpdate({ draftExplanation: explanation })
+    setDraftSaved(true)
+    setTimeout(() => setDraftSaved(false), 2000)
+  }
+
+  // ── 过程记忆 ──────────────────────────────────────────────────
+  const loadVersions = async () => {
+    setLoadingV(true)
+    const v = await getBlockVersions(block.id)
+    setVersions(v)
+    setLoadingV(false)
+  }
+
+  // ── 关系 ──────────────────────────────────────────────────────
+  const loadRelations = async () => {
+    setLoadingR(true)
+    const { getRelations } = await import('@/lib/block-graph-api')
+    const r = await getRelations({ source_id: block.id, source_type: 'block' })
+    setRelations(r)
+    setLoadingR(false)
+  }
+
+  const handleTogglePanel = (panel: 'publish' | 'memory' | 'relations') => {
+    if (activePanel === panel) { setActivePanel(null); return }
+    setActivePanel(panel)
+    if (panel === 'memory') loadVersions()
+    if (panel === 'relations') loadRelations()
+  }
+
+  const handleCreateRelation = async () => {
+    if (!relForm.target_id.trim()) return
+    const { createRelation } = await import('@/lib/block-graph-api')
+    try {
+      await createRelation({
+        title: relForm.title,
+        source_type: 'block',
+        source_id: block.id,
+        target_type: relForm.target_type as import('./types').EntityType,
+        target_id: relForm.target_id.trim(),
+        description: relForm.description,
+      })
+      setRelForm({ target_type: 'block', target_id: '', description: '', title: '' })
+      setShowRelForm(false)
+      loadRelations()
+    } catch (e) {
+      alert((e as Error).message)
+    }
+  }
+
+  const handleDeleteRelation = async (id: string) => {
+    const { deleteRelation } = await import('@/lib/block-graph-api')
+    await deleteRelation(id).catch(() => {})
+    setRelations(r => r.filter(x => x.id !== id))
+  }
+
+  // ── 显示信息 ──────────────────────────────────────────────────
+  const creatorLabel = block.creator
+    ? block.creator.replace('human:', '').replace('ai:', '🤖 ')
+    : (user ? user.username : '')
+
+  const createdAtLabel = block.createdAt
+    ? new Date(block.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : ''
+
+  const hasDraft = !!(block.draftExplanation?.trim())
+
+  return (
+    <div
+      className={`block-header group/hdr overflow-hidden transition-all duration-150 ${
+        hasTitle || activePanel ? 'max-h-[800px] mb-1' : 'max-h-0 group-hover:max-h-[800px] group-hover:mb-1'
+      }`}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* ── 标题行 ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 py-0.5">
+        {canEdit ? (
+          <input
+            value={block.title ?? ''}
+            onChange={e => handleTitleChange(e.target.value)}
+            placeholder="块标题…"
+            className="flex-1 min-w-0 bg-transparent text-xs text-neutral-400 placeholder-neutral-700 outline-none border-b border-transparent focus:border-neutral-700 transition-colors py-0.5"
+          />
+        ) : (
+          hasTitle && <span className="flex-1 text-xs text-neutral-500 truncate">{block.title}</span>
+        )}
+
+        {/* 元信息 + 操作按钮：仅 hover 显示 */}
+        <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover/hdr:opacity-100 focus-within:opacity-100 transition-opacity">
+          {creatorLabel   && <span className="text-[10px] text-neutral-600">{creatorLabel}</span>}
+          {createdAtLabel && <span className="text-[10px] text-neutral-700">{createdAtLabel}</span>}
+
+          {/* 发布 */}
+          {canEdit && (
+            <button
+              onClick={() => handleTogglePanel('publish')}
+              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+                activePanel === 'publish'
+                  ? 'border-blue-500/60 text-blue-400'
+                  : 'border-neutral-700 text-neutral-500 hover:border-blue-500/60 hover:text-blue-400'
+              }${hasDraft ? ' after:content-["·"] after:text-blue-400 after:ml-0.5' : ''}`}
+            >发布{hasDraft && <span className="ml-0.5 text-blue-400">·</span>}</button>
+          )}
+
+          {/* 过程记忆 */}
+          <button
+            onClick={() => handleTogglePanel('memory')}
+            className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+              activePanel === 'memory'
+                ? 'border-amber-500/60 text-amber-400'
+                : 'border-neutral-700 text-neutral-500 hover:border-amber-500/40 hover:text-amber-500/80'
+            }`}
+          >记忆</button>
+
+          {/* 关系 */}
+          <button
+            onClick={() => handleTogglePanel('relations')}
+            className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+              activePanel === 'relations'
+                ? 'border-purple-500/60 text-purple-400'
+                : 'border-neutral-700 text-neutral-500 hover:border-purple-500/40 hover:text-purple-500/80'
+            }`}
+          >关系</button>
+        </div>
+      </div>
+
+      {/* ── 发布面板 ────────────────────────────────────────────── */}
+      {activePanel === 'publish' && (
+        <div className="mt-1 border border-blue-900/40 rounded-lg bg-neutral-950/70 text-xs overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800/60">
+            <span className="text-neutral-300 font-medium">发布说明</span>
+            <span className="text-neutral-700 text-[10px]">记录这次改动的意图与上下文</span>
+          </div>
+          <div className="px-3 pt-2 pb-1">
+            <textarea
+              autoFocus
+              value={explanation}
+              onChange={e => setExplanation(e.target.value)}
+              placeholder="这次做了什么？为什么这样改？留给未来的自己…"
+              className="w-full bg-transparent border-0 outline-none resize-none text-xs text-neutral-200 placeholder-neutral-700 leading-relaxed min-h-[72px]"
+            />
+          </div>
+          <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-neutral-800/40">
+            <button
+              onClick={() => setActivePanel(null)}
+              className="text-[10px] text-neutral-600 hover:text-neutral-400 transition-colors px-1 py-1"
+            >取消</button>
+            <div className="flex items-center gap-2">
+              {draftSaved && <span className="text-[10px] text-neutral-600 animate-pulse">已存草稿</span>}
+              <button
+                onClick={handleSaveDraft}
+                className="text-[10px] border border-neutral-700 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300 transition-colors px-2.5 py-1 rounded"
+              >存草稿</button>
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className="text-[10px] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-1 rounded font-medium transition-colors"
+              >{publishing ? '发布中…' : '确认发布'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 过程记忆面板 ───────────────────────────────────────── */}
+      {activePanel === 'memory' && (
+        <div className="mt-1 border border-neutral-800 rounded-lg bg-neutral-900/60 text-xs overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-800">
+            <span className="text-neutral-400 font-medium">过程记忆</span>
+            <span className="text-neutral-700">{versions.length} 个版本</span>
+          </div>
+          {loadingV ? (
+            <p className="text-neutral-600 px-3 py-3 text-center">加载中…</p>
+          ) : versions.length === 0 ? (
+            <p className="text-neutral-700 px-3 py-3 text-center">尚未发布版本，点「发布」创建第一条记录</p>
+          ) : (
+            <div className="max-h-52 overflow-y-auto divide-y divide-neutral-800/60">
+              {[...versions].reverse().map(v => (
+                <div key={v.id} className="px-3 py-2">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-blue-500/80 font-mono">v{v.version_num}</span>
+                    <span className="text-neutral-600">
+                      {new Date(v.publish_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-neutral-700 text-[10px]">{v.publisher.replace('human:', '')}</span>
+                    {v.start_time && (
+                      <span className="text-neutral-800 text-[10px]">
+                        开始 {new Date(v.start_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                  {v.title_snapshot && <p className="text-neutral-500 truncate">标题: {v.title_snapshot}</p>}
+                  {v.explanation    && <p className="text-neutral-400 mt-0.5 leading-relaxed">{v.explanation}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 关系面板 ───────────────────────────────────────────── */}
+      {activePanel === 'relations' && (
+        <div className="mt-1 border border-neutral-800 rounded-lg bg-neutral-900/60 text-xs overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-800">
+            <span className="text-neutral-400 font-medium">关系</span>
+            <button
+              onClick={() => setShowRelForm(f => !f)}
+              className="text-[10px] text-purple-500 hover:text-purple-300 transition-colors"
+            >+ 新建关系</button>
+          </div>
+
+          {/* 新建关系表单 */}
+          {showRelForm && (
+            <div className="px-3 py-2 border-b border-neutral-800 space-y-1.5 bg-neutral-950/40">
+              <input
+                value={relForm.title}
+                onChange={e => setRelForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="关系标题（可选）"
+                className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              />
+              <div className="flex gap-1.5">
+                <select
+                  value={relForm.target_type}
+                  onChange={e => setRelForm(f => ({ ...f, target_type: e.target.value }))}
+                  className="bg-neutral-900 border border-neutral-700 rounded px-1.5 py-1 text-xs text-neutral-300 outline-none"
+                >
+                  {['block','task','memory','theory','label','label_system'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <input
+                  value={relForm.target_id}
+                  onChange={e => setRelForm(f => ({ ...f, target_id: e.target.value }))}
+                  placeholder="目标 ID"
+                  className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+                />
+              </div>
+              <input
+                value={relForm.description}
+                onChange={e => setRelForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="关系描述（开放文本：依赖 / 推导自 / 矛盾于…）"
+                className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowRelForm(false)} className="text-neutral-500 hover:text-neutral-300 px-2 py-1">取消</button>
+                <button
+                  onClick={handleCreateRelation}
+                  disabled={!relForm.target_id.trim()}
+                  className="bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white px-3 py-1 rounded"
+                >创建</button>
+              </div>
+            </div>
+          )}
+
+          {/* 关系列表 */}
+          {loadingR ? (
+            <p className="text-neutral-600 px-3 py-3 text-center">加载中…</p>
+          ) : relations.length === 0 ? (
+            <p className="text-neutral-700 px-3 py-3 text-center">暂无关系</p>
+          ) : (
+            <div className="max-h-52 overflow-y-auto divide-y divide-neutral-800/60">
+              {relations.map(r => (
+                <div key={r.id} className="px-3 py-2 flex items-start gap-2 group/rel">
+                  <div className="flex-1 min-w-0">
+                    {r.title && <p className="text-neutral-300 truncate font-medium">{r.title}</p>}
+                    <p className="text-neutral-500">
+                      <span className="text-neutral-700">{r.description || '→'}</span>
+                      {' '}
+                      <span className="text-purple-500/70">[{r.target_type}]</span>
+                      {' '}
+                      <span className="font-mono text-[10px] text-neutral-600 truncate">{r.target_id}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteRelation(r.id)}
+                    className="opacity-0 group-hover/rel:opacity-100 text-neutral-700 hover:text-red-400 transition-all shrink-0 text-[10px] px-1"
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+})
+
 // ─── 块节点 ────────────────────────────────────────────────────────────────────
 type DropZone = 'before' | 'after' | 'inside' | null
 
@@ -649,6 +1000,12 @@ function BlockNode({
 
         {/* 内容 */}
         <div className="flex-1 min-w-0 py-[1px]">
+          {/* Block 头部：标题 / 创建人 / 时间 / 发布 / 过程记忆 */}
+          <BlockHeader
+            block={block}
+            onUpdate={(updates) => onUpdate(block.id, updates)}
+            canEdit={perm.canEdit}
+          />
           {/* 标签显示 */}
           {blockTags.length > 0 && (
             <div className="mb-1.5">

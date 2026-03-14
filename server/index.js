@@ -13,6 +13,9 @@ const agentsRouter    = require('./routes/agents');
 const egoneticsRouter = require('./routes/egonetics');
 const mediaRouter     = require('./routes/media');
 const authRouter      = require('./routes/auth');
+const graphRouter     = require('./routes/graph');
+const relationsRouter     = require('./routes/relations');
+const canvasesRouter      = require('./routes/canvases');
 
 const app = express();
 const PORT = 3002;
@@ -79,6 +82,11 @@ app.use('/api', chronicleRouter.init(memoryDb));
 app.use('/api', agentsRouter.init(agentsDb));
 app.use('/api', egoneticsRouter.init(agentsDb));
 app.use('/api', mediaRouter.init());
+app.use('/api', graphRouter.init());
+app.use('/api', relationsRouter.init(pagesDb));
+app.use('/api', canvasesRouter.init(pagesDb));
+// notionImportRouter — notion-import.js 尚未完成，暂时注释
+// app.use('/api', notionImportRouter.init({ memoryDb, pagesDb, tasksDb }));
 
 app.listen(PORT, () => {
   console.log(`🚀 后端运行在 http://localhost:${PORT}`);

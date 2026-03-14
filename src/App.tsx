@@ -11,6 +11,8 @@ import Sidebar from './components/Sidebar'
 import MemoryView from './components/MemoryView'
 import EgoneticsView from './components/EgoneticsView'
 import EgoneticsSubjectPage from './components/EgoneticsSubjectPage'
+import CanvasView from './components/CanvasView'
+import RelationDetailView from './components/RelationDetailView'
 import KanbanBoard from './components/taskBoard/KanbanBoard'
 import TaskDetailPage from './components/taskBoard/TaskDetailPage'
 import ChronicleView from './components/ChronicleView'
@@ -170,7 +172,9 @@ const AppContent: React.FC = () => {
               <Route path="/theory" element={<TheoryPageView />} />
               <Route path="/chronicle" element={<ChronicleView />} />
               <Route path="/egonetics" element={<EgoneticsView />} />
+              <Route path="/egonetics/canvas/:canvasId" element={<CanvasView />} />
               <Route path="/egonetics/:subjectId" element={<EgoneticsSubjectPage />} />
+              <Route path="/relations/:relationId" element={<RelationDetailView />} />
               <Route path="/tasks" element={<KanbanBoard />} />
               <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
               <Route path="/blog" element={<BlogPage />} />

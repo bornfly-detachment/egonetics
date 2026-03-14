@@ -125,7 +125,11 @@ router.post('/pages/:id/move', (req, res) => {
 // GET /api/pages/:id/blocks
 router.get('/pages/:id/blocks', (req, res) => {
   pagesDb.all(
-    'SELECT id, parent_id as parentId, type, content, position, metadata, collapsed, created_at as createdAt, updated_at as updatedAt FROM blocks WHERE page_id = ? ORDER BY position',
+    `SELECT id, parent_id as parentId, type, content, position, metadata, collapsed,
+            title, creator, edit_start_time as editStartTime,
+            draft_explanation as draftExplanation,
+            created_at as createdAt, updated_at as updatedAt
+     FROM blocks WHERE page_id = ? ORDER BY position`,
     [req.params.id], (err, blocks) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(blocks.map(b => ({
@@ -163,15 +167,28 @@ router.put('/pages/:id/blocks', (req, res) => {
         const metadata = typeof block.metadata === 'string' ? block.metadata : JSON.stringify(block.metadata || {});
 
         pagesDb.run(
-          'INSERT INTO blocks (id, page_id, parent_id, type, content, position, metadata, collapsed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [blockId, pageId, block.parentId || null, block.type || 'paragraph', content, block.position || 1.0, metadata, block.collapsed || false],
+          `INSERT INTO blocks
+             (id, page_id, parent_id, type, content, position, metadata, collapsed,
+              title, creator, edit_start_time, draft_explanation, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
+          [
+            blockId, pageId, block.parentId || null, block.type || 'paragraph',
+            content, block.position || 1.0, metadata, block.collapsed || false,
+            block.title || '', block.creator || '', block.editStartTime || null,
+            block.draftExplanation || '',
+            block.createdAt || null,
+          ],
           (err) => {
             if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
             if (++done === blocks.length) {
               pagesDb.run('COMMIT', (err) => {
                 if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
                 pagesDb.all(
-                  'SELECT id, parent_id as parentId, type, content, position, metadata, collapsed, created_at as createdAt, updated_at as updatedAt FROM blocks WHERE page_id = ? ORDER BY position',
+                  `SELECT id, parent_id as parentId, type, content, position, metadata, collapsed,
+                          title, creator, edit_start_time as editStartTime,
+                          draft_explanation as draftExplanation,
+                          created_at as createdAt, updated_at as updatedAt
+                   FROM blocks WHERE page_id = ? ORDER BY position`,
                   [pageId], (err, saved) => {
                     if (err) return res.status(500).json({ error: err.message });
                     res.json(saved.map(b => ({
@@ -188,6 +205,112 @@ router.put('/pages/:id/blocks', (req, res) => {
       });
     });
   });
+});
+
+// ── /api/blocks — block 元信息 + 发布 ────────────────────────
+
+// PATCH /api/blocks/:blockId/meta — 更新 title / creator / edit_start_time
+router.patch('/blocks/:blockId/meta', (req, res) => {
+  const { title, creator, editStartTime, draftExplanation } = req.body;
+  const updates = ['updated_at = CURRENT_TIMESTAMP'];
+  const params = [];
+
+  if (title            !== undefined) { updates.push('title = ?');            params.push(title); }
+  if (creator          !== undefined) { updates.push('creator = ?');          params.push(creator); }
+  if (editStartTime    !== undefined) { updates.push('edit_start_time = ?');  params.push(editStartTime); }
+  if (draftExplanation !== undefined) { updates.push('draft_explanation = ?'); params.push(draftExplanation); }
+
+  if (updates.length === 1) return res.status(400).json({ error: '没有要更新的字段' });
+  params.push(req.params.blockId);
+
+  pagesDb.run(`UPDATE blocks SET ${updates.join(', ')} WHERE id = ?`, params, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: 'Block 不存在' });
+    res.json({ ok: true });
+  });
+});
+
+// POST /api/blocks/:blockId/publish — 发布过程版本快照
+router.post('/blocks/:blockId/publish', (req, res) => {
+  const { explanation = '' } = req.body;
+  const blockId = req.params.blockId;
+
+  pagesDb.get(
+    `SELECT id, title, creator, content, edit_start_time, created_at FROM blocks WHERE id = ?`,
+    [blockId],
+    (err, block) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!block) return res.status(404).json({ error: 'Block 不存在' });
+
+      pagesDb.get(
+        'SELECT COUNT(*) as cnt FROM process_versions WHERE entity_id = ?',
+        [blockId],
+        (err, row) => {
+          if (err) return res.status(500).json({ error: err.message });
+
+          const versionNum  = (row?.cnt || 0) + 1;
+          const versionId   = `pv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const publisher   = req.user ? `human:${req.user.username}` : 'unknown';
+          const publishTime = new Date().toISOString();
+          const startTime   = block.edit_start_time || block.created_at;
+
+          pagesDb.run(
+            `INSERT INTO process_versions
+               (id, entity_id, entity_type, version_num, start_time, publish_time, publisher,
+                title_snapshot, content_snapshot, explanation)
+             VALUES (?, ?, 'block', ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              versionId, blockId, versionNum,
+              startTime, publishTime, publisher,
+              block.title || '',
+              block.content,
+              explanation,
+            ],
+            function(err) {
+              if (err) return res.status(500).json({ error: err.message });
+
+              // 发布后清除 edit_start_time 和草稿
+              pagesDb.run(
+                "UPDATE blocks SET edit_start_time = NULL, draft_explanation = '' WHERE id = ?",
+                [blockId],
+                () => {}
+              );
+
+              res.status(201).json({
+                id: versionId,
+                entity_id: blockId,
+                entity_type: 'block',
+                version_num: versionNum,
+                start_time: startTime,
+                publish_time: publishTime,
+                publisher,
+                explanation,
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+// GET /api/blocks/:blockId/versions — 获取过程版本列表
+router.get('/blocks/:blockId/versions', (req, res) => {
+  pagesDb.all(
+    `SELECT * FROM process_versions
+     WHERE entity_id = ? AND entity_type = 'block'
+     ORDER BY version_num ASC`,
+    [req.params.blockId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows.map(v => ({
+        ...v,
+        content_snapshot: (() => {
+          try { return JSON.parse(v.content_snapshot || '{}'); } catch { return {}; }
+        })(),
+      })));
+    }
+  );
 });
 
 // ── /api/notion (兼容旧版，blocks 在 tasksDb) ─────────────
