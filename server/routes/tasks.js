@@ -9,9 +9,11 @@ const crypto = require('crypto');
 const router = express.Router();
 
 let tasksDb;
+let pagesDb;
 
-function init(db) {
+function init(db, pDb) {
   tasksDb = db;
+  pagesDb = pDb;
 
   // Migrate: add chronicle columns if missing (safe to run every startup)
   const noop = (err) => { if (err && !err.message.includes('duplicate column')) console.error('[tasks init]', err.message); };
@@ -188,9 +190,29 @@ router.put('/tasks/:id', (req, res) => {
 });
 
 router.delete('/tasks/:id', (req, res) => {
-  tasksDb.run('DELETE FROM tasks WHERE id = ?', [req.params.id], function(err) {
+  const taskId = req.params.id;
+  tasksDb.run('DELETE FROM tasks WHERE id = ?', [taskId], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+    // 级联删除 pages.db 中关联的页面和块
+    const db = pagesDb;
+    if (db) {
+      db.all(
+        `WITH RECURSIVE tree AS (
+           SELECT id FROM pages WHERE ref_id = ?
+           UNION ALL
+           SELECT p.id FROM pages p INNER JOIN tree t ON p.parent_id = t.id
+         ) SELECT id FROM tree`,
+        [taskId],
+        (err2, rows) => {
+          if (err2 || !rows?.length) return;
+          const ids = rows.map(r => r.id);
+          const placeholders = ids.map(() => '?').join(',');
+          db.run(`DELETE FROM blocks WHERE page_id IN (${placeholders})`, ids);
+          db.run(`DELETE FROM pages  WHERE id      IN (${placeholders})`, ids);
+        }
+      );
+    }
     res.json({ success: true });
   });
 });
@@ -448,9 +470,29 @@ router.patch('/kanban/tasks/:id', (req, res) => {
 });
 
 router.delete('/kanban/tasks/:id', (req, res) => {
-  tasksDb.run('DELETE FROM tasks WHERE id = ?', [req.params.id], function(err) {
+  const taskId = req.params.id;
+  tasksDb.run('DELETE FROM tasks WHERE id = ?', [taskId], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+    // 级联删除 pages.db 中关联的页面和块
+    const db = pagesDb;
+    if (db) {
+      db.all(
+        `WITH RECURSIVE tree AS (
+           SELECT id FROM pages WHERE ref_id = ?
+           UNION ALL
+           SELECT p.id FROM pages p INNER JOIN tree t ON p.parent_id = t.id
+         ) SELECT id FROM tree`,
+        [taskId],
+        (err2, rows) => {
+          if (err2 || !rows?.length) return;
+          const ids = rows.map(r => r.id);
+          const placeholders = ids.map(() => '?').join(',');
+          db.run(`DELETE FROM blocks WHERE page_id IN (${placeholders})`, ids);
+          db.run(`DELETE FROM pages  WHERE id      IN (${placeholders})`, ids);
+        }
+      );
+    }
     res.json({ success: true });
   });
 });

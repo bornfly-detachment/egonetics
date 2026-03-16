@@ -27,8 +27,9 @@ import {
 } from 'lucide-react'
 import { useDrag, useDrop, DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import BlockEditor, { positionBetween } from './BlockEditor'
+import BlockEditor, { positionBetween, generateBlockId } from './BlockEditor'
 import type { Block, PageMeta, ApiClient } from './types'
+import { getToken } from '@/lib/http'
 
 // ─── Mock API（开发期间使用，对接真实后端时删除） ───────────────────────────────
 
@@ -516,6 +517,12 @@ export default function PageManager({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
+  // ── 导入弹窗 ──
+  const [showImport, setShowImport] = useState(false)
+  const [importUrl, setImportUrl] = useState('')
+  const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [importMsg, setImportMsg] = useState('')
+
   // ── 初始化 ──
   useEffect(() => {
     ;(async () => {
@@ -595,6 +602,28 @@ export default function PageManager({
       await activatePage(p.id)
       // 初始化空块
       setPageBlocks((prev) => ({ ...prev, [p.id]: [] }))
+
+      // 向父页面末尾追加 subpage 块，保持侧边栏与内容 1:1 对应
+      if (parentId) {
+        setPageBlocks((prev) => {
+          const parentBlocks = prev[parentId] ?? []
+          const lastBlockPos = parentBlocks.length
+            ? parentBlocks[parentBlocks.length - 1].position
+            : 0
+          const subpageBlock: Block = {
+            id: generateBlockId(),
+            parentId: null,
+            type: 'subpage',
+            content: { rich_text: [], subpageId: p.id, subpageTitle: '新页面', subpageIcon: '📄' },
+            position: lastBlockPos + 1,
+          }
+          const updated = { ...prev, [parentId]: [...parentBlocks, subpageBlock] }
+          // 异步持久化，不阻塞 UI
+          api.saveBlocks(parentId, updated[parentId]).catch(console.error)
+          return updated
+        })
+      }
+
       return p.id
     },
     [pages, api, activatePage]
@@ -630,6 +659,20 @@ export default function PageManager({
         const remaining = pages.filter((p) => p.id !== id)
         const fallback = remaining.find((p) => p.parentId === null)?.id ?? remaining[0]?.id ?? ''
         if (fallback) await activatePage(fallback)
+      }
+      // 清理所有父页面中引用被删页面的 subpage 块
+      const deletedPage = pages.find((p) => p.id === id)
+      if (deletedPage?.parentId) {
+        const parentId = deletedPage.parentId
+        setPageBlocks((prev) => {
+          const parentBlocks = prev[parentId]
+          if (!parentBlocks) return prev
+          const updated = parentBlocks.filter(
+            (b) => !(b.type === 'subpage' && b.content.subpageId === id)
+          )
+          api.saveBlocks(parentId, updated).catch(console.error)
+          return { ...prev, [parentId]: updated }
+        })
       }
     },
     [api, pages, activePageId, activatePage]
@@ -740,6 +783,37 @@ export default function PageManager({
     },
     [createPage]
   )
+
+  // ── Notion 导入 ──
+  const handleNotionImport = useCallback(async () => {
+    if (!importUrl.trim()) return
+    setImportStatus('loading')
+    setImportMsg('导入中，请稍候…')
+    try {
+      const res = await fetch('/api/notion/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken() || ''}`,
+        },
+        body: JSON.stringify({
+          notionPageUrl: importUrl.trim(),
+          parentPageId: activePageId || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '导入失败')
+      // 刷新页面列表
+      const ps = await api.listPages()
+      setPages(ps)
+      setImportStatus('success')
+      setImportMsg(`导入完成：${data.pagesImported?.length ?? 0} 个页面${data.errors?.length ? `，${data.errors.length} 个失败` : ''}`)
+      setImportUrl('')
+    } catch (err: unknown) {
+      setImportStatus('error')
+      setImportMsg(err instanceof Error ? err.message : '导入失败')
+    }
+  }, [importUrl, activePageId, api])
 
   // ── 侧边栏拖拽调整宽度 ──
   const handleSidebarResize = useCallback(
@@ -873,6 +947,17 @@ export default function PageManager({
               )}
             </div>
 
+            {/* 导入知识库按钮 */}
+            {activePageId && !readOnly && (
+              <button
+                onClick={() => { setShowImport((v) => !v); setImportStatus('idle'); setImportMsg('') }}
+                className="shrink-0 text-[11px] text-neutral-400 hover:text-neutral-200 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-colors border border-white/5"
+                title="导入外部知识库"
+              >
+                ↓ 导入
+              </button>
+            )}
+
             {/* Chronicle 入库 / 锁定 badge */}
             {activePage &&
               onArchivePage &&
@@ -902,6 +987,39 @@ export default function PageManager({
               ))}
             </div>
           </div>
+
+          {/* 导入弹窗 */}
+          {showImport && (
+            <div className="border-b border-white/5 bg-neutral-900/80 px-6 py-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-400 shrink-0">Notion URL</span>
+                <input
+                  autoFocus
+                  value={importUrl}
+                  onChange={(e) => { setImportUrl(e.target.value); setImportStatus('idle'); setImportMsg('') }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleNotionImport(); if (e.key === 'Escape') setShowImport(false) }}
+                  placeholder="https://www.notion.so/..."
+                  className="flex-1 bg-neutral-800 border border-white/10 rounded px-3 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                />
+                <button
+                  onClick={handleNotionImport}
+                  disabled={importStatus === 'loading' || !importUrl.trim()}
+                  className="shrink-0 px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+                >
+                  {importStatus === 'loading' ? '导入中…' : '导入'}
+                </button>
+                <button
+                  onClick={() => setShowImport(false)}
+                  className="shrink-0 text-neutral-600 hover:text-neutral-400 text-xs px-1"
+                >✕</button>
+              </div>
+              {importMsg && (
+                <p className={`text-xs ${importStatus === 'error' ? 'text-red-400' : importStatus === 'success' ? 'text-green-400' : 'text-neutral-500'}`}>
+                  {importMsg}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* 编辑器区域 */}
           <div className="flex-1 overflow-y-auto">

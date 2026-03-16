@@ -16,6 +16,7 @@ const authRouter      = require('./routes/auth');
 const graphRouter     = require('./routes/graph');
 const relationsRouter     = require('./routes/relations');
 const canvasesRouter      = require('./routes/canvases');
+const notionImportRouter   = require('./routes/notion-import');
 
 const app = express();
 const PORT = 3002;
@@ -75,7 +76,7 @@ app.use('/api', (req, res, next) => {
 });
 
 // 注册路由模块 (all protected by global middleware above)
-app.use('/api', tasksRouter.init(tasksDb));
+app.use('/api', tasksRouter.init(tasksDb, pagesDb));
 app.use('/api', pagesRouter.init({ pagesDb, tasksDb }));
 app.use('/api', memoryRouter.init(memoryDb));
 app.use('/api', chronicleRouter.init(memoryDb));
@@ -85,8 +86,7 @@ app.use('/api', mediaRouter.init());
 app.use('/api', graphRouter.init());
 app.use('/api', relationsRouter.init(pagesDb));
 app.use('/api', canvasesRouter.init(pagesDb));
-// notionImportRouter — notion-import.js 尚未完成，暂时注释
-// app.use('/api', notionImportRouter.init({ memoryDb, pagesDb, tasksDb }));
+app.use('/api', notionImportRouter.init({ pagesDb, tasksDb }));
 
 app.listen(PORT, () => {
   console.log(`🚀 后端运行在 http://localhost:${PORT}`);

@@ -112,6 +112,21 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **New files**: `server/routes/relations.js`, `server/scripts/migrate-blocks-v2.js`, `server/scripts/migrate-blocks-v3.js`, `src/lib/block-graph-api.ts`
   - **Migrations**: `cd server && npm run migrate-v2` (schema) → `npm run migrate-v3` (draft_explanation)
 
+- **Notion Knowledge Base Import** *(2026-03-16)*
+  - `POST /api/notion/import` — server calls Notion API directly, zero Claude token consumption, fully automated
+  - Recursive children-first import: child pages imported before parent's blocks are saved, so `subpageId` values are always valid
+  - Auto-pagination: `fetchAllBlocks()` loops on `has_more` cursor until all blocks retrieved
+  - Full Notion → Egonetics block type mapping: paragraph, heading1/2/3, bullet, numbered, todo, code, quote, callout (info/warning/success/tip by color), divider, image, bookmark, table→markdown code block, child_page→subpage, column_list/column→flattened
+  - `subpageTitle` sourced from page metadata (full title), not from parent's truncated block field
+  - UTF-8 chunk boundary fix: HTTP response collected as `Buffer[]` then decoded once via `Buffer.concat().toString('utf8')`, eliminating `\ufffd` replacement characters in multi-byte CJK text
+  - `parentPageId` parameter: import under any existing page (no new task created); omit to auto-create a same-title task
+  - `NOTION_TOKEN` stored in shell env, never in project code or git
+  - **In-page import button**: toolbar "↓ 导入" button opens inline dialog — paste Notion URL → import → page tree auto-refreshes. Available on all pages using `PageManager`
+  - **Cascade delete**: `DELETE /tasks/:id` and `DELETE /kanban/tasks/:id` now recursively delete all associated pages and blocks via recursive CTE
+  - **Sidebar ↔ content sync**: creating a child page from sidebar automatically appends a subpage block to the parent page's content; deleting a page removes its subpage block from parent
+  - **New server file**: `server/routes/notion-import.js`
+  - **New env var**: `NOTION_TOKEN` (your Notion integration token)
+
 **In Progress**
 - Chronicle hash chain integrity verification
 - Theory page locking & versioning
@@ -378,6 +393,7 @@ Five separate SQLite databases under `server/data/`:
 - `POST /blocks/:id/publish` — Publish process version snapshot; clears editStartTime + draftExplanation
 - `GET /blocks/:id/versions` — List process versions for a block
 - `GET/PUT /notion/blocks` — Notion-compatible API (legacy)
+- `POST /notion/import` — Recursively import Notion page tree (body: `notionPageUrl`, opt. `parentPageId` / `taskId` / `pageType`)
 
 **Relations** (`/api/relations/*`)
 - `GET /relations` — Query relations by source_id / target_id / source_type / target_type
@@ -511,6 +527,21 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - **新增 API**：`PATCH /blocks/:id/meta`、`POST /blocks/:id/publish`、`GET /blocks/:id/versions`；`/relations/*` 完整 CRUD + 发布/版本历史
   - **新增文件**：`server/routes/relations.js`、`server/scripts/migrate-blocks-v2.js`、`server/scripts/migrate-blocks-v3.js`、`src/lib/block-graph-api.ts`
   - **迁移命令**：`cd server && npm run migrate-v2`（建表）→ `npm run migrate-v3`（draft_explanation 列）
+
+- **Notion 知识库导入** *(2026-03-16)*
+  - `POST /api/notion/import` — 服务端直接调 Notion API，零 Claude token 消耗，完全自动化
+  - children-first 递归导入：先导入子页面再处理父页面块，subpageId 始终有效
+  - 自动翻页：`fetchAllBlocks()` 循环消费 `has_more` cursor，直到拉取全部块
+  - 完整 Notion → Egonetics 块类型映射：paragraph、heading1/2/3、bullet、numbered、todo、code、quote、callout（按颜色分为 info/warning/success/tip）、divider、image、bookmark、table→markdown code 块、child_page→subpage、column_list/column→展开子块
+  - `subpageTitle` 取自页面元数据（完整标题），不使用父块列表中的截断预览字段
+  - UTF-8 chunk 边界修复：HTTP 响应改为收集 `Buffer[]` 后统一 `Buffer.concat().toString('utf8')` 解码，彻底消除中文 `\ufffd` 乱码
+  - `parentPageId` 参数：传入时导入到指定页面下（不新建 task）；不传时自动建同名 task
+  - `NOTION_TOKEN` 存于 shell 环境变量，不进项目代码和 git
+  - **页面内导入按钮**：工具栏"↓ 导入"按钮，点击展开内联弹窗 — 粘贴 Notion URL → 导入 → 自动刷新页面树。适用于所有使用 `PageManager` 的页面
+  - **级联删除**：`DELETE /tasks/:id` 和 `DELETE /kanban/tasks/:id` 通过递归 CTE 同步删除所有关联页面和块
+  - **侧边栏与内容同步**：从侧边栏新建子页面时，自动向父页面内容末尾追加 subpage 块；删除页面时同步清理父页面中的对应 subpage 块
+  - **新增服务端文件**：`server/routes/notion-import.js`
+  - **新增环境变量**：`NOTION_TOKEN`（Notion Integration Token）
 
 **开发中**
 - Chronicle 哈希链完整性验证
@@ -778,6 +809,7 @@ egonetics/
 - `POST /blocks/:id/publish` — 发布过程版本快照；自动清空 editStartTime + draftExplanation
 - `GET /blocks/:id/versions` — 获取块的过程版本列表
 - `GET/PUT /notion/blocks` — Notion 兼容 API（遗留）
+- `POST /notion/import` — 递归导入 Notion 页面树（body: `notionPageUrl`，可选 `parentPageId` / `taskId` / `pageType`）
 
 **关系** (`/api/relations/*`)
 - `GET /relations` — 按 source_id / target_id / source_type / target_type 查询

@@ -23,18 +23,51 @@ function genId(prefix) {
 // ── /api/pages ─────────────────────────────────────────────
 
 // GET /api/pages?type=xxx&refId=xxx
+// 当 refId 存在时，用递归 CTE 返回完整子树（忽略 type 过滤，子页面 type='page'）
+// 当只有 type 时，保持原有平铺过滤逻辑
 router.get('/pages', (req, res) => {
   const { type, refId } = req.query;
-  let sql = 'SELECT id, parent_id as parentId, page_type as pageType, ref_id as refId, title, icon, position, created_at as createdAt, updated_at as updatedAt FROM pages WHERE 1=1';
+  const cols = 'id, parent_id as parentId, page_type as pageType, ref_id as refId, title, icon, position, created_at as createdAt, updated_at as updatedAt';
+
+  if (refId) {
+    // 递归返回以 ref_id=refId 为根的整棵页面树
+    const sql = `
+      WITH RECURSIVE tree AS (
+        SELECT * FROM pages WHERE ref_id = ?
+        UNION ALL
+        SELECT p.* FROM pages p INNER JOIN tree t ON p.parent_id = t.id
+      )
+      SELECT ${cols} FROM tree ORDER BY position`;
+    pagesDb.all(sql, [refId], (err, pages) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(pages);
+    });
+    return;
+  }
+
+  // 无 refId：原有平铺过滤
+  let sql = `SELECT ${cols} FROM pages WHERE 1=1`;
   const params = [];
-  if (type)  { sql += ' AND page_type = ?'; params.push(type); }
-  if (refId) { sql += ' AND ref_id = ?';    params.push(refId); }
+  if (type) { sql += ' AND page_type = ?'; params.push(type); }
   sql += ' ORDER BY position';
 
   pagesDb.all(sql, params, (err, pages) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(pages);
   });
+});
+
+// GET /api/pages/:id
+router.get('/pages/:id', (req, res) => {
+  pagesDb.get(
+    'SELECT id, parent_id as parentId, page_type as pageType, ref_id as refId, title, icon, position, created_at as createdAt, updated_at as updatedAt FROM pages WHERE id = ?',
+    [req.params.id],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: 'Page 不存在' });
+      res.json(row);
+    }
+  );
 });
 
 // POST /api/pages
