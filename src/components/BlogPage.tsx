@@ -6,7 +6,7 @@ import { createApiClient } from './apiClient'
 // 所有 page_type = 'page' 的页面（默认类型）
 const BlogPage: React.FC = () => {
   // 创建 API 客户端 - 使用 useMemo 避免重新创建
-  const apiClient = useMemo(() => createApiClient(), [])
+  const apiClient = useMemo(() => createApiClient('blog'), [])
 
   return (
     <div className="h-screen flex flex-col bg-[#191919]">

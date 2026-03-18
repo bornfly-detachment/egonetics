@@ -13,16 +13,15 @@ function openDb(filename, label) {
   });
 }
 
-const memoryDb  = openDb('memory.db',  'Memory');
-const tasksDb   = openDb('tasks.db',   'Tasks');
-const pagesDb   = openDb('pages.db',   'Pages');
-const agentsDb  = openDb('agents.db',  'Agents');
-const authDb    = openDb('auth.db',    'Auth');
+const memoryDb = openDb('memory.db', 'Memory');
+const pagesDb  = openDb('pages.db',  'Pages');   // 统一富文本 DB（含 tasks）
+const agentsDb = openDb('agents.db', 'Agents');
+const authDb   = openDb('auth.db',   'Auth');
 
-// Enable WAL mode for better concurrency on all databases
-[memoryDb, tasksDb, pagesDb, agentsDb, authDb].forEach(db => {
+// WAL 模式 + 外键约束
+[memoryDb, pagesDb, agentsDb, authDb].forEach(db => {
   db.run('PRAGMA journal_mode=WAL');
   db.run('PRAGMA foreign_keys=ON');
 });
 
-module.exports = { memoryDb, tasksDb, pagesDb, agentsDb, authDb };
+module.exports = { memoryDb, pagesDb, agentsDb, authDb };

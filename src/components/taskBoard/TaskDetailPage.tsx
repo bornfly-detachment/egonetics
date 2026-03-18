@@ -7,7 +7,7 @@
  * 路由: /tasks/:taskId
  */
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -19,10 +19,8 @@ import {
   Tag,
   BookMarked,
 } from 'lucide-react'
-import BlockEditor from '../BlockEditor'
 import PageManager from '../PageManager'
 import { createApiClient } from '../apiClient'
-import type { Block } from '../BlockEditor'
 import { getToken, removeToken } from '@/lib/http'
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low'
@@ -85,19 +83,6 @@ const PRI: Record<Priority, { label: string; cls: string; dot: string }> = {
   },
 }
 
-const fmtDateTime = (s?: string) => {
-  if (!s) return ''
-  try {
-    return new Date(s).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  } catch {
-    return s
-  }
-}
-
 async function loadTask(id: string): Promise<Task | null> {
   try {
     const res = await fetch(`/api/kanban/tasks/${id}`, { headers: authHeaders() })
@@ -121,17 +106,6 @@ async function loadColumns(): Promise<Column[]> {
   }
 }
 
-async function loadBlocks(taskId: string): Promise<Block[]> {
-  try {
-    const res = await fetch(`/api/tasks/${taskId}/blocks`, { headers: authHeaders() })
-    handle401(res)
-    if (!res.ok) return []
-    return await res.json()
-  } catch {
-    return []
-  }
-}
-
 async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
   try {
     const res = await fetch(`/api/kanban/tasks/${id}`, {
@@ -144,60 +118,6 @@ async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
   } catch {
     return false
   }
-}
-
-// ─── Inline editable field ────────────────────────────────────────────────────
-
-function InlineText({
-  value,
-  placeholder,
-  onSave,
-  className,
-}: {
-  value: string
-  placeholder: string
-  onSave: (v: string) => void
-  className?: string
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value)
-
-  useEffect(() => {
-    if (!editing) setDraft(value)
-  }, [value, editing])
-
-  if (editing)
-    return (
-      <input
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          setEditing(false)
-          if (draft !== value) onSave(draft)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            setEditing(false)
-            if (draft !== value) onSave(draft)
-          }
-          if (e.key === 'Escape') {
-            setEditing(false)
-            setDraft(value)
-          }
-        }}
-        className={`bg-white/5 border border-white/20 rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/40 placeholder-white/30 ${className ?? ''}`}
-        placeholder={placeholder}
-      />
-    )
-  return (
-    <span
-      onClick={() => setEditing(true)}
-      className={`cursor-text hover:bg-white/5 rounded px-1 py-0.5 transition-colors ${value ? 'text-white/80' : 'text-white/25'} text-sm ${className ?? ''}`}
-    >
-      {value || placeholder}
-    </span>
-  )
 }
 
 // ─── Publish to Chronicle Modal ───────────────────────────────────────────────
@@ -324,25 +244,22 @@ export default function TaskDetailPage() {
 
   const [task, setTask] = useState<Task | null>(null)
   const [columns, setColumns] = useState<Column[]>([])
-  const [initialBlocks, setInitialBlocks] = useState<Block[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [showPublish, setShowPublish] = useState(false)
-  const saveBlocksTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load task + columns + blocks in parallel
+  // Load task + columns in parallel
   useEffect(() => {
     if (!taskId) {
       setError('未找到任务 ID')
       setLoading(false)
       return
     }
-    Promise.all([loadTask(taskId), loadColumns(), loadBlocks(taskId)]).then(([t, cols, blks]) => {
+    Promise.all([loadTask(taskId), loadColumns()]).then(([t, cols]) => {
       if (!t) setError('任务不存在或已删除')
       else setTask(t)
       setColumns(cols)
-      setInitialBlocks(blks)
       setLoading(false)
     })
   }, [taskId])
@@ -356,22 +273,6 @@ export default function TaskDetailPage() {
       setSaving(false)
     },
     [task]
-  )
-
-  // Debounced block save (BlockEditor's onChange fires on every keystroke)
-  const handleBlocksChange = useCallback(
-    (blocks: Block[]) => {
-      if (!taskId) return
-      if (saveBlocksTimer.current) clearTimeout(saveBlocksTimer.current)
-      saveBlocksTimer.current = setTimeout(async () => {
-        await fetch(`/api/tasks/${taskId}/blocks`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify(blocks),
-        }).catch(console.error)
-      }, 800)
-    },
-    [taskId]
   )
 
   const handleDelete = async () => {
@@ -414,9 +315,7 @@ export default function TaskDetailPage() {
       </div>
     )
 
-  const p = PRI[task.priority]
-  const colLabel =
-    columns.find((c) => c.id === (task.columnId ?? task.status))?.label ?? task.status
+  const priorityStyle = PRI[task.priority]
   const isArchived = !!task.chronicle_entry_id
 
   return (
@@ -424,7 +323,7 @@ export default function TaskDetailPage() {
       className="h-screen bg-[#191919] flex flex-col"
       style={{ fontFamily: "'PingFang SC','SF Pro Text',system-ui,sans-serif" }}
     >
-      {/* 顶部导航栏（和博客页风格一致） */}
+      {/* 顶部导航栏 */}
       <div className="shrink-0 h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -460,7 +359,101 @@ export default function TaskDetailPage() {
         </div>
       </div>
 
-      {/* PageManager 内容区（和博客页完全一致） */}
+      {/* 属性栏 */}
+      <div className="shrink-0 border-b border-white/5 bg-[#141414] px-4 py-2 flex items-center gap-4 overflow-x-auto">
+        {/* 状态 */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] text-neutral-600">状态</span>
+          <select
+            value={task.columnId ?? task.status}
+            onChange={(e) => save({ columnId: e.target.value, status: e.target.value })}
+            className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none cursor-pointer hover:border-white/20 transition-colors"
+          >
+            {columns.length > 0
+              ? columns.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)
+              : <>
+                  <option value="planned">计划中</option>
+                  <option value="in-progress">进行中</option>
+                  <option value="review">审核中</option>
+                  <option value="done">已完成</option>
+                </>
+            }
+          </select>
+        </div>
+
+        <div className="w-px h-4 bg-white/8 shrink-0" />
+
+        {/* 优先级 */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] text-neutral-600">优先级</span>
+          <select
+            value={task.priority}
+            onChange={(e) => save({ priority: e.target.value as Priority })}
+            className={`text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-white/20 transition-colors ${priorityStyle.cls.split(' ')[0]}`}
+          >
+            {Object.entries(PRI).map(([val, opt]) => (
+              <option key={val} value={val}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="w-px h-4 bg-white/8 shrink-0" />
+
+        {/* 负责人 */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <User size={10} className="text-neutral-600 shrink-0" />
+          <input
+            value={task.assignee ?? ''}
+            onChange={(e) => setTask((prev) => prev ? { ...prev, assignee: e.target.value } : prev)}
+            onBlur={(e) => save({ assignee: e.target.value })}
+            placeholder="未分配"
+            className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none w-24 hover:border-white/20 focus:border-blue-500/50 transition-colors placeholder-neutral-700"
+          />
+        </div>
+
+        <div className="w-px h-4 bg-white/8 shrink-0" />
+
+        {/* 开始日期 */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Calendar size={10} className="text-neutral-600 shrink-0" />
+          <input
+            type="date"
+            value={task.startDate ? task.startDate.split('T')[0] : ''}
+            onChange={(e) => save({ startDate: e.target.value || undefined })}
+            className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/20 focus:border-blue-500/50 transition-colors"
+          />
+        </div>
+
+        {/* 截止日期 */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] text-neutral-600">截止</span>
+          <input
+            type="date"
+            value={task.dueDate ? task.dueDate.split('T')[0] : ''}
+            onChange={(e) => save({ dueDate: e.target.value || undefined })}
+            className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/20 focus:border-blue-500/50 transition-colors"
+          />
+        </div>
+
+        {/* 标签 */}
+        {task.tags && task.tags.length > 0 && (
+          <>
+            <div className="w-px h-4 bg-white/8 shrink-0" />
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Tag size={10} className="text-neutral-600 shrink-0" />
+              <div className="flex gap-1">
+                {task.tags.map((tag) => (
+                  <span key={tag} className="text-[10px] bg-neutral-700/60 text-neutral-400 px-1.5 py-0.5 rounded border border-white/5">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* PageManager 内容区 */}
       <div className="flex-1 overflow-hidden">
         {taskApiClient && <PageManager api={taskApiClient} />}
       </div>

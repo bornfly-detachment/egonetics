@@ -274,6 +274,12 @@ function SidebarNode({
         return p.parentId === aId || isDesc(p.parentId, aId)
       }
       if (isDesc(page.id, item.id)) return
+      // Root-level nodes: only allow 'inside' drops — before/after would set parent_id=null
+      // and orphan pages from their ref_id scoped tree
+      if (level === 0) {
+        setDropZone('inside')
+        return
+      }
       const rect = ref.current.getBoundingClientRect()
       const ratio = (monitor.getClientOffset()!.y - rect.top) / rect.height
       setDropZone(ratio < 0.25 ? 'before' : ratio > 0.75 ? 'inside' : 'after')
@@ -520,6 +526,7 @@ export default function PageManager({
   // ── 导入弹窗 ──
   const [showImport, setShowImport] = useState(false)
   const [importUrl, setImportUrl] = useState('')
+  const [importToken, setImportToken] = useState(() => localStorage.getItem('notion_token') || '')
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [importMsg, setImportMsg] = useState('')
 
@@ -799,6 +806,7 @@ export default function PageManager({
         body: JSON.stringify({
           notionPageUrl: importUrl.trim(),
           parentPageId: activePageId || null,
+          notionToken: importToken.trim() || undefined,
         }),
       })
       const data = await res.json()
@@ -806,6 +814,21 @@ export default function PageManager({
       // 刷新页面列表
       const ps = await api.listPages()
       setPages(ps)
+      // 展开当前页，使新导入的子页面在侧边栏可见
+      if (activePageId) {
+        setExpandedIds((prev) => {
+          const next = new Set(prev)
+          next.add(activePageId)
+          return next
+        })
+      }
+      // 清除当前页的块缓存，使点击时重新加载（import 可能新增了 subpage 块）
+      setPageBlocks((prev) => {
+        const next = { ...prev }
+        delete next[activePageId]
+        return next
+      })
+      await loadBlocks(activePageId)
       setImportStatus('success')
       setImportMsg(`导入完成：${data.pagesImported?.length ?? 0} 个页面${data.errors?.length ? `，${data.errors.length} 个失败` : ''}`)
       setImportUrl('')
@@ -813,7 +836,7 @@ export default function PageManager({
       setImportStatus('error')
       setImportMsg(err instanceof Error ? err.message : '导入失败')
     }
-  }, [importUrl, activePageId, api])
+  }, [importUrl, importToken, activePageId, api])
 
   // ── 侧边栏拖拽调整宽度 ──
   const handleSidebarResize = useCallback(
@@ -991,8 +1014,24 @@ export default function PageManager({
           {/* 导入弹窗 */}
           {showImport && (
             <div className="border-b border-white/5 bg-neutral-900/80 px-6 py-3 flex flex-col gap-2">
+              {/* Token 行 */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-neutral-400 shrink-0">Notion URL</span>
+                <span className="text-xs text-neutral-500 shrink-0 w-20">Notion Token</span>
+                <input
+                  type="password"
+                  value={importToken}
+                  onChange={(e) => {
+                    setImportToken(e.target.value)
+                    localStorage.setItem('notion_token', e.target.value)
+                    setImportStatus('idle'); setImportMsg('')
+                  }}
+                  placeholder="secret_xxxx…（保存在本地，不上传服务器）"
+                  className="flex-1 bg-neutral-800 border border-white/10 rounded px-3 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500 font-mono"
+                />
+              </div>
+              {/* URL 行 */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-500 shrink-0 w-20">Notion URL</span>
                 <input
                   autoFocus
                   value={importUrl}
@@ -1003,7 +1042,7 @@ export default function PageManager({
                 />
                 <button
                   onClick={handleNotionImport}
-                  disabled={importStatus === 'loading' || !importUrl.trim()}
+                  disabled={importStatus === 'loading' || !importUrl.trim() || !importToken.trim()}
                   className="shrink-0 px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
                 >
                   {importStatus === 'loading' ? '导入中…' : '导入'}

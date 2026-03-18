@@ -53,6 +53,7 @@ router.get('/relations', (req, res) => {
 router.post('/relations', (req, res) => {
   const {
     title = '',
+    relation_type = 'contains',
     source_type, source_id,
     target_type, target_id,
     description = '',
@@ -67,12 +68,12 @@ router.post('/relations', (req, res) => {
   const ts = now();
 
   pagesDb.run(
-    `INSERT INTO relations (id, title, source_type, source_id, target_type, target_id, description, creator, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, title, source_type, source_id, target_type, target_id, description, creator, ts, ts],
+    `INSERT INTO relations (id, title, relation_type, source_type, source_id, target_type, target_id, description, creator, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, title, relation_type, source_type, source_id, target_type, target_id, description, creator, ts, ts],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ id, title, source_type, source_id, target_type, target_id, description, creator, created_at: ts, updated_at: ts });
+      res.status(201).json({ id, title, relation_type, source_type, source_id, target_type, target_id, description, creator, created_at: ts, updated_at: ts });
     }
   );
 });
@@ -88,13 +89,14 @@ router.get('/relations/:id', (req, res) => {
 
 // ── PATCH /api/relations/:id ───────────────────────────────────
 router.patch('/relations/:id', (req, res) => {
-  const { title, description, properties } = req.body;
+  const { title, description, relation_type, properties } = req.body;
   const updates = ['updated_at = ?'];
   const params = [now()];
 
-  if (title       !== undefined) { updates.push('title = ?');       params.push(title); }
-  if (description !== undefined) { updates.push('description = ?'); params.push(description); }
-  if (properties  !== undefined) { updates.push('properties = ?');  params.push(typeof properties === 'string' ? properties : JSON.stringify(properties)); }
+  if (title         !== undefined) { updates.push('title = ?');         params.push(title); }
+  if (description   !== undefined) { updates.push('description = ?');   params.push(description); }
+  if (relation_type !== undefined) { updates.push('relation_type = ?'); params.push(relation_type); }
+  if (properties    !== undefined) { updates.push('properties = ?');    params.push(typeof properties === 'string' ? properties : JSON.stringify(properties)); }
 
   if (updates.length === 1) return res.status(400).json({ error: '没有要更新的字段' });
   params.push(req.params.id);

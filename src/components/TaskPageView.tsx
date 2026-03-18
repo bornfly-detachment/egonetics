@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
@@ -7,6 +7,18 @@ import { getToken, removeToken } from '@/lib/http'
 
 const KANBAN_API_BASE = '/api'
 
+interface TaskData {
+  id: string
+  name: string
+  column_id: string | null
+  priority: string | null
+  assignee: string | null
+  start_date: string | null
+  due_date: string | null
+  tags: string[]
+  icon?: string
+}
+
 // 创建 Task 专属的 API 客户端
 function createTaskPageApiClient(taskId: string): ApiClient {
   // 使用带过滤的 baseClient，会自动添加 type=task&refId=taskId 参数
@@ -14,51 +26,55 @@ function createTaskPageApiClient(taskId: string): ApiClient {
 
   return {
     async listPages(): Promise<PageMeta[]> {
-      // 从主 server 获取与该 task 关联的 pages
-      // baseClient 会自动添加 ?type=task&refId=taskId 参数
       return baseClient.listPages()
     },
-
     async createPage(input) {
       return baseClient.createPage(input)
     },
-
     async updatePage(id, patch) {
       return baseClient.updatePage(id, patch)
     },
-
     async deletePage(id) {
       return baseClient.deletePage(id)
     },
-
     async movePage(id, input) {
       return baseClient.movePage(id, input)
     },
-
     async listBlocks(pageId) {
       return baseClient.listBlocks(pageId)
     },
-
     async saveBlocks(pageId, blocks) {
       return baseClient.saveBlocks(pageId, blocks)
     },
   }
 }
 
+const PRIORITY_OPTIONS = [
+  { value: 'low',    label: '低',   cls: 'text-neutral-400' },
+  { value: 'medium', label: '中',   cls: 'text-blue-400' },
+  { value: 'high',   label: '高',   cls: 'text-amber-400' },
+  { value: 'urgent', label: '紧急', cls: 'text-red-400' },
+]
+
+const COLUMN_OPTIONS = [
+  { value: 'planned',     label: '计划中' },
+  { value: 'in-progress', label: '进行中' },
+  { value: 'review',      label: '审核中' },
+  { value: 'done',        label: '已完成' },
+]
+
 const TaskPageView: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
-  const [taskName, setTaskName] = useState<string>('任务详情')
+  const [taskData, setTaskData] = useState<TaskData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // 获取 task 信息
+  // 获取 task 完整信息
   useEffect(() => {
     if (!taskId) return
 
     fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`, {
-      headers: {
-        Authorization: `Bearer ${getToken() || ''}`
-      }
+      headers: { Authorization: `Bearer ${getToken() || ''}` },
     })
       .then((res) => {
         if (res.status === 401) {
@@ -69,15 +85,57 @@ const TaskPageView: React.FC = () => {
         return res.json()
       })
       .then((data) => {
-        if (data.name) {
-          setTaskName(data.name)
-        }
+        setTaskData({
+          id: data.id ?? taskId,
+          name: data.name ?? data.title ?? '任务详情',
+          column_id: data.column_id ?? data.columnId ?? 'planned',
+          priority: data.priority ?? 'medium',
+          assignee: data.assignee ?? '',
+          start_date: data.start_date ?? data.startDate ?? null,
+          due_date: data.due_date ?? data.dueDate ?? null,
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          icon: data.icon ?? '📋',
+        })
         setIsLoading(false)
       })
-      .catch(() => {
-        setIsLoading(false)
-      })
+      .catch(() => setIsLoading(false))
   }, [taskId])
+
+  // PATCH task field — fires on blur / select change
+  const updateTaskField = useCallback(
+    async (field: string, value: unknown) => {
+      if (!taskId) return
+      try {
+        const res = await fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken() || ''}`,
+          },
+          body: JSON.stringify({ [field]: value }),
+        })
+        if (res.ok) {
+          const updated = await res.json()
+          setTaskData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  column_id: updated.column_id ?? updated.columnId ?? prev.column_id,
+                  priority: updated.priority ?? prev.priority,
+                  assignee: updated.assignee ?? prev.assignee,
+                  start_date: updated.start_date ?? updated.startDate ?? prev.start_date,
+                  due_date: updated.due_date ?? updated.dueDate ?? prev.due_date,
+                  tags: Array.isArray(updated.tags) ? updated.tags : prev.tags,
+                }
+              : prev
+          )
+        }
+      } catch {
+        /* ignore */
+      }
+    },
+    [taskId]
+  )
 
   // 创建 API 客户端 - 使用 useMemo 避免每次渲染重新创建
   const apiClient = useMemo(() => {
@@ -92,14 +150,7 @@ const TaskPageView: React.FC = () => {
             onClick={() => navigate('/tasks')}
             className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
             <span className="text-sm">返回任务列表</span>
@@ -112,6 +163,8 @@ const TaskPageView: React.FC = () => {
     )
   }
 
+  const priorityOpt = PRIORITY_OPTIONS.find((p) => p.value === taskData?.priority) ?? PRIORITY_OPTIONS[1]
+
   return (
     <div className="h-screen flex flex-col bg-[#191919]">
       {/* 顶部导航栏 */}
@@ -120,24 +173,124 @@ const TaskPageView: React.FC = () => {
           onClick={() => navigate('/tasks')}
           className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           <span className="text-sm">返回任务列表</span>
         </button>
         <div className="flex-1" />
         <div className="flex items-center gap-2 text-neutral-500 text-sm">
-          <span>📝</span>
-          <span>{isLoading ? '加载中...' : taskName}</span>
+          <span>{taskData?.icon ?? '📝'}</span>
+          <span>{isLoading ? '加载中...' : (taskData?.name ?? '任务详情')}</span>
         </div>
       </div>
+
+      {/* 属性栏 */}
+      {taskData && !isLoading && (
+        <div className="shrink-0 border-b border-white/5 bg-[#141414] px-4 py-2 flex items-center gap-4 overflow-x-auto">
+          {/* 状态 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-neutral-600">状态</span>
+            <select
+              value={taskData.column_id ?? 'planned'}
+              onChange={(e) => {
+                setTaskData((prev) => prev ? { ...prev, column_id: e.target.value } : prev)
+                updateTaskField('column_id', e.target.value)
+              }}
+              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none cursor-pointer hover:border-white/20 transition-colors"
+            >
+              {COLUMN_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-px h-4 bg-white/8 shrink-0" />
+
+          {/* 优先级 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-neutral-600">优先级</span>
+            <select
+              value={taskData.priority ?? 'medium'}
+              onChange={(e) => {
+                setTaskData((prev) => prev ? { ...prev, priority: e.target.value } : prev)
+                updateTaskField('priority', e.target.value)
+              }}
+              className={`text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-white/20 transition-colors ${priorityOpt.cls}`}
+            >
+              {PRIORITY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-px h-4 bg-white/8 shrink-0" />
+
+          {/* 负责人 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-neutral-600">负责人</span>
+            <input
+              value={taskData.assignee ?? ''}
+              onChange={(e) => setTaskData((prev) => prev ? { ...prev, assignee: e.target.value } : prev)}
+              onBlur={(e) => updateTaskField('assignee', e.target.value)}
+              placeholder="未分配"
+              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none w-24 hover:border-white/20 focus:border-blue-500/50 transition-colors placeholder-neutral-700"
+            />
+          </div>
+
+          <div className="w-px h-4 bg-white/8 shrink-0" />
+
+          {/* 开始日期 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-neutral-600">开始</span>
+            <input
+              type="date"
+              value={taskData.start_date ? taskData.start_date.split('T')[0] : ''}
+              onChange={(e) => {
+                const v = e.target.value || null
+                setTaskData((prev) => prev ? { ...prev, start_date: v } : prev)
+                updateTaskField('start_date', v)
+              }}
+              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/20 focus:border-blue-500/50 transition-colors"
+            />
+          </div>
+
+          {/* 截止日期 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-neutral-600">截止</span>
+            <input
+              type="date"
+              value={taskData.due_date ? taskData.due_date.split('T')[0] : ''}
+              onChange={(e) => {
+                const v = e.target.value || null
+                setTaskData((prev) => prev ? { ...prev, due_date: v } : prev)
+                updateTaskField('due_date', v)
+              }}
+              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/20 focus:border-blue-500/50 transition-colors"
+            />
+          </div>
+
+          {/* 标签 */}
+          {taskData.tags.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-white/8 shrink-0" />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] text-neutral-600">标签</span>
+                <div className="flex gap-1">
+                  {taskData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[10px] bg-neutral-700/60 text-neutral-400 px-1.5 py-0.5 rounded border border-white/5"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* PageManager 内容区 */}
       <div className="flex-1 overflow-hidden">

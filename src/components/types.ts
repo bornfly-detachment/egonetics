@@ -201,6 +201,7 @@ export type EntityType =
 export interface Relation {
   id: string
   title: string
+  relation_type: string  // e.g. 'contains' | 'causal' | ...
   source_type: EntityType
   source_id: string
   target_type: EntityType

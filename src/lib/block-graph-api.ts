@@ -50,6 +50,7 @@ export async function getRelations(params: {
 
 export async function createRelation(input: {
   title?: string
+  relation_type?: string
   source_type: EntityType
   source_id: string
   target_type: EntityType

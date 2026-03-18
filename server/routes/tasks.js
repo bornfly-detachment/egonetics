@@ -1,100 +1,102 @@
 /**
  * routes/tasks.js
  * /api/tasks  — Task CRUD + 属性 + 版本
- * /api/kanban — 看板视图（共享 tasks.db）
+ * /api/kanban — 看板视图
+ *
+ * 统一使用 pagesDb（pages 表，page_type='task'）
+ * API 契约与原 tasks.js 保持完全兼容（KanbanBoard.tsx 零改动）
  */
 
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
+const { syncPageUpsert, syncPageDelete } = require('../lib/graph-sync');
 
-let tasksDb;
 let pagesDb;
 
-function init(db, pDb) {
-  tasksDb = db;
-  pagesDb = pDb;
-
-  // Migrate: add chronicle columns if missing (safe to run every startup)
-  const noop = (err) => { if (err && !err.message.includes('duplicate column')) console.error('[tasks init]', err.message); };
-  tasksDb.run('ALTER TABLE tasks ADD COLUMN chronicle_entry_id TEXT', noop);
-  tasksDb.run('ALTER TABLE tasks ADD COLUMN task_outcome TEXT', noop);
-  tasksDb.run('ALTER TABLE tasks ADD COLUMN task_summary TEXT', noop);
-
+function init(db) {
+  pagesDb = db;
   return router;
-}
-
-// ── 工具函数 ───────────────────────────────────────────────
-
-function rowToKanbanTask(row) {
-  return {
-    id:          row.id,
-    columnId:    row.column_id,
-    status:      row.column_id,
-    name:        row.name,
-    icon:        row.icon,
-    priority:    row.priority,
-    sortOrder:   row.sort_order,
-    assignee:    row.assignee     || null,
-    startDate:   row.start_date   || null,
-    dueDate:     row.due_date     || null,
-    project:     row.project      || null,
-    projectIcon: row.project_icon || null,
-    tags:        row.tags ? JSON.parse(row.tags) : [],
-    created_at:  row.created_at,
-    updated_at:  row.updated_at
-  };
-}
-
-function getDefaultValue(type) {
-  switch (type) {
-    case 'text':         return '';
-    case 'number':       return 0;
-    case 'select':       return '';
-    case 'multi-select': return [];
-    case 'date':         return null;
-    case 'checkbox':     return false;
-    case 'url':          return '';
-    default:             return '';
-  }
 }
 
 function genId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// ── /api/tasks ─────────────────────────────────────────────
+function tryParse(s) {
+  try { return JSON.parse(s); } catch { return s || {}; }
+}
+
+// pages 表行 → Kanban Task 格式（KanbanBoard.tsx 需要）
+function rowToKanbanTask(row) {
+  return {
+    id:          row.id,
+    columnId:    row.column_id   || 'planned',
+    status:      row.column_id   || 'planned',
+    name:        row.title,        // pages.title → tasks.name
+    icon:        row.icon,
+    priority:    row.priority    || 'medium',
+    sortOrder:   row.sort_order  || 0,
+    assignee:    row.assignee    || null,
+    startDate:   row.start_date  || null,
+    dueDate:     row.due_date    || null,
+    project:     row.project     || null,
+    projectIcon: row.project_icon || null,
+    tags:        row.tags ? (() => { try { return JSON.parse(row.tags); } catch { return []; } })() : [],
+    created_at:  row.created_at,
+    updated_at:  row.updated_at,
+  };
+}
+
+function getDefaultValue(type) {
+  switch (type) {
+    case 'text': case 'url': return '';
+    case 'number':           return 0;
+    case 'select':           return '';
+    case 'multi-select':     return [];
+    case 'date':             return null;
+    case 'checkbox':         return false;
+    default:                 return '';
+  }
+}
+
+// ── /api/tasks ───────────────────────────────────────────────────
 
 router.get('/tasks', (req, res) => {
-  tasksDb.all(`
-    SELECT t.*,
-           COUNT(DISTINCT tp.id) AS property_count,
-           COUNT(DISTINCT tv.id) AS version_count
-    FROM tasks t
-    LEFT JOIN task_properties tp ON t.id = tp.task_id
-    LEFT JOIN task_versions   tv ON t.id = tv.task_id
-    GROUP BY t.id
-    ORDER BY t.updated_at DESC
+  pagesDb.all(`
+    SELECT p.*,
+           COUNT(DISTINCT pd.id) AS property_count,
+           COUNT(DISTINCT pv.id) AS version_count
+    FROM pages p
+    LEFT JOIN page_property_defs pd ON p.id = pd.page_id
+    LEFT JOIN process_versions    pv ON p.id = pv.entity_id AND pv.entity_type = 'task_version'
+    WHERE p.page_type = 'task' AND p.parent_id IS NULL AND p.chronicle_entry_id IS NULL
+    GROUP BY p.id
+    ORDER BY p.updated_at DESC
   `, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    const tasks = rows.map(r => ({ ...r, tags: r.tags ? JSON.parse(r.tags) : [] }));
+    const tasks = rows.map(r => ({
+      ...r,
+      name: r.title,   // compat alias
+      tags: r.tags ? (() => { try { return JSON.parse(r.tags); } catch { return []; } })() : [],
+    }));
     res.json({ tasks });
   });
 });
 
 router.get('/tasks/:id', (req, res) => {
   const taskId = req.params.id;
-  tasksDb.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+  pagesDb.get('SELECT * FROM pages WHERE id = ? AND page_type = ?', [taskId, 'task'], (err, task) => {
     if (err || !task) return res.status(404).json({ error: '任务不存在' });
 
-    tasksDb.all('SELECT * FROM task_property_defs WHERE task_id = ? ORDER BY display_order', [taskId], (err, propertyDefs) => {
+    pagesDb.all('SELECT * FROM page_property_defs WHERE page_id = ? ORDER BY display_order', [taskId], (err, propertyDefs) => {
       if (err) return res.status(500).json({ error: err.message });
 
-      tasksDb.all(`
-        SELECT tp.*, tpd.name, tpd.type
-        FROM task_properties tp
-        JOIN task_property_defs tpd ON tp.property_def_id = tpd.id
-        WHERE tp.task_id = ?
+      pagesDb.all(`
+        SELECT pp.*, pd.name, pd.type
+        FROM page_properties pp
+        JOIN page_property_defs pd ON pp.property_def_id = pd.id
+        WHERE pp.page_id = ?
       `, [taskId], (err, properties) => {
         if (err) return res.status(500).json({ error: err.message });
 
@@ -108,13 +110,19 @@ router.get('/tasks/:id', (req, res) => {
             case 'checkbox':     value = prop.value_boolean === 1; break;
             case 'select':
             case 'multi-select':
-            case 'url':          value = prop.value_json ? JSON.parse(prop.value_json) : null; break;
+            case 'url':          value = prop.value_json ? tryParse(prop.value_json) : null; break;
             default:             value = prop.value_text;
           }
           propertyValues[prop.name] = value;
         });
 
-        res.json({ ...task, tags: task.tags ? JSON.parse(task.tags) : [], propertyDefs, properties: propertyValues });
+        res.json({
+          ...task,
+          name: task.title,
+          tags: task.tags ? (() => { try { return JSON.parse(task.tags); } catch { return []; } })() : [],
+          propertyDefs,
+          properties: propertyValues,
+        });
       });
     });
   });
@@ -125,28 +133,45 @@ router.post('/tasks', (req, res) => {
     name, icon = '📋', content = '',
     column_id = 'planned', sort_order = 0, priority = 'medium',
     assignee = null, start_date = null, due_date = null,
-    tags = [], project = null, project_icon = null
+    tags = [], project = null, project_icon = null,
   } = req.body;
-  const id = genId('task');
-  const content_plain = content.replace(/<[^>]*>/g, '');
+
+  const title = (name || 'Untitled').trim();
+  const id = genId('t');
   const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
-  tasksDb.run(
-    `INSERT INTO tasks
-       (id, name, icon, content, content_plain, column_id, sort_order, priority,
-        assignee, start_date, due_date, tags, project, project_icon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, name, icon, content, content_plain, column_id, sort_order, priority,
-     assignee, start_date, due_date, tagsJson, project, project_icon],
-    function(err) {
+  // Check title uniqueness at root level for tasks
+  pagesDb.get(
+    "SELECT id FROM pages WHERE page_type = 'task' AND title = ? AND parent_id IS NULL",
+    [title],
+    (err, existing) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({
-        success: true, id,
-        task: { id, name, icon, content, content_plain, column_id, sort_order, priority,
-                assignee, start_date, due_date, tags, project, project_icon,
-                created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-                property_count: 0, version_count: 0 }
-      });
+      // For tasks, root-level title uniqueness is optional (tasks can share names via subtasks)
+      // We create the root task page without parent
+
+      pagesDb.run(
+        `INSERT INTO pages
+           (id, page_type, title, icon, column_id, sort_order, priority,
+            assignee, start_date, due_date, tags, project, project_icon, ref_id)
+         VALUES (?, 'task', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, title, icon, column_id, sort_order, priority,
+         assignee, start_date, due_date, tagsJson, project, project_icon,
+         id],  // ref_id = self id for root task pages
+        function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+          syncPageUpsert({ id, title, page_type: 'task', icon });
+          res.status(201).json({
+            success: true, id,
+            task: {
+              id, name: title, icon, column_id, sort_order, priority,
+              assignee, start_date, due_date, tags,
+              project, project_icon,
+              created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+              property_count: 0, version_count: 0,
+            }
+          });
+        }
+      );
     }
   );
 });
@@ -159,12 +184,8 @@ router.put('/tasks/:id', (req, res) => {
 
   const updates = [], params = [];
 
-  if (name             !== undefined) { updates.push('name = ?');              params.push(name); }
+  if (name             !== undefined) { updates.push('title = ?');             params.push(name); }
   if (icon             !== undefined) { updates.push('icon = ?');              params.push(icon); }
-  if (content          !== undefined) {
-    updates.push('content = ?, content_plain = ?');
-    params.push(content, content.replace(/<[^>]*>/g, ''));
-  }
   if (column_id        !== undefined) { updates.push('column_id = ?');         params.push(column_id); }
   if (sort_order       !== undefined) { updates.push('sort_order = ?');        params.push(sort_order); }
   if (priority         !== undefined) { updates.push('priority = ?');          params.push(priority); }
@@ -179,58 +200,63 @@ router.put('/tasks/:id', (req, res) => {
   if (chronicle_entry_id !== undefined) { updates.push('chronicle_entry_id = ?'); params.push(chronicle_entry_id); }
 
   if (updates.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
-
-  updates.push('updated_at = datetime(\'now\')');
+  updates.push("updated_at = datetime('now')");
   params.push(taskId);
-  tasksDb.run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, params, function(err) {
+
+  pagesDb.run(`UPDATE pages SET ${updates.join(', ')} WHERE id = ? AND page_type = 'task'`, params, function(err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+    // sync root page title to pages where ref_id = taskId
+    if (name !== undefined) {
+      pagesDb.run("UPDATE pages SET title = ?, updated_at = datetime('now') WHERE ref_id = ? AND id != ?",
+        [name, taskId, taskId], () => {});
+      syncPageUpsert({ id: taskId, title: name, page_type: 'task', icon: icon || '📋' });
+    }
     res.json({ success: true, updated_at: new Date().toISOString() });
   });
 });
 
 router.delete('/tasks/:id', (req, res) => {
   const taskId = req.params.id;
-  tasksDb.run('DELETE FROM tasks WHERE id = ?', [taskId], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
-    // 级联删除 pages.db 中关联的页面和块
-    const db = pagesDb;
-    if (db) {
-      db.all(
-        `WITH RECURSIVE tree AS (
-           SELECT id FROM pages WHERE ref_id = ?
-           UNION ALL
-           SELECT p.id FROM pages p INNER JOIN tree t ON p.parent_id = t.id
-         ) SELECT id FROM tree`,
-        [taskId],
-        (err2, rows) => {
-          if (err2 || !rows?.length) return;
-          const ids = rows.map(r => r.id);
-          const placeholders = ids.map(() => '?').join(',');
-          db.run(`DELETE FROM blocks WHERE page_id IN (${placeholders})`, ids);
-          db.run(`DELETE FROM pages  WHERE id      IN (${placeholders})`, ids);
+
+  // Collect full subtree for graph cleanup
+  pagesDb.all(
+    `WITH RECURSIVE tree AS (
+       SELECT id FROM pages WHERE ref_id = ? AND id = ?
+       UNION ALL
+       SELECT p.id FROM pages p INNER JOIN tree t ON p.parent_id = t.id
+     ) SELECT id FROM tree`,
+    [taskId, taskId],
+    (err, rows) => {
+      const subtreeIds = rows ? rows.map(r => r.id) : [taskId];
+
+      pagesDb.run("DELETE FROM pages WHERE id = ? AND page_type = 'task'", [taskId], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+
+        subtreeIds.forEach(id => syncPageDelete(id));
+        if (subtreeIds.length) {
+          const ph = subtreeIds.map(() => '?').join(',');
+          pagesDb.run(`DELETE FROM canvas_nodes WHERE entity_id IN (${ph})`, subtreeIds, () => {});
         }
-      );
+        res.json({ success: true });
+      });
     }
-    res.json({ success: true });
-  });
+  );
 });
 
-// Task 入库 Chronicle
+// Task → Chronicle
 router.post('/tasks/:id/send-to-chronicle', (req, res) => {
   const taskId = req.params.id;
   const { task_outcome, task_summary } = req.body;
-
   if (!task_outcome) return res.status(400).json({ error: 'task_outcome 必填' });
 
   const entryId = genId('ce');
-  tasksDb.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+  pagesDb.get("SELECT * FROM pages WHERE id = ? AND page_type = 'task'", [taskId], (err, task) => {
     if (err || !task) return res.status(404).json({ error: '任务不存在' });
     if (task.chronicle_entry_id) return res.status(409).json({ error: '该任务已入库 Chronicle' });
-
-    tasksDb.run(
-      'UPDATE tasks SET task_outcome = ?, task_summary = ?, chronicle_entry_id = ?, updated_at = datetime(\'now\') WHERE id = ?',
+    pagesDb.run(
+      "UPDATE pages SET task_outcome = ?, task_summary = ?, chronicle_entry_id = ?, updated_at = datetime('now') WHERE id = ?",
       [task_outcome, task_summary || null, entryId, taskId],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
@@ -240,52 +266,50 @@ router.post('/tasks/:id/send-to-chronicle', (req, res) => {
   });
 });
 
-// 属性定义
+// ── 属性定义（page_property_defs） ─────────────────────────────
+
 router.post('/tasks/:id/properties/definitions', (req, res) => {
-  const taskId = req.params.id;
+  const pageId = req.params.id;
   const { name, type, options } = req.body;
   const defId = genId('prop');
 
-  tasksDb.run(
-    'INSERT INTO task_property_defs (id, task_id, name, type, options, display_order) VALUES (?, ?, ?, ?, ?, ?)',
-    [defId, taskId, name, type, options ? JSON.stringify(options) : null, 0],
+  pagesDb.run(
+    'INSERT INTO page_property_defs (id, page_id, name, type, options, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+    [defId, pageId, name, type, options ? JSON.stringify(options) : null, 0],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
-
       const defaultValue = getDefaultValue(type);
+      const propId = genId('pval');
       let valueSql, valueParams;
-
       switch (type) {
         case 'text': case 'url':
-          valueSql = 'INSERT INTO task_properties (task_id, property_def_id, value_text) VALUES (?, ?, ?)';
-          valueParams = [taskId, defId, defaultValue]; break;
+          valueSql = 'INSERT INTO page_properties (id, page_id, property_def_id, value_text) VALUES (?, ?, ?, ?)';
+          valueParams = [propId, pageId, defId, defaultValue]; break;
         case 'number':
-          valueSql = 'INSERT INTO task_properties (task_id, property_def_id, value_number) VALUES (?, ?, ?)';
-          valueParams = [taskId, defId, defaultValue]; break;
+          valueSql = 'INSERT INTO page_properties (id, page_id, property_def_id, value_number) VALUES (?, ?, ?, ?)';
+          valueParams = [propId, pageId, defId, defaultValue]; break;
         case 'date':
-          valueSql = 'INSERT INTO task_properties (task_id, property_def_id, value_date) VALUES (?, ?, ?)';
-          valueParams = [taskId, defId, defaultValue]; break;
+          valueSql = 'INSERT INTO page_properties (id, page_id, property_def_id, value_date) VALUES (?, ?, ?, ?)';
+          valueParams = [propId, pageId, defId, defaultValue]; break;
         case 'checkbox':
-          valueSql = 'INSERT INTO task_properties (task_id, property_def_id, value_boolean) VALUES (?, ?, ?)';
-          valueParams = [taskId, defId, defaultValue ? 1 : 0]; break;
+          valueSql = 'INSERT INTO page_properties (id, page_id, property_def_id, value_boolean) VALUES (?, ?, ?, ?)';
+          valueParams = [propId, pageId, defId, 0]; break;
         case 'select': case 'multi-select':
-          valueSql = 'INSERT INTO task_properties (task_id, property_def_id, value_json) VALUES (?, ?, ?)';
-          valueParams = [taskId, defId, JSON.stringify(defaultValue)]; break;
+          valueSql = 'INSERT INTO page_properties (id, page_id, property_def_id, value_json) VALUES (?, ?, ?, ?)';
+          valueParams = [propId, pageId, defId, JSON.stringify(defaultValue)]; break;
         default:
           return res.json({ success: true, id: defId });
       }
-
-      tasksDb.run(valueSql, valueParams, () => res.json({ success: true, id: defId }));
+      pagesDb.run(valueSql, valueParams, () => res.json({ success: true, id: defId }));
     }
   );
 });
 
-// 属性值更新
 router.put('/tasks/:id/properties/:propertyName', (req, res) => {
-  const { id: taskId, propertyName } = req.params;
+  const { id: pageId, propertyName } = req.params;
   const { value } = req.body;
 
-  tasksDb.get('SELECT id, type FROM task_property_defs WHERE task_id = ? AND name = ?', [taskId, propertyName], (err, def) => {
+  pagesDb.get('SELECT id, type FROM page_property_defs WHERE page_id = ? AND name = ?', [pageId, propertyName], (err, def) => {
     if (err || !def) return res.status(404).json({ error: '属性定义不存在' });
 
     const colMap = { text: 'value_text', url: 'value_text', number: 'value_number',
@@ -297,242 +321,54 @@ router.put('/tasks/:id/properties/:propertyName', (req, res) => {
                 : (def.type === 'select' || def.type === 'multi-select') ? JSON.stringify(value)
                 : value;
 
-    tasksDb.run(`UPDATE task_properties SET ${col} = ? WHERE task_id = ? AND property_def_id = ?`,
-      [dbVal, taskId, def.id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        if (this.changes === 0) {
-          tasksDb.run(`INSERT INTO task_properties (task_id, property_def_id, ${col}) VALUES (?, ?, ?)`,
-            [taskId, def.id, dbVal], (err) => {
-              if (err) return res.status(500).json({ error: err.message });
-              res.json({ success: true });
-            });
-        } else {
-          res.json({ success: true });
-        }
-      });
-  });
-});
-
-// 版本历史
-router.post('/tasks/:id/versions', (req, res) => {
-  const { content, previousHash } = req.body;
-  const contentHash = crypto.createHash('sha256').update(content).digest('hex');
-
-  tasksDb.run(
-    'INSERT INTO task_versions (task_id, content_hash, content, previous_version_hash) VALUES (?, ?, ?, ?)',
-    [req.params.id, contentHash, content, previousHash || null],
-    function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, hash: contentHash, id: this.lastID });
-    }
-  );
-});
-
-router.get('/tasks/:id/versions', (req, res) => {
-  tasksDb.all('SELECT * FROM task_versions WHERE task_id = ? ORDER BY created_at DESC', [req.params.id], (err, versions) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ versions });
-  });
-});
-
-// ── /api/kanban ────────────────────────────────────────────
-
-router.get('/kanban', (req, res) => {
-  tasksDb.all(
-    'SELECT id, label, header_bg as headerBg, card_bg as cardBg, accent, position FROM kanban_columns ORDER BY position',
-    [], (err, columns) => {
-      if (err) return res.status(500).json({ error: err.message });
-      tasksDb.all('SELECT * FROM tasks WHERE chronicle_entry_id IS NULL ORDER BY sort_order DESC', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ columns, tasks: rows.map(rowToKanbanTask) });
-      });
-    }
-  );
-});
-
-router.get('/kanban/tasks/:id', (req, res) => {
-  tasksDb.get('SELECT * FROM tasks WHERE id = ?', [req.params.id], (err, row) => {
-    if (err || !row) return res.status(404).json({ error: '任务不存在' });
-    res.json(rowToKanbanTask(row));
-  });
-});
-
-router.put('/kanban/columns', (req, res) => {
-  const columns = req.body;
-  if (!Array.isArray(columns)) return res.status(400).json({ error: 'columns 必须是数组' });
-
-  tasksDb.run('BEGIN TRANSACTION', (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    tasksDb.run('DELETE FROM kanban_columns', [], (err) => {
-      if (err) { tasksDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
-      if (columns.length === 0) { return tasksDb.run('COMMIT', () => res.json([])); }
-
-      let done = 0, failed = false;
-      columns.forEach((col, i) => {
-        tasksDb.run(
-          'INSERT INTO kanban_columns (id, label, header_bg, card_bg, accent, position) VALUES (?, ?, ?, ?, ?, ?)',
-          [col.id, col.label, col.headerBg, col.cardBg, col.accent, i],
-          (err) => {
-            if (failed) return;
-            if (err) { failed = true; tasksDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
-            if (++done === columns.length) tasksDb.run('COMMIT', () => res.json(columns));
-          }
-        );
-      });
-    });
-  });
-});
-
-router.put('/kanban/tasks', (req, res) => {
-  const tasks = req.body;
-  if (!Array.isArray(tasks)) return res.status(400).json({ error: 'tasks 必须是数组' });
-  if (tasks.length === 0) return res.json([]);
-
-  tasksDb.run('BEGIN TRANSACTION', (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-
-    let done = 0, failed = false;
-    tasks.forEach((task) => {
-      const id = task.id || genId('t');
-      tasksDb.run(
-        `INSERT INTO tasks (id, name, icon, column_id, sort_order, priority, assignee, start_date, due_date, project, project_icon, tags)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET
-           name = excluded.name, icon = excluded.icon,
-           column_id = excluded.column_id, sort_order = excluded.sort_order,
-           priority = excluded.priority, assignee = excluded.assignee,
-           start_date = excluded.start_date, due_date = excluded.due_date,
-           project = excluded.project, project_icon = excluded.project_icon,
-           tags = excluded.tags, updated_at = datetime('now')`,
-        [id, task.name || 'Untitled', task.icon || '📋',
-         task.columnId || task.status || 'planned', task.sortOrder ?? 0, task.priority || 'medium',
-         task.assignee || null, task.startDate || null, task.dueDate || null,
-         task.project || null, task.projectIcon || null,
-         task.tags ? JSON.stringify(task.tags) : '[]'],
-        (err) => {
-          if (failed) return;
-          if (err) { failed = true; tasksDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
-          if (++done === tasks.length) tasksDb.run('COMMIT', () => res.json(tasks));
-        }
-      );
-    });
-  });
-});
-
-router.post('/kanban/tasks', (req, res) => {
-  const task = req.body;
-  const id = task.id || genId('t');
-
-  tasksDb.run(
-    `INSERT INTO tasks (id, name, icon, column_id, sort_order, priority, assignee, start_date, due_date, project, project_icon, tags)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, task.name || 'Untitled', task.icon || '📋',
-     task.columnId || task.status || 'planned', task.sortOrder ?? 0, task.priority || 'medium',
-     task.assignee || null, task.startDate || null, task.dueDate || null,
-     task.project || null, task.projectIcon || null,
-     task.tags ? JSON.stringify(task.tags) : '[]'],
-    function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      tasksDb.get('SELECT * FROM tasks WHERE id = ?', [id], (err, row) => {
-        if (err || !row) return res.status(500).json({ error: '任务创建后查询失败' });
-        res.status(201).json(rowToKanbanTask(row));
-      });
-    }
-  );
-});
-
-router.patch('/kanban/tasks/:id', (req, res) => {
-  const taskId = req.params.id;
-  const u = req.body;
-  const fields = [], values = [];
-
-  if (u.name        !== undefined) { fields.push('name = ?');         values.push(u.name); }
-  if (u.icon        !== undefined) { fields.push('icon = ?');         values.push(u.icon); }
-  if (u.assignee    !== undefined) { fields.push('assignee = ?');     values.push(u.assignee); }
-  if (u.startDate   !== undefined) { fields.push('start_date = ?');   values.push(u.startDate); }
-  if (u.dueDate     !== undefined) { fields.push('due_date = ?');     values.push(u.dueDate); }
-  if (u.project     !== undefined) { fields.push('project = ?');      values.push(u.project); }
-  if (u.projectIcon !== undefined) { fields.push('project_icon = ?'); values.push(u.projectIcon); }
-  if (u.priority    !== undefined) { fields.push('priority = ?');     values.push(u.priority); }
-  if (u.sortOrder   !== undefined) { fields.push('sort_order = ?');   values.push(u.sortOrder); }
-  if (u.columnId    !== undefined) { fields.push('column_id = ?');    values.push(u.columnId); }
-  if (u.status      !== undefined) { fields.push('column_id = ?');    values.push(u.status); }
-  if (u.tags        !== undefined) { fields.push('tags = ?');         values.push(JSON.stringify(u.tags)); }
-
-  if (fields.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
-
-  values.push(taskId);
-  tasksDb.run(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, values, function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
-    res.json({ success: true, id: taskId });
-  });
-});
-
-router.delete('/kanban/tasks/:id', (req, res) => {
-  const taskId = req.params.id;
-  tasksDb.run('DELETE FROM tasks WHERE id = ?', [taskId], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
-    // 级联删除 pages.db 中关联的页面和块
-    const db = pagesDb;
-    if (db) {
-      db.all(
-        `WITH RECURSIVE tree AS (
-           SELECT id FROM pages WHERE ref_id = ?
-           UNION ALL
-           SELECT p.id FROM pages p INNER JOIN tree t ON p.parent_id = t.id
-         ) SELECT id FROM tree`,
-        [taskId],
-        (err2, rows) => {
-          if (err2 || !rows?.length) return;
-          const ids = rows.map(r => r.id);
-          const placeholders = ids.map(() => '?').join(',');
-          db.run(`DELETE FROM blocks WHERE page_id IN (${placeholders})`, ids);
-          db.run(`DELETE FROM pages  WHERE id      IN (${placeholders})`, ids);
-        }
-      );
-    }
-    res.json({ success: true });
-  });
-});
-
-router.post('/kanban/columns', (req, res) => {
-  const col = req.body;
-  const id = col.id || genId('col');
-
-  tasksDb.get('SELECT MAX(position) as maxPos FROM kanban_columns', [], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    const position = (row?.maxPos ?? 0) + 1;
-
-    tasksDb.run(
-      'INSERT INTO kanban_columns (id, label, header_bg, card_bg, accent, position) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, col.label, col.headerBg, col.cardBg, col.accent, position],
+    const propId = genId('pval');
+    pagesDb.run(
+      `INSERT INTO page_properties (id, page_id, property_def_id, ${col}) VALUES (?, ?, ?, ?)
+       ON CONFLICT(page_id, property_def_id) DO UPDATE SET ${col} = excluded.${col}`,
+      [propId, pageId, def.id, dbVal],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id, label: col.label, headerBg: col.headerBg, cardBg: col.cardBg, accent: col.accent, position });
+        res.json({ success: true });
       }
     );
   });
 });
 
-router.delete('/kanban/columns/:id', (req, res) => {
-  tasksDb.run('DELETE FROM kanban_columns WHERE id = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: '列不存在' });
-    res.json({ success: true });
-  });
+// ── 版本历史（task_versions 改为 process_versions）─────────────
+
+router.post('/tasks/:id/versions', (req, res) => {
+  const { content, previousHash } = req.body;
+  const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+  const vId = genId('tv');
+  pagesDb.run(
+    `INSERT INTO process_versions
+       (id, entity_id, entity_type, version_num, content_snapshot, explanation)
+     SELECT ?, ?, 'task_version',
+            COALESCE((SELECT MAX(version_num) FROM process_versions WHERE entity_id = ?), 0) + 1,
+            ?, ?`,
+    [vId, req.params.id, req.params.id, content, previousHash || ''],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, hash: contentHash, id: vId });
+    }
+  );
 });
 
-// ── Task Blocks (body editor) ───────────────────────────────
+router.get('/tasks/:id/versions', (req, res) => {
+  pagesDb.all(
+    "SELECT * FROM process_versions WHERE entity_id = ? AND entity_type = 'task_version' ORDER BY created_at DESC",
+    [req.params.id],
+    (err, versions) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ versions });
+    }
+  );
+});
 
-function tryParse(s) {
-  try { return JSON.parse(s); } catch { return s || {}; }
-}
+// ── Task Blocks ──────────────────────────────────────────────────
 
-// GET /api/tasks/:id/blocks — load all blocks for a task
 router.get('/tasks/:id/blocks', (req, res) => {
-  tasksDb.all('SELECT * FROM blocks WHERE page_id = ? ORDER BY position', [req.params.id], (err, rows) => {
+  pagesDb.all('SELECT * FROM blocks WHERE page_id = ? ORDER BY position', [req.params.id], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json((rows || []).map(r => ({
       id: r.id,
@@ -546,42 +382,34 @@ router.get('/tasks/:id/blocks', (req, res) => {
   });
 });
 
-// PUT /api/tasks/:id/blocks — full replace (mirrors PUT /api/pages/:id/blocks)
 router.put('/tasks/:id/blocks', (req, res) => {
   const blocks = req.body;
   if (!Array.isArray(blocks)) return res.status(400).json({ error: 'body must be array' });
   const pageId = req.params.id;
 
-  tasksDb.serialize(() => {
-    tasksDb.run('BEGIN TRANSACTION');
-    tasksDb.run('DELETE FROM blocks WHERE page_id = ?', [pageId], (err) => {
-      if (err) { tasksDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
-
+  pagesDb.serialize(() => {
+    pagesDb.run('BEGIN TRANSACTION');
+    pagesDb.run('DELETE FROM blocks WHERE page_id = ?', [pageId], (err) => {
+      if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
       if (blocks.length === 0) {
-        return tasksDb.run('COMMIT', (e) => {
+        return pagesDb.run('COMMIT', (e) => {
           if (e) return res.status(500).json({ error: e.message });
           res.json([]);
         });
       }
-
-      let done = 0;
-      let failed = false;
+      let done = 0, failed = false;
       blocks.forEach((b, i) => {
-        const content = typeof b.content === 'string' ? b.content : JSON.stringify(b.content || {});
+        const content  = typeof b.content  === 'string' ? b.content  : JSON.stringify(b.content  || {});
         const metadata = typeof b.metadata === 'string' ? b.metadata : JSON.stringify(b.metadata || {});
         const position = b.position ?? (i + 1);
-        tasksDb.run(
+        pagesDb.run(
           'INSERT INTO blocks (id, page_id, parent_id, type, content, metadata, collapsed, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           [b.id, pageId, b.parentId || null, b.type, content, metadata, b.collapsed ? 1 : 0, position],
           (err2) => {
             if (failed) return;
-            if (err2) {
-              failed = true;
-              tasksDb.run('ROLLBACK');
-              return res.status(500).json({ error: err2.message });
-            }
+            if (err2) { failed = true; pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err2.message }); }
             if (++done === blocks.length) {
-              tasksDb.run('COMMIT', (e) => {
+              pagesDb.run('COMMIT', (e) => {
                 if (e) return res.status(500).json({ error: e.message });
                 res.json(blocks);
               });
@@ -590,6 +418,190 @@ router.put('/tasks/:id/blocks', (req, res) => {
         );
       });
     });
+  });
+});
+
+// ── /api/kanban ──────────────────────────────────────────────────
+
+router.get('/kanban', (req, res) => {
+  pagesDb.all(
+    'SELECT id, label, header_bg as headerBg, card_bg as cardBg, accent, position FROM kanban_columns ORDER BY position',
+    [], (err, columns) => {
+      if (err) return res.status(500).json({ error: err.message });
+      pagesDb.all(
+        "SELECT * FROM pages WHERE page_type = 'task' AND parent_id IS NULL AND chronicle_entry_id IS NULL ORDER BY sort_order DESC",
+        [], (err, rows) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ columns, tasks: rows.map(rowToKanbanTask) });
+        }
+      );
+    }
+  );
+});
+
+router.get('/kanban/tasks/:id', (req, res) => {
+  pagesDb.get("SELECT * FROM pages WHERE id = ? AND page_type = 'task'", [req.params.id], (err, row) => {
+    if (err || !row) return res.status(404).json({ error: '任务不存在' });
+    res.json(rowToKanbanTask(row));
+  });
+});
+
+router.put('/kanban/columns', (req, res) => {
+  const columns = req.body;
+  if (!Array.isArray(columns)) return res.status(400).json({ error: 'columns 必须是数组' });
+  pagesDb.run('BEGIN TRANSACTION', (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    pagesDb.run('DELETE FROM kanban_columns', [], (err) => {
+      if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+      if (columns.length === 0) { return pagesDb.run('COMMIT', () => res.json([])); }
+      let done = 0, failed = false;
+      columns.forEach((col, i) => {
+        pagesDb.run(
+          'INSERT INTO kanban_columns (id, label, header_bg, card_bg, accent, position) VALUES (?, ?, ?, ?, ?, ?)',
+          [col.id, col.label, col.headerBg, col.cardBg, col.accent, i],
+          (err) => {
+            if (failed) return;
+            if (err) { failed = true; pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+            if (++done === columns.length) pagesDb.run('COMMIT', () => res.json(columns));
+          }
+        );
+      });
+    });
+  });
+});
+
+router.put('/kanban/tasks', (req, res) => {
+  const tasks = req.body;
+  if (!Array.isArray(tasks)) return res.status(400).json({ error: 'tasks 必须是数组' });
+  if (tasks.length === 0) return res.json([]);
+
+  pagesDb.run('BEGIN TRANSACTION', (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    let done = 0, failed = false;
+    tasks.forEach((task) => {
+      const id = task.id || genId('t');
+      pagesDb.run(
+        `INSERT INTO pages (id, page_type, title, icon, column_id, sort_order, priority,
+           assignee, start_date, due_date, project, project_icon, tags, ref_id)
+         VALUES (?, 'task', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           title = excluded.title, icon = excluded.icon,
+           column_id = excluded.column_id, sort_order = excluded.sort_order,
+           priority = excluded.priority, assignee = excluded.assignee,
+           start_date = excluded.start_date, due_date = excluded.due_date,
+           project = excluded.project, project_icon = excluded.project_icon,
+           tags = excluded.tags, updated_at = CURRENT_TIMESTAMP`,
+        [id, task.name || 'Untitled', task.icon || '📋',
+         task.columnId || task.status || 'planned', task.sortOrder ?? 0, task.priority || 'medium',
+         task.assignee || null, task.startDate || null, task.dueDate || null,
+         task.project || null, task.projectIcon || null,
+         task.tags ? JSON.stringify(task.tags) : '[]',
+         id],  // ref_id = self
+        (err) => {
+          if (failed) return;
+          if (err) { failed = true; pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+          if (++done === tasks.length) pagesDb.run('COMMIT', () => res.json(tasks));
+        }
+      );
+    });
+  });
+});
+
+router.post('/kanban/tasks', (req, res) => {
+  const task = req.body;
+  const id = task.id || genId('t');
+  pagesDb.run(
+    `INSERT INTO pages (id, page_type, title, icon, column_id, sort_order, priority,
+       assignee, start_date, due_date, project, project_icon, tags, ref_id)
+     VALUES (?, 'task', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, task.name || 'Untitled', task.icon || '📋',
+     task.columnId || task.status || 'planned', task.sortOrder ?? 0, task.priority || 'medium',
+     task.assignee || null, task.startDate || null, task.dueDate || null,
+     task.project || null, task.projectIcon || null,
+     task.tags ? JSON.stringify(task.tags) : '[]',
+     id],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      pagesDb.get("SELECT * FROM pages WHERE id = ?", [id], (err, row) => {
+        if (err || !row) return res.status(500).json({ error: '任务创建后查询失败' });
+        syncPageUpsert({ id, title: row.title, page_type: 'task', icon: row.icon });
+        res.status(201).json(rowToKanbanTask(row));
+      });
+    }
+  );
+});
+
+router.patch('/kanban/tasks/:id', (req, res) => {
+  const taskId = req.params.id;
+  const u = req.body;
+  const fields = [], values = [];
+
+  if (u.name        !== undefined) { fields.push('title = ?');        values.push(u.name); }
+  if (u.icon        !== undefined) { fields.push('icon = ?');         values.push(u.icon); }
+  if (u.assignee    !== undefined) { fields.push('assignee = ?');     values.push(u.assignee); }
+  if (u.startDate   !== undefined) { fields.push('start_date = ?');   values.push(u.startDate); }
+  if (u.dueDate     !== undefined) { fields.push('due_date = ?');     values.push(u.dueDate); }
+  if (u.project     !== undefined) { fields.push('project = ?');      values.push(u.project); }
+  if (u.projectIcon !== undefined) { fields.push('project_icon = ?'); values.push(u.projectIcon); }
+  if (u.priority    !== undefined) { fields.push('priority = ?');     values.push(u.priority); }
+  if (u.sortOrder   !== undefined) { fields.push('sort_order = ?');   values.push(u.sortOrder); }
+  if (u.columnId    !== undefined) { fields.push('column_id = ?');    values.push(u.columnId); }
+  if (u.status      !== undefined) { fields.push('column_id = ?');    values.push(u.status); }
+  if (u.tags        !== undefined) { fields.push('tags = ?');         values.push(JSON.stringify(u.tags)); }
+
+  if (fields.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
+  values.push(taskId);
+
+  pagesDb.run(`UPDATE pages SET ${fields.join(', ')} WHERE id = ? AND page_type = 'task'`, values, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+    res.json({ success: true, id: taskId });
+  });
+});
+
+router.delete('/kanban/tasks/:id', (req, res) => {
+  const taskId = req.params.id;
+  pagesDb.all(
+    `WITH RECURSIVE tree AS (
+       SELECT id FROM pages WHERE id = ?
+       UNION ALL
+       SELECT p.id FROM pages p INNER JOIN tree t ON p.parent_id = t.id
+     ) SELECT id FROM tree`,
+    [taskId],
+    (err, rows) => {
+      const subtreeIds = rows ? rows.map(r => r.id) : [taskId];
+      pagesDb.run("DELETE FROM pages WHERE id = ? AND page_type = 'task'", [taskId], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+        subtreeIds.forEach(id => syncPageDelete(id));
+        res.json({ success: true });
+      });
+    }
+  );
+});
+
+router.post('/kanban/columns', (req, res) => {
+  const col = req.body;
+  const id = col.id || genId('col');
+  pagesDb.get('SELECT MAX(position) as maxPos FROM kanban_columns', [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const position = (row?.maxPos ?? 0) + 1;
+    pagesDb.run(
+      'INSERT INTO kanban_columns (id, label, header_bg, card_bg, accent, position) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, col.label, col.headerBg, col.cardBg, col.accent, position],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id, label: col.label, headerBg: col.headerBg, cardBg: col.cardBg, accent: col.accent, position });
+      }
+    );
+  });
+});
+
+router.delete('/kanban/columns/:id', (req, res) => {
+  pagesDb.run('DELETE FROM kanban_columns WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '列不存在' });
+    res.json({ success: true });
   });
 });
 

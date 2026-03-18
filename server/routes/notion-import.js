@@ -27,19 +27,15 @@ const { extractNotionPageId,
 const NOTION_VERSION = '2022-06-28';
 
 let pagesDb;
-let tasksDb;
 
 function init(dbInstances) {
   pagesDb = dbInstances.pagesDb;
-  tasksDb = dbInstances.tasksDb;
   return router;
 }
 
 // ── Notion API ────────────────────────────────────────────────────────────────
 
-function notionGet(path) {
-  const token = process.env.NOTION_TOKEN;
-  if (!token) throw new Error('NOTION_TOKEN 未设置');
+function notionGet(path, token) {
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'api.notion.com',
@@ -64,19 +60,19 @@ function notionGet(path) {
   });
 }
 
-async function fetchPageMeta(pageId) {
-  const page = await notionGet(`/pages/${pageId}`);
+async function fetchPageMeta(pageId, token) {
+  const page = await notionGet(`/pages/${pageId}`, token);
   if (page.object === 'error') throw new Error(`Notion pages: ${page.message}`);
   return page;
 }
 
 /** 获取块列表，自动处理 has_more 翻页 */
-async function fetchAllBlocks(blockId) {
+async function fetchAllBlocks(blockId, token) {
   const blocks = [];
   let cursor;
   do {
     const qs = cursor ? `?page_size=100&start_cursor=${cursor}` : '?page_size=100';
-    const res = await notionGet(`/blocks/${blockId}/children${qs}`);
+    const res = await notionGet(`/blocks/${blockId}/children${qs}`, token);
     if (res.object === 'error') throw new Error(`Notion blocks: ${res.message}`);
     blocks.push(...res.results);
     cursor = res.has_more ? res.next_cursor : null;
@@ -85,12 +81,12 @@ async function fetchAllBlocks(blockId) {
 }
 
 /** 递归拉取子块（table 行、toggle、column — 不含 child_page） */
-async function fetchBlocksWithChildren(blockId) {
-  const blocks = await fetchAllBlocks(blockId);
+async function fetchBlocksWithChildren(blockId, token) {
+  const blocks = await fetchAllBlocks(blockId, token);
   for (const block of blocks) {
     if (!block.has_children) continue;
     if (block.type === 'child_page' || block.type === 'child_database') continue;
-    block.children = await fetchBlocksWithChildren(block.id);
+    block.children = await fetchBlocksWithChildren(block.id, token);
   }
   return blocks;
 }
@@ -287,24 +283,18 @@ function dbRun(db, sql, params = []) {
   );
 }
 
-async function createTask(title, icon) {
-  const taskId  = genId('task');
-  const maxRow  = await dbGet(tasksDb, 'SELECT MAX(sort_order) as max FROM tasks');
-  const sortOrd = (maxRow?.max || 0) + 100;
-  await dbRun(tasksDb,
-    `INSERT INTO tasks (id, name, icon, column_id, sort_order, priority, created_at, updated_at)
-     VALUES (?, ?, ?, 'in-progress', ?, 'medium', datetime('now'), datetime('now'))`,
-    [taskId, title, icon, sortOrd]);
-  return taskId;
-}
-
 async function saveEgoBlocks(pageId, egoBlocks) {
   await dbRun(pagesDb, 'DELETE FROM blocks WHERE page_id = ?', [pageId]);
   for (const b of egoBlocks) {
-    await dbRun(pagesDb,
-      `INSERT INTO blocks (id, page_id, parent_id, type, content, position, metadata, collapsed)
-       VALUES (?, ?, ?, ?, ?, ?, '{}', 0)`,
-      [b.id, pageId, b.parentId || null, b.type, JSON.stringify(b.content), b.position]);
+    try {
+      await dbRun(pagesDb,
+        `INSERT INTO blocks (id, page_id, parent_id, type, content, position, metadata, collapsed)
+         VALUES (?, ?, ?, ?, ?, ?, '{}', 0)`,
+        [b.id, pageId, b.parentId || null, b.type, JSON.stringify(b.content), b.position]);
+    } catch (err) {
+      console.error('[notion-import] block INSERT FAILED', { blockId: b.id, pageId, parentId: b.parentId, type: b.type }, err.message);
+      throw err;
+    }
   }
 }
 
@@ -315,32 +305,71 @@ async function saveEgoBlocks(pageId, egoBlocks) {
  */
 async function importPage(notionPageId, { parentPageId, position }, ctx) {
   // 1. 拉取元数据
-  const pageMeta = await fetchPageMeta(notionPageId);
-  const title    = extractTitle(pageMeta);
+  const pageMeta = await fetchPageMeta(notionPageId, ctx.token);
+  let title      = extractTitle(pageMeta);
   const icon     = extractIcon(pageMeta);
   ctx.log(`  导入: ${title}`);
 
   // 2. 拉取所有块（自动翻页 + 子块）
-  const notionBlocks = await fetchBlocksWithChildren(notionPageId);
+  const notionBlocks = await fetchBlocksWithChildren(notionPageId, ctx.token);
 
-  // 3. 根页面无 taskId → 建 task
+  // 4. 建页面记录 ID（需在步骤3前生成）
+  const pageId = genId('page');
+
+  // 3. 根页面且无 taskId → 直接在 pagesDb 建 task 页
   if (!parentPageId && !ctx.taskId) {
-    ctx.taskId = await createTask(title, icon);
-    ctx.log(`  建立 Task: ${title} (${ctx.taskId})`);
+    ctx.taskId = pageId; // task ID = 根页面 ID
+    ctx.log(`  建立 Task Page: ${title} (${pageId})`);
   }
 
-  // 4. 建页面记录（blocks 稍后填）
-  const pageId   = genId('page');
-  const pageType = parentPageId ? 'page' : (ctx.rootPageType || 'task');
-  await savePageToDatabase({ pagesDb }, {
-    id:       pageId,
-    parentId: parentPageId || null,
-    pageType,
-    title,
-    icon,
-    position: position || 1.0,
-    refId:    parentPageId ? null : ctx.taskId,
-  });
+  // Title dedup
+  const existingPage = await new Promise((resolve) =>
+    pagesDb.get(
+      parentPageId
+        ? 'SELECT id FROM pages WHERE parent_id = ? AND title = ?'
+        : 'SELECT id FROM pages WHERE parent_id IS NULL AND title = ?',
+      parentPageId ? [parentPageId, title] : [title],
+      (err, row) => resolve(row)
+    )
+  );
+  if (existingPage) {
+    // Deduplicate: append number suffix
+    let suffix = 2;
+    let newTitle = `${title} (${suffix})`;
+    while (true) {
+      const check = await new Promise((resolve) =>
+        pagesDb.get(
+          parentPageId
+            ? 'SELECT id FROM pages WHERE parent_id = ? AND title = ?'
+            : 'SELECT id FROM pages WHERE parent_id IS NULL AND title = ?',
+          parentPageId ? [parentPageId, newTitle] : [newTitle],
+          (err, row) => resolve(row)
+        )
+      );
+      if (!check) break;
+      suffix++;
+      newTitle = `${title} (${suffix})`;
+    }
+    title = newTitle;
+  }
+
+  // 保存页面记录（blocks 稍后填）
+  // 子页面始终为 'page'，只有根页面才应用 inheritedPageType / rootPageType
+  const pageType = parentPageId ? 'page' : (ctx.inheritedPageType || ctx.rootPageType || 'task');
+  try {
+    await savePageToDatabase({ pagesDb }, {
+      id:       pageId,
+      parentId: parentPageId || null,
+      pageType,
+      title,
+      icon,
+      position: position || 1.0,
+      refId:    parentPageId ? null : ctx.taskId,
+    });
+  } catch (err) {
+    console.error('[notion-import] savePageToDatabase FAILED', { pageId, parentPageId, title, refId: parentPageId ? null : ctx.taskId }, err.message);
+    throw err;
+  }
 
   // 5. 递归处理 child_page 块，建立 notionBlockId → {pageId, title, icon} 映射
   const childPageBlocks = notionBlocks.filter(b => b.type === 'child_page');
@@ -361,7 +390,12 @@ async function importPage(notionPageId, { parentPageId, position }, ctx) {
   const egoBlocks = notionBlocksToEgo(notionBlocks, childPageMap);
 
   // 7. 保存块
-  await saveEgoBlocks(pageId, egoBlocks);
+  try {
+    await saveEgoBlocks(pageId, egoBlocks);
+  } catch (err) {
+    console.error('[notion-import] saveEgoBlocks FAILED', { pageId, title, blocksCount: egoBlocks.length }, err.message);
+    throw err;
+  }
 
   ctx.imported.push({ title, pageId });
   return { title, icon, pageId, taskId: ctx.taskId };
@@ -378,7 +412,10 @@ async function importPage(notionPageId, { parentPageId, position }, ctx) {
  *   pageType       {string}  根页面类型，默认 'task'；传 'theory'/'page' 挂到对应树
  */
 router.post('/notion/import', async (req, res) => {
-  const { notionPageUrl, taskId: initTaskId, pageType = 'task', parentPageId: initParentPageId } = req.body;
+  const {
+    notionPageUrl, taskId: initTaskId, pageType = 'task',
+    parentPageId: initParentPageId, notionToken,
+  } = req.body;
 
   if (!notionPageUrl) {
     return res.status(400).json({ error: '请提供 notionPageUrl' });
@@ -389,20 +426,36 @@ router.post('/notion/import', async (req, res) => {
     return res.status(400).json({ error: '无法从 URL 提取 Notion 页面 ID' });
   }
 
-  if (!process.env.NOTION_TOKEN) {
-    return res.status(500).json({ error: 'NOTION_TOKEN 未设置' });
+  // 优先使用请求体中的 token，fallback 到环境变量
+  const token = (notionToken || '').trim() || process.env.NOTION_TOKEN;
+  if (!token) {
+    return res.status(400).json({ error: '请在导入对话框中填入 Notion Integration Token（secret_xxx）' });
+  }
+
+  // Validate parentPageId exists if provided, and inherit its page_type
+  let inheritedPageType = null;
+  if (initParentPageId) {
+    const parentPage = await new Promise((resolve) =>
+      pagesDb.get('SELECT id, page_type FROM pages WHERE id = ?', [initParentPageId], (err, row) => resolve(row))
+    );
+    if (!parentPage) {
+      return res.status(400).json({ error: `父页面不存在: ${initParentPageId}` });
+    }
+    inheritedPageType = parentPage.page_type; // 继承父页面类型（theory / page / task）
   }
 
   const ctx = {
-    taskId:       initTaskId || null,
-    rootPageType: pageType,
+    token,
+    taskId:           initTaskId || null,
+    rootPageType:     pageType,
+    inheritedPageType,  // when set, ALL imported pages use this type
     imported:     [],
     errors:       [],
     log: (msg) => console.log('[notion-import]', msg),
   };
 
   try {
-    ctx.log(`开始导入: ${notionPageUrl}`);
+    ctx.log(`开始导入: ${notionPageUrl} parentPageId=${initParentPageId || 'none'}`);
     const root = await importPage(notionPageId, { parentPageId: initParentPageId || null, position: 1 }, ctx);
 
     res.json({

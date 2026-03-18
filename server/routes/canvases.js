@@ -48,16 +48,16 @@ router.get('/canvases', (req, res) => {
 router.post('/canvases', (req, res) => {
   const { title = '新画布', description = '' } = req.body;
   const id = genId('cvs');
-  const creator = req.user ? `human:${req.user.username}` : 'unknown';
+  const created_by = req.user ? `human:${req.user.username}` : 'unknown';
   const ts = now();
 
   pagesDb.run(
-    `INSERT INTO canvases (id, title, description, creator, created_at, updated_at)
+    `INSERT INTO canvases (id, title, description, created_by, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, title, description, creator, ts, ts],
+    [id, title, description, created_by, ts, ts],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.status(201).json({ id, title, description, creator, node_count: 0, created_at: ts, updated_at: ts });
+      res.status(201).json({ id, title, description, created_by, node_count: 0, created_at: ts, updated_at: ts });
     }
   );
 });
@@ -160,13 +160,15 @@ router.post('/canvases/:id/nodes', (req, res) => {
 
 // ── PATCH /api/canvases/:id/nodes/:nodeId ────────────────────────
 router.patch('/canvases/:id/nodes/:nodeId', (req, res) => {
-  const { x, y, expanded_level } = req.body;
+  const { x, y, expanded_level, collapsed, tree_expanded } = req.body;
   const updates = [];
   const params = [];
 
-  if (x !== undefined)              { updates.push('x = ?');              params.push(x); }
-  if (y !== undefined)              { updates.push('y = ?');              params.push(y); }
-  if (expanded_level !== undefined) { updates.push('expanded_level = ?'); params.push(expanded_level); }
+  if (x !== undefined)             { updates.push('x = ?');             params.push(x); }
+  if (y !== undefined)             { updates.push('y = ?');             params.push(y); }
+  if (expanded_level !== undefined){ updates.push('expanded_level = ?');params.push(expanded_level); }
+  if (collapsed !== undefined)     { updates.push('collapsed = ?');     params.push(collapsed); }
+  if (tree_expanded !== undefined) { updates.push('tree_expanded = ?'); params.push(tree_expanded); }
 
   if (updates.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
   params.push(req.params.nodeId);

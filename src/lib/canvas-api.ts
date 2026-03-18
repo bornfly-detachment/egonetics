@@ -23,6 +23,8 @@ export interface CanvasNode {
   x: number
   y: number
   expanded_level: number
+  collapsed: number      // 0 | 1 — 卡片折叠到标题栏
+  tree_expanded: number  // 0 | 1 — 子节点已在画布上展开
   created_at: string
 }
 
@@ -69,7 +71,7 @@ export async function addCanvasNode(
 export async function updateCanvasNode(
   canvasId: string,
   nodeId: string,
-  patch: { x?: number; y?: number; expanded_level?: number }
+  patch: { x?: number; y?: number; expanded_level?: number; collapsed?: number; tree_expanded?: number }
 ): Promise<CanvasNode> {
   return authFetch<CanvasNode>(`/canvases/${canvasId}/nodes/${nodeId}`, {
     method: 'PATCH',

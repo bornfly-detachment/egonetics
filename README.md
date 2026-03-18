@@ -98,6 +98,21 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **New files**: `server/routes/canvases.js`, `server/scripts/migrate-blocks-v4.js`, `src/lib/canvas-api.ts`, `src/components/CanvasView.tsx`, `src/components/RelationDetailView.tsx`
   - **Migration**: `cd server && npm run migrate-v4`
 
+- **Graph System v2 — Relation Types + Bottom Sheet + Tree Expand** *(2026-03-18)*
+  - **Relation type system**: 9 preset types (contains / causal / derives / relates / assumes / chain / question / answer / based_on), each with its own color. Types stored as JSON in `settings` table (`key='relation_types'`), managed at runtime via full CRUD UI — no schema migration needed to add types
+  - **Auto color assignment**: new types auto-pick the next unused color from a 15-color palette
+  - **Edge coloring**: SVG bezier edges are colored by `relation_type`, updating live when type changes
+  - **XMind-style tree expand**: `[+]` button on any card fetches direct children via `/pages/:id/subtree`, places them to the right in a vertical tree layout (`parent.x + CARD_W + 80`, children centered), auto-creates `contains` relations for each parent→child pair, marks parent `tree_expanded=1`; `[−]` removes all descendant canvas nodes
+  - **Card fold**: `[⊟]` / `[⊞]` collapses/expands card to title bar only — state persisted in `canvas_nodes.collapsed`
+  - **Fullscreen mode**: toolbar `[⤢]` button sets `position: fixed; inset: 0; z-index: 50`, escaping the app shell entirely. `Esc` exits
+  - **Relation Bottom Sheet** (replaces right-side panel): clicking any edge opens a half-screen bottom sheet with draggable resize handle (drag top bar to resize from 200px to viewport−80px). Contains: type selector + title input (800ms auto-save), source→target chain row, publish form (POST snapshot with explanation), collapsible version history, full **BlockEditor** for rich content (1200ms debounced PUT `/relations/:id/blocks`)
+  - **`relation_blocks` table**: created via `migrate-relation-blocks.js`; same schema as `blocks` table; CASCADE delete when relation is deleted
+  - **`canvas_nodes` schema additions**: `collapsed INTEGER DEFAULT 0`, `tree_expanded INTEGER DEFAULT 0` (via `migrate-canvas-nodes.js`)
+  - **`relations` schema addition**: `relation_type TEXT NOT NULL DEFAULT 'contains'` (via `migrate-relation-types.js`)
+  - **New API**: `GET/POST/PATCH/DELETE /api/relation-types`; `POST /api/relations` and `PATCH /api/relations/:id` now accept/return `relation_type`
+  - **New files**: `server/routes/relation-types.js`, `server/scripts/migrate-relation-types.js`, `server/scripts/migrate-canvas-nodes.js`, `server/scripts/migrate-relation-blocks.js`, `src/components/RelationBottomSheet.tsx`
+  - **Migrations**: `node scripts/migrate-relation-types.js` → `node scripts/migrate-canvas-nodes.js` → `node scripts/migrate-relation-blocks.js`
+
 - **Block v2 — Process Versions & Relations** *(2026-03-14)*
   - Every block gains a collapsible header (visible on hover or when title is set): **title** input, **creator** label, **creation timestamp**, **Publish** button, **Memory** panel, **Relations** panel
   - **Process versions (过程记忆)**: clicking Publish creates an append-only snapshot in `process_versions` — records `start_time` (when editing began after last publish), `publish_time`, `publisher` (`human:username` / `ai:model`), full content snapshot, and explanation text. No publish = no history, just normal editing
