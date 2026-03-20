@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, LayoutTemplate } from 'lucide-react'
+import { Plus, Trash2, LayoutTemplate, Zap, RefreshCw } from 'lucide-react'
 import { listCanvases, createCanvas, deleteCanvas, type Canvas } from '../lib/canvas-api'
 
 const fmtDate = (s: string) =>
   new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
 
-// ── CanvasCard ──────────────────────────────────────────────────
-const CanvasCard: React.FC<{
+// ── Semantic Canvas Card ─────────────────────────────────────────
+const SemanticCard: React.FC<{
   canvas: Canvas
   onClick: () => void
   onDelete: (e: React.MouseEvent) => void
 }> = ({ canvas, onClick, onDelete }) => (
   <div
     onClick={onClick}
-    className="glass-panel p-5 cursor-pointer hover:bg-white/10 transition-all duration-200 group relative"
+    className="glass-panel p-4 cursor-pointer hover:bg-white/10 transition-all duration-200 group relative"
   >
     <button
       onClick={onDelete}
@@ -24,11 +24,11 @@ const CanvasCard: React.FC<{
     </button>
 
     <div className="flex items-start gap-3">
-      <div className="w-9 h-9 rounded-lg bg-primary-500/10 border border-primary-500/20 flex items-center justify-center shrink-0">
+      <div className="w-8 h-8 rounded-lg bg-primary-500/10 border border-primary-500/20 flex items-center justify-center shrink-0">
         <LayoutTemplate className="w-4 h-4 text-primary-400" />
       </div>
-      <div className="flex-1 min-w-0 pr-4">
-        <p className="font-medium text-white group-hover:text-primary-300 transition-colors truncate">
+      <div className="flex-1 min-w-0 pr-6">
+        <p className="font-medium text-white group-hover:text-primary-300 transition-colors truncate text-sm">
           {canvas.title}
         </p>
         {canvas.description && (
@@ -44,7 +44,42 @@ const CanvasCard: React.FC<{
   </div>
 )
 
-// ── CreateModal ─────────────────────────────────────────────────
+// ── Execution Canvas Card ────────────────────────────────────────
+const ExecutionCard: React.FC<{
+  canvas: Canvas
+  onClick: () => void
+}> = ({ canvas, onClick }) => (
+  <div
+    onClick={onClick}
+    className="glass-panel p-4 cursor-pointer hover:bg-white/10 transition-all duration-200 group relative border-l-2 border-l-amber-500/30"
+  >
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+        <Zap className="w-4 h-4 text-amber-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-white group-hover:text-amber-300 transition-colors truncate text-sm flex-1">
+            {canvas.title}
+          </p>
+          <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded shrink-0">
+            Agent 执行
+          </span>
+        </div>
+        {canvas.task_ref_id && (
+          <p className="text-xs text-neutral-600 mt-0.5">Task: {canvas.task_ref_id.slice(0, 8)}…</p>
+        )}
+        <div className="flex items-center gap-2 mt-2 text-xs text-neutral-600">
+          <span>{canvas.node_count} 个节点</span>
+          <span>·</span>
+          <span>{fmtDate(canvas.updated_at)}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+// ── CreateModal ──────────────────────────────────────────────────
 const CreateModal: React.FC<{ onCreated: (id: string) => void; onClose: () => void }> = ({ onCreated, onClose }) => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -67,9 +102,7 @@ const CreateModal: React.FC<{ onCreated: (id: string) => void; onClose: () => vo
         onClick={e => e.stopPropagation()}
         className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-white">新建画布</h3>
-        </div>
+        <h3 className="font-semibold text-white">新建语义画布</h3>
 
         <div>
           <label className="text-xs text-neutral-500 mb-1 block">画布名称 *</label>
@@ -77,7 +110,7 @@ const CreateModal: React.FC<{ onCreated: (id: string) => void; onClose: () => vo
             value={title}
             onChange={e => setTitle(e.target.value)}
             autoFocus
-            placeholder="如：主体性认知框架 / 工程实践图谱 / 宪法关系网络..."
+            placeholder="如：主体性认知框架 / 工程实践图谱..."
             className="input-field w-full text-sm"
           />
         </div>
@@ -108,7 +141,36 @@ const CreateModal: React.FC<{ onCreated: (id: string) => void; onClose: () => vo
   )
 }
 
-// ── EgoneticsView ───────────────────────────────────────────────
+// ── Column ───────────────────────────────────────────────────────
+const Column: React.FC<{
+  title: string
+  subtitle: string
+  count: number
+  headerColor: string
+  action?: React.ReactNode
+  empty: React.ReactNode
+  children: React.ReactNode
+}> = ({ title, subtitle, count, headerColor, action, empty, children }) => (
+  <div className="flex-1 min-w-0 flex flex-col gap-3">
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-white">{title}</h2>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${headerColor}`}>
+            {count}
+          </span>
+        </div>
+        <p className="text-neutral-600 text-xs mt-0.5">{subtitle}</p>
+      </div>
+      {action}
+    </div>
+    <div className="space-y-3">
+      {count === 0 ? empty : children}
+    </div>
+  </div>
+)
+
+// ── EgoneticsView ────────────────────────────────────────────────
 const EgoneticsView: React.FC = () => {
   const navigate = useNavigate()
   const [canvases, setCanvases] = useState<Canvas[]>([])
@@ -116,6 +178,7 @@ const EgoneticsView: React.FC = () => {
   const [showCreate, setShowCreate] = useState(false)
 
   const load = useCallback(async () => {
+    setLoading(true)
     try {
       const data = await listCanvases()
       setCanvases(data)
@@ -131,50 +194,96 @@ const EgoneticsView: React.FC = () => {
     setCanvases(prev => prev.filter(c => c.id !== canvas.id))
   }, [])
 
+  const semantic = canvases.filter(c => c.canvas_type === 'semantic')
+  const execution = canvases.filter(c => c.canvas_type === 'execution')
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold gradient-text">抽象认知网络</h1>
-          <p className="text-neutral-500 text-sm mt-1">自由画布 · 构建跨实体知识网络，连接 Task / 页面 / 理论</p>
+          <p className="text-neutral-500 text-sm mt-1">语义图 · 执行图 — 连接 Task / 页面 / 理论 / Agent 过程</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="btn-primary flex items-center gap-2 text-sm"
-        >
-          <Plus className="w-4 h-4" /> 新建画布
+        <button onClick={load} className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+          <RefreshCw className="w-3.5 h-3.5" /> 刷新
         </button>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="glass-panel h-28 animate-pulse" />
-          ))}
-        </div>
-      ) : canvases.length === 0 ? (
-        <div className="glass-panel p-16 text-center">
-          <span className="text-5xl block mb-4">🗺️</span>
-          <p className="text-neutral-400 mb-2">还没有画布</p>
-          <p className="text-neutral-600 text-sm">点击"新建画布"开始构建你的认知网络</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-primary mt-4 text-sm inline-flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> 新建画布
-          </button>
+        <div className="flex gap-6">
+          <div className="flex-1 space-y-3">
+            {[...Array(2)].map((_, i) => <div key={i} className="glass-panel h-20 animate-pulse" />)}
+          </div>
+          <div className="w-px self-stretch bg-white/5 shrink-0" />
+          <div className="flex-1 space-y-3">
+            {[...Array(2)].map((_, i) => <div key={i} className="glass-panel h-20 animate-pulse" />)}
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {canvases.map(cvs => (
-            <CanvasCard
-              key={cvs.id}
-              canvas={cvs}
-              onClick={() => navigate(`/egonetics/canvas/${cvs.id}`)}
-              onDelete={e => handleDelete(e, cvs)}
-            />
-          ))}
+        <div className="flex gap-6 items-start">
+          {/* ── 语义图列 ── */}
+          <Column
+            title="语义图"
+            subtitle="用户构建 · 自由连接页面与实体"
+            count={semantic.length}
+            headerColor="bg-primary-500/15 text-primary-400"
+            action={
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary flex items-center gap-1.5 text-xs py-1.5 px-3"
+              >
+                <Plus className="w-3.5 h-3.5" /> 新建
+              </button>
+            }
+            empty={
+              <div className="glass-panel p-10 text-center">
+                <span className="text-4xl block mb-3 opacity-50">🗺️</span>
+                <p className="text-neutral-500 text-sm mb-1">还没有语义画布</p>
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="btn-primary mt-3 text-xs inline-flex items-center gap-1.5 py-1.5 px-3"
+                >
+                  <Plus className="w-3 h-3" /> 新建画布
+                </button>
+              </div>
+            }
+          >
+            {semantic.map(cvs => (
+              <SemanticCard
+                key={cvs.id}
+                canvas={cvs}
+                onClick={() => navigate(`/egonetics/canvas/${cvs.id}`)}
+                onDelete={e => handleDelete(e, cvs)}
+              />
+            ))}
+          </Column>
+
+          {/* 竖向分隔线 */}
+          <div className="w-px self-stretch bg-white/5 shrink-0 mt-8" />
+
+          {/* ── 执行图列 ── */}
+          <Column
+            title="执行图"
+            subtitle="Agent 自动生成 · 任务执行过程图"
+            count={execution.length}
+            headerColor="bg-amber-500/15 text-amber-400"
+            empty={
+              <div className="glass-panel p-10 text-center">
+                <span className="text-4xl block mb-3 opacity-30">⚡</span>
+                <p className="text-neutral-500 text-sm mb-1">还没有执行图</p>
+                <p className="text-neutral-700 text-xs">在 /agents 启动 Task 生命周期后，Agent 会自动创建执行图</p>
+              </div>
+            }
+          >
+            {execution.map(cvs => (
+              <ExecutionCard
+                key={cvs.id}
+                canvas={cvs}
+                onClick={() => navigate(`/egonetics/canvas/${cvs.id}`)}
+              />
+            ))}
+          </Column>
         </div>
       )}
 

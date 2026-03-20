@@ -1,948 +1,584 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Trash2, Link, X, Send, Bot, Zap, RefreshCw, ChevronDown } from 'lucide-react'
+import { Play, Square, RefreshCw, Wifi, WifiOff, MessageSquare, ChevronDown, Loader2 } from 'lucide-react'
 import { getToken, removeToken } from '@/lib/http'
 
-// ── API ────────────────────────────────────────────────────
-const apiFetch = async (path: string, opts?: RequestInit) => {
-  const token = getToken()
-  const headers = {
-    ...opts?.headers,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-  const r = await fetch(`/api${path}`, { ...opts, headers })
-  if (r.status === 401) {
-    removeToken()
-    window.location.href = '/login'
-  }
-  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
-  return r.json()
-}
-const apiPost = (path: string, body: unknown) =>
-  apiFetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-const apiPatch = (path: string, body: unknown) =>
-  apiFetch(path, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-const apiDelete = (path: string) => apiFetch(path, { method: 'DELETE' })
+// ── Constants ──────────────────────────────────────────────────
+const SEAI_BASE = 'http://localhost:8000'
 
-// ── Types ──────────────────────────────────────────────────
-interface Agent {
+// ── Types ──────────────────────────────────────────────────────
+interface Task {
   id: string
   name: string
-  type: string
-  model: string | null
-  role: string
-  description: string | null
-  status: 'idle' | 'running' | 'error'
-  position_x: number
-  position_y: number
-  created_at: string
+  column_id: string | null
+  priority: string | null
+  icon?: string
 }
 
-interface Relation {
+interface LifecycleStatus {
+  running: boolean
+  trajectories: Array<{ node_id: string; status: string; output?: string; error?: string }>
+  pending_feedback: Array<{ id: string; prompt: string }>
+}
+
+interface StreamEvent {
   id: string
-  from_agent: string
-  to_agent: string
   type: string
-  condition: string | null
+  task_id: string
+  ts: string
+  node_id?: string
+  canvas_id?: string
+  cost?: Record<string, number>
+  error?: string
+  node_kind?: string
 }
 
-interface AgentMessage {
-  id: string
-  from_id: string | null
-  to_id: string | null
-  content: string
-  type: string
-  created_at: string
+const PRIORITY_COLOR: Record<string, string> = {
+  low: 'text-neutral-400',
+  medium: 'text-blue-400',
+  high: 'text-amber-400',
+  urgent: 'text-red-400',
 }
 
-// ── Constants ──────────────────────────────────────────────
-const NODE_W = 160
-const NODE_H = 80
-const AGENT_TYPES = ['claude_code', 'claude_api', 'tool', 'human', 'scheduler']
-const AGENT_ROLES = ['orchestrator', 'worker', 'monitor', 'tool']
-
-const STATUS_COLOR: Record<string, string> = {
-  idle: 'bg-slate-500',
-  running: 'bg-green-400 animate-pulse',
-  error: 'bg-red-500',
+const COLUMN_LABEL: Record<string, string> = {
+  planned: '计划中',
+  'in-progress': '进行中',
+  review: '审核中',
+  done: '已完成',
 }
 
-const RELATION_STYLES: Record<
-  string,
-  {
-    stroke: string
-    dashArray: string
-    arrowId: string
-    arrowFill: string
-    labelColor: string
-    label: string
-  }
-> = {
-  sequential: {
-    stroke: 'rgba(148,163,184,0.5)',
-    dashArray: '5,4',
-    arrowId: 'arrow-sequential',
-    arrowFill: 'rgba(148,163,184,0.7)',
-    labelColor: 'text-slate-400',
-    label: '顺序',
-  },
-  parallel: {
-    stroke: 'rgba(74,222,128,0.6)',
-    dashArray: 'none',
-    arrowId: 'arrow-parallel',
-    arrowFill: 'rgba(74,222,128,0.8)',
-    labelColor: 'text-green-400',
-    label: '并行',
-  },
-  causal: {
-    stroke: 'rgba(167,139,250,0.6)',
-    dashArray: '2,4',
-    arrowId: 'arrow-causal',
-    arrowFill: 'rgba(167,139,250,0.8)',
-    labelColor: 'text-violet-400',
-    label: '因果',
-  },
+const EVENT_STYLE: Record<string, { icon: string; cls: string }> = {
+  node_start: { icon: '▶', cls: 'text-blue-400' },
+  node_complete: { icon: '✓', cls: 'text-green-400' },
+  node_failed: { icon: '✗', cls: 'text-red-400' },
+  lifecycle_started: { icon: '🚀', cls: 'text-amber-400' },
+  human_gate: { icon: '⏸', cls: 'text-yellow-400' },
+  feedback_resolved: { icon: '✅', cls: 'text-emerald-400' },
 }
 
-const TYPE_ICON: Record<string, string> = {
-  claude_code: '🤖',
-  claude_api: '⚡',
-  tool: '🔧',
-  human: '👤',
-  scheduler: '⏰',
-}
-
-// ── Sub-components ─────────────────────────────────────────
-
-interface CreateAgentModalProps {
-  onClose: () => void
-  onCreate: (agent: Partial<Agent>) => void
-  defaultPos: { x: number; y: number }
-}
-
-const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ onClose, onCreate, defaultPos }) => {
-  const [form, setForm] = useState({
-    name: '',
-    type: 'claude_code',
-    model: 'claude-sonnet-4-6',
-    role: 'worker',
-    description: '',
+// ── API helpers ────────────────────────────────────────────────
+const egoFetch = async (path: string, opts?: RequestInit) => {
+  const token = getToken()
+  const r = await fetch(`/api${path}`, {
+    ...opts,
+    headers: { ...(opts?.headers ?? {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   })
+  if (r.status === 401) { removeToken(); window.location.href = '/login' }
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.name.trim()) return
-    onCreate({
-      ...form,
-      position_x: defaultPos.x,
-      position_y: defaultPos.y,
-    })
-  }
+const seaiFetch = async (path: string, opts?: RequestInit) => {
+  const r = await fetch(`${SEAI_BASE}${path}`, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts?.headers ?? {}) },
+  })
+  if (!r.ok) throw new Error(`SEAI HTTP ${r.status}: ${await r.text()}`)
+  return r.json()
+}
+
+// ── Left panel: Task Queue ─────────────────────────────────────
+const TaskQueue: React.FC<{
+  tasks: Task[]
+  loading: boolean
+  selectedId: string | null
+  runningIds: Set<string>
+  onSelect: (task: Task) => void
+}> = ({ tasks, loading, selectedId, runningIds, onSelect }) => {
+  const active = tasks.filter(t => t.column_id === 'planned' || t.column_id === 'in-progress')
+  const done = tasks.filter(t => t.column_id === 'review' || t.column_id === 'done')
+  const [showDone, setShowDone] = useState(false)
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-semibold text-lg flex items-center gap-2">
-            <Bot size={18} className="text-primary-400" /> 新建 Agent
-          </h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-white">
-            <X size={18} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs text-neutral-400 mb-1 block">名称 *</label>
-            <input
-              autoFocus
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-500"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. LifeCore, TaskRunner..."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-neutral-400 mb-1 block">类型</label>
-              <select
-                className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-500"
-                value={form.type}
-                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-              >
-                {AGENT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-neutral-400 mb-1 block">角色</label>
-              <select
-                className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-500"
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              >
-                {AGENT_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-neutral-400 mb-1 block">Model</label>
-            <input
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-500"
-              value={form.model}
-              onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-              placeholder="claude-sonnet-4-6"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-neutral-400 mb-1 block">描述</label>
-            <textarea
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-500 resize-none"
-              rows={2}
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="这个 Agent 负责..."
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-sm bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium transition-colors"
-            >
-              创建
-            </button>
-          </div>
-        </form>
+    <div className="flex flex-col h-full border-r border-white/8 bg-[#111] w-72 shrink-0">
+      <div className="px-4 py-3 border-b border-white/5 shrink-0">
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">任务队列</span>
       </div>
-    </div>
-  )
-}
 
-// ── Message Panel ──────────────────────────────────────────
-interface MessagePanelProps {
-  agent: Agent
-  agents: Agent[]
-  onClose: () => void
-  onDelete: (id: string) => void
-  onStatusChange: (id: string, status: string) => void
-}
-
-const MessagePanel: React.FC<MessagePanelProps> = ({
-  agent,
-  agents,
-  onClose,
-  onDelete,
-  onStatusChange,
-}) => {
-  const [messages, setMessages] = useState<AgentMessage[]>([])
-  const [input, setInput] = useState('')
-  const [targetId, setTargetId] = useState('')
-  const [loading, setLoading] = useState(false)
-  const msgsContainerRef = useRef<HTMLDivElement>(null)
-
-  const loadMessages = useCallback(async () => {
-    try {
-      const data = await apiFetch(`/agents/${agent.id}/messages`)
-      setMessages(data.messages || [])
-    } catch {
-      /* ignore */
-    }
-  }, [agent.id])
-
-  useEffect(() => {
-    loadMessages()
-    const t = setInterval(loadMessages, 5000)
-    return () => clearInterval(t)
-  }, [loadMessages])
-
-  useEffect(() => {
-    const el = msgsContainerRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [messages])
-
-  const sendMessage = async () => {
-    if (!input.trim()) return
-    setLoading(true)
-    try {
-      await apiPost('/agents/messages', {
-        from_id: null,
-        to_id: targetId || agent.id,
-        content: input.trim(),
-        type: 'message',
-      })
-      setInput('')
-      await loadMessages()
-    } catch {
-      /* ignore */
-    }
-    setLoading(false)
-  }
-
-  const getAgentName = (id: string | null) => {
-    if (!id) return '系统'
-    return agents.find((a) => a.id === id)?.name || id.slice(0, 8)
-  }
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{TYPE_ICON[agent.type] || '🤖'}</span>
-          <div>
-            <div className="text-white font-semibold">{agent.name}</div>
-            <div className="text-xs text-neutral-400">
-              {agent.type} · {agent.role}
-            </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 size={18} className="animate-spin text-neutral-600" />
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Status selector */}
-          <div className="relative group">
-            <button className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800 text-xs text-neutral-300 hover:bg-slate-700 transition-colors">
-              <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[agent.status]}`} />
-              {agent.status}
-              <ChevronDown size={12} />
-            </button>
-            <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-white/10 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-10">
-              {['idle', 'running', 'error'].map((s) => (
+        ) : (
+          <>
+            {active.length === 0 ? (
+              <div className="px-4 py-6 text-xs text-neutral-700 text-center">
+                没有计划中或进行中的任务
+              </div>
+            ) : (
+              active.map(task => (
                 <button
-                  key={s}
-                  onClick={() => onStatusChange(agent.id, s)}
-                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-slate-700 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                  key={task.id}
+                  onClick={() => onSelect(task)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-white/3 ${
+                    selectedId === task.id
+                      ? 'bg-primary-500/10 border-l-2 border-l-primary-500'
+                      : 'hover:bg-white/4'
+                  }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[s]}`} />
-                  {s}
+                  <span className="text-base shrink-0">{task.icon ?? '📋'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white truncate font-medium">{task.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] text-neutral-600">
+                        {COLUMN_LABEL[task.column_id ?? 'planned'] ?? task.column_id}
+                      </span>
+                      {task.priority && (
+                        <span className={`text-[10px] ${PRIORITY_COLOR[task.priority] ?? 'text-neutral-500'}`}>
+                          {task.priority}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {runningIds.has(task.id) && (
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+                  )}
                 </button>
-              ))}
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              if (confirm(`删除 Agent "${agent.name}"?`)) onDelete(agent.id)
-            }}
-            className="p-1.5 text-neutral-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-neutral-400 hover:text-white rounded transition-colors"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
+              ))
+            )}
 
-      {/* Info */}
-      {agent.description && (
-        <div className="px-4 py-2 bg-slate-800/50 text-xs text-neutral-400 border-b border-white/5">
-          {agent.description}
-        </div>
-      )}
-      {agent.model && (
-        <div className="px-4 py-2 bg-slate-800/30 text-xs text-neutral-500 border-b border-white/5 flex items-center gap-1">
-          <Zap size={11} /> {agent.model}
-        </div>
-      )}
-
-      {/* Messages */}
-      <div ref={msgsContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-        {messages.length === 0 && (
-          <div className="text-center text-neutral-500 text-sm py-8">暂无消息记录</div>
+            {done.length > 0 && (
+              <>
+                <button
+                  onClick={() => setShowDone(s => !s)}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[10px] text-neutral-600 hover:text-neutral-400 transition-colors"
+                >
+                  <ChevronDown size={11} className={showDone ? '' : '-rotate-90'} />
+                  已完成 / 审核中 ({done.length})
+                </button>
+                {showDone && done.map(task => (
+                  <button
+                    key={task.id}
+                    onClick={() => onSelect(task)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors opacity-50 hover:opacity-70 border-b border-white/3 ${
+                      selectedId === task.id ? 'bg-primary-500/10' : ''
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">{task.icon ?? '📋'}</span>
+                    <p className="text-xs text-neutral-400 truncate">{task.name}</p>
+                  </button>
+                ))}
+              </>
+            )}
+          </>
         )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex flex-col gap-1 ${msg.to_id === agent.id ? 'items-end' : 'items-start'}`}
-          >
-            <div className="text-xs text-neutral-500">
-              {getAgentName(msg.from_id)} → {getAgentName(msg.to_id)}
-            </div>
-            <div
-              className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
-                msg.to_id === agent.id
-                  ? 'bg-primary-600/30 border border-primary-500/20 text-neutral-200'
-                  : 'bg-slate-700/50 border border-white/5 text-neutral-300'
-              }`}
-            >
-              {msg.content}
-            </div>
-            <div className="text-xs text-neutral-600">
-              {new Date(msg.created_at).toLocaleTimeString('zh-CN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Send */}
-      <div className="p-4 border-t border-white/10 space-y-2">
-        <select
-          className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-300 focus:outline-none"
-          value={targetId}
-          onChange={(e) => setTargetId(e.target.value)}
-        >
-          <option value={agent.id}>→ 发送给 {agent.name}</option>
-          {agents
-            .filter((a) => a.id !== agent.id)
-            .map((a) => (
-              <option key={a.id} value={a.id}>
-                → 发送给 {a.name}
-              </option>
-            ))}
-        </select>
-        <div className="flex gap-2">
-          <input
-            className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-primary-500"
-            placeholder="输入消息..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={loading || !input.trim()}
-            className="px-3 py-2 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-lg transition-colors"
-          >
-            <Send size={15} />
-          </button>
-        </div>
       </div>
     </div>
   )
 }
 
-// ── Main View ──────────────────────────────────────────────
+// ── Middle panel: Lifecycle Controls ──────────────────────────
+const LifecyclePanel: React.FC<{
+  task: Task | null
+  status: LifecycleStatus | null
+  starting: boolean
+  stopping: boolean
+  onStart: () => void
+  onStop: () => void
+  onRefreshStatus: () => void
+}> = ({ task, status, starting, stopping, onStart, onStop, onRefreshStatus }) => {
+  if (!task) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#0d0d0d]">
+        <div className="text-center">
+          <div className="text-5xl mb-4 opacity-20">🤖</div>
+          <p className="text-neutral-600 text-sm">从左侧选择一个任务</p>
+          <p className="text-neutral-700 text-xs mt-1">然后启动生命周期，Agent 将自动执行</p>
+        </div>
+      </div>
+    )
+  }
+
+  const isRunning = status?.running ?? false
+  const trajectories = status?.trajectories ?? []
+  const pendingFeedback = status?.pending_feedback ?? []
+
+  const statusColor = (s: string) => {
+    if (s === 'success') return 'text-green-400'
+    if (s === 'failed') return 'text-red-400'
+    if (s === 'running') return 'text-blue-400'
+    if (s === 'waiting_human') return 'text-yellow-400'
+    return 'text-neutral-500'
+  }
+
+  return (
+    <div className="flex-1 flex flex-col bg-[#0d0d0d] min-w-0">
+      {/* Controls bar */}
+      <div className="px-5 py-3 border-b border-white/5 flex items-center gap-3 shrink-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span>{task.icon ?? '📋'}</span>
+            <p className="text-sm font-medium text-white truncate">{task.name}</p>
+            {isRunning && (
+              <span className="flex items-center gap-1 text-xs text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                运行中
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-neutral-600 mt-0.5">
+            {COLUMN_LABEL[task.column_id ?? ''] ?? task.column_id ?? ''}
+          </p>
+        </div>
+
+        <button
+          onClick={onRefreshStatus}
+          className="p-1.5 text-neutral-500 hover:text-neutral-300 transition-colors"
+          title="刷新状态"
+        >
+          <RefreshCw size={14} />
+        </button>
+
+        {isRunning ? (
+          <button
+            onClick={onStop}
+            disabled={stopping}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs rounded-lg border border-red-500/20 transition-colors disabled:opacity-50"
+          >
+            {stopping ? <Loader2 size={12} className="animate-spin" /> : <Square size={12} />}
+            停止
+          </button>
+        ) : (
+          <button
+            onClick={onStart}
+            disabled={starting}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs rounded-lg border border-green-500/20 transition-colors disabled:opacity-50"
+          >
+            {starting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+            启动生命周期
+          </button>
+        )}
+      </div>
+
+      {/* Trajectories */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {trajectories.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-3xl mb-3 opacity-30">⚡</div>
+            <p className="text-neutral-600 text-sm">
+              {isRunning ? '执行中，等待节点完成...' : '启动生命周期后显示执行轨迹'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-neutral-600 mb-3 uppercase tracking-widest">执行轨迹</p>
+            {trajectories.map((t, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
+              >
+                <div className={`text-xs mt-0.5 font-mono ${statusColor(t.status)}`}>
+                  {t.status === 'success' ? '✓' : t.status === 'failed' ? '✗' : t.status === 'running' ? '▶' : '…'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-neutral-400">{t.node_id.slice(0, 8)}…</span>
+                    <span className={`text-xs ${statusColor(t.status)}`}>{t.status}</span>
+                  </div>
+                  {t.output && (
+                    <p className="text-xs text-neutral-500 mt-1 truncate">{
+                      typeof t.output === 'string' ? t.output.slice(0, 120) : JSON.stringify(t.output).slice(0, 120)
+                    }</p>
+                  )}
+                  {t.error && (
+                    <p className="text-xs text-red-500/70 mt-1 truncate">{t.error}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pending feedback */}
+        {pendingFeedback.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-yellow-500 uppercase tracking-widest">等待人工介入</p>
+            {pendingFeedback.map(fb => (
+              <div key={fb.id} className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                <p className="text-xs text-yellow-300">{fb.prompt}</p>
+                <p className="text-[10px] text-neutral-600 mt-1">feedback id: {fb.id}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Right panel: Real-time stream ─────────────────────────────
+const StreamPanel: React.FC<{
+  taskId: string | null
+  events: StreamEvent[]
+  connected: boolean
+  pendingFeedback: Array<{ id: string; prompt: string }>
+  onFeedback: (fbId: string, response: string) => void
+}> = ({ taskId, events, connected, pendingFeedback, onFeedback }) => {
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const [fbInput, setFbInput] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [events])
+
+  const fmtTime = (ts: string) =>
+    new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+  return (
+    <div className="w-80 shrink-0 flex flex-col border-l border-white/8 bg-[#0a0a0a]">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2 shrink-0">
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest flex-1">实时流</span>
+        <div className={`flex items-center gap-1.5 text-xs ${connected ? 'text-green-400' : 'text-neutral-600'}`}>
+          {connected ? <Wifi size={11} /> : <WifiOff size={11} />}
+          {connected ? 'WS 已连接' : taskId ? '未连接' : '未选择'}
+        </div>
+      </div>
+
+      {/* Events stream */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1.5 font-mono text-xs">
+        {events.length === 0 ? (
+          <div className="text-center py-8 text-neutral-700 text-[11px]">
+            {taskId ? '等待事件...' : '选择任务后开始监听'}
+          </div>
+        ) : (
+          events.map(ev => {
+            const style = EVENT_STYLE[ev.type] ?? { icon: '·', cls: 'text-neutral-500' }
+            return (
+              <div key={ev.id} className="flex items-start gap-2 leading-relaxed">
+                <span className={`shrink-0 ${style.cls}`}>{style.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <span className={`${style.cls} mr-1.5`}>{ev.type}</span>
+                  {ev.node_id && (
+                    <span className="text-neutral-600">{ev.node_id.slice(0, 8)}</span>
+                  )}
+                  {ev.error && <span className="text-red-500/80"> {ev.error.slice(0, 40)}</span>}
+                </div>
+                <span className="text-neutral-700 shrink-0 text-[10px]">{fmtTime(ev.ts)}</span>
+              </div>
+            )
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Human feedback inputs */}
+      {pendingFeedback.length > 0 && (
+        <div className="border-t border-white/5 p-3 space-y-2 shrink-0">
+          <div className="flex items-center gap-1.5 text-[10px] text-yellow-400 uppercase tracking-widest">
+            <MessageSquare size={10} /> 人工反馈
+          </div>
+          {pendingFeedback.map(fb => (
+            <div key={fb.id} className="space-y-1.5">
+              <p className="text-[11px] text-neutral-400 leading-relaxed">{fb.prompt}</p>
+              <div className="flex gap-1.5">
+                <input
+                  value={fbInput[fb.id] ?? ''}
+                  onChange={e => setFbInput(prev => ({ ...prev, [fb.id]: e.target.value }))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && fbInput[fb.id]?.trim()) {
+                      onFeedback(fb.id, fbInput[fb.id])
+                      setFbInput(prev => ({ ...prev, [fb.id]: '' }))
+                    }
+                  }}
+                  placeholder="输入回复后按 Enter..."
+                  className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-yellow-500/40"
+                />
+                <button
+                  onClick={() => {
+                    if (fbInput[fb.id]?.trim()) {
+                      onFeedback(fb.id, fbInput[fb.id])
+                      setFbInput(prev => ({ ...prev, [fb.id]: '' }))
+                    }
+                  }}
+                  className="px-2 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded text-xs transition-colors"
+                >
+                  发送
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main View ──────────────────────────────────────────────────
 const AgentsView: React.FC = () => {
-  const [agents, setAgents] = useState<Agent[]>([])
-  const [relations, setRelations] = useState<Relation[]>([])
-  const [selected, setSelected] = useState<Agent | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
-  const [linkMode, setLinkMode] = useState(false)
-  const [linkFrom, setLinkFrom] = useState<string | null>(null)
-  const [linkTo, setLinkTo] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [tasksLoading, setTasksLoading] = useState(true)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [status, setStatus] = useState<LifecycleStatus | null>(null)
+  const [starting, setStarting] = useState(false)
+  const [stopping, setStopping] = useState(false)
+  const [runningIds, setRunningIds] = useState<Set<string>>(new Set())
+  const [events, setEvents] = useState<StreamEvent[]>([])
+  const [wsConnected, setWsConnected] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
+  const eventsIdCounter = useRef(0)
 
-  // Drag state (not in React state to avoid re-renders during drag)
-  const dragRef = useRef<{
-    id: string
-    startX: number
-    startY: number
-    ox: number
-    oy: number
-  } | null>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
-  // Local position overrides during drag (avoids DB round-trip lag)
-  const [localPos, setLocalPos] = useState<Record<string, { x: number; y: number }>>({})
-
-  const load = useCallback(async () => {
+  // ── Load tasks ──
+  const loadTasks = useCallback(async () => {
+    setTasksLoading(true)
     try {
-      const [ad, rd] = await Promise.all([apiFetch('/agents'), apiFetch('/agents/relations')])
-      setAgents(ad.agents || [])
-      setRelations(rd.relations || [])
-    } catch {
-      /* ignore */
-    }
-    setLoading(false)
+      const data = await egoFetch('/tasks')
+      const list = Array.isArray(data) ? data : (data?.tasks ?? [])
+      setTasks(list)
+    } catch { /* ignore */ }
+    setTasksLoading(false)
   }, [])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  useEffect(() => { loadTasks() }, [loadTasks])
 
-  // ── Drag handlers ──
-  const getPos = (agent: Agent) => ({
-    x: localPos[agent.id]?.x ?? agent.position_x,
-    y: localPos[agent.id]?.y ?? agent.position_y,
-  })
-
-  const onNodeMouseDown = (e: React.MouseEvent, agentId: string) => {
-    if (linkMode) return // in link mode, click = select for linking
-    e.stopPropagation()
-    const agent = agents.find((a) => a.id === agentId)
-    if (!agent) return
-    dragRef.current = {
-      id: agentId,
-      startX: e.clientX,
-      startY: e.clientY,
-      ox: localPos[agentId]?.x ?? agent.position_x,
-      oy: localPos[agentId]?.y ?? agent.position_y,
-    }
-    const onMove = (me: MouseEvent) => {
-      if (!dragRef.current) return
-      const dx = me.clientX - dragRef.current.startX
-      const dy = me.clientY - dragRef.current.startY
-      setLocalPos((p) => ({
-        ...p,
-        [dragRef.current!.id]: {
-          x: Math.max(0, dragRef.current!.ox + dx),
-          y: Math.max(0, dragRef.current!.oy + dy),
-        },
-      }))
-    }
-    const onUp = async (me: MouseEvent) => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      if (!dragRef.current) return
-      const dx = me.clientX - dragRef.current.startX
-      const dy = me.clientY - dragRef.current.startY
-      const nx = Math.max(0, dragRef.current.ox + dx)
-      const ny = Math.max(0, dragRef.current.oy + dy)
-      const id = dragRef.current.id
-      dragRef.current = null
-      // persist
-      await apiPatch(`/agents/${id}`, { position_x: nx, position_y: ny }).catch(() => {})
-      setAgents((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, position_x: nx, position_y: ny } : a))
-      )
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
-
-  // ── Link mode click ──
-  const onNodeClick = (e: React.MouseEvent, agentId: string) => {
-    e.stopPropagation()
-    if (!linkMode) {
-      setSelected(agents.find((a) => a.id === agentId) || null)
-      return
-    }
-    if (!linkFrom) {
-      setLinkFrom(agentId)
-    } else if (linkFrom !== agentId) {
-      // Show type selection popup
-      setLinkTo(agentId)
-    }
-  }
-
-  // ── Create relation with chosen type ──
-  const handleCreateRelation = (type: string) => {
-    if (!linkFrom || !linkTo) return
-    apiPost('/agents/relations', { from_agent: linkFrom, to_agent: linkTo, type })
-      .then(() => {
-        load()
-        setLinkFrom(null)
-        setLinkTo(null)
-        setLinkMode(false)
-      })
-      .catch(() => {
-        setLinkFrom(null)
-        setLinkTo(null)
-      })
-  }
-
-  // ── Create agent ──
-  const handleCreate = async (data: Partial<Agent>) => {
-    setShowCreate(false)
+  // ── Refresh lifecycle status ──
+  const refreshStatus = useCallback(async (taskId: string) => {
     try {
-      await apiPost('/agents', data)
-      await load()
+      const s: LifecycleStatus = await seaiFetch(`/lifecycle/status/${taskId}`)
+      setStatus(s)
+      if (s.running) {
+        setRunningIds(prev => new Set([...prev, taskId]))
+      } else {
+        setRunningIds(prev => { const n = new Set(prev); n.delete(taskId); return n })
+      }
     } catch {
-      /* ignore */
+      setStatus(null)
     }
-  }
+  }, [])
 
-  // ── Delete agent ──
-  const handleDelete = async (id: string) => {
-    setSelected(null)
-    await apiDelete(`/agents/${id}`).catch(() => {})
-    await load()
-  }
-
-  // ── Delete relation ──
-  const handleDeleteRelation = async (relId: string) => {
-    await apiDelete(`/agents/relations/${relId}`).catch(() => {})
-    await load()
-  }
-
-  // ── Status change ──
-  const handleStatusChange = async (id: string, status: string) => {
-    await apiPatch(`/agents/${id}`, { status }).catch(() => {})
-    setAgents((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: status as Agent['status'] } : a))
-    )
-    if (selected?.id === id)
-      setSelected((prev) => (prev ? { ...prev, status: status as Agent['status'] } : null))
-  }
-
-  // ── Edge path ──
-  const getEdgePath = (rel: Relation) => {
-    const from = agents.find((a) => a.id === rel.from_agent)
-    const to = agents.find((a) => a.id === rel.to_agent)
-    if (!from || !to) return null
-    const fx = (localPos[from.id]?.x ?? from.position_x) + NODE_W
-    const fy = (localPos[from.id]?.y ?? from.position_y) + NODE_H / 2
-    const tx = localPos[to.id]?.x ?? to.position_x
-    const ty = (localPos[to.id]?.y ?? to.position_y) + NODE_H / 2
-    const cx = (fx + tx) / 2
-    const style = RELATION_STYLES[rel.type] ?? RELATION_STYLES.sequential
-    return { d: `M ${fx} ${fy} C ${cx} ${fy}, ${cx} ${ty}, ${tx} ${ty}`, rel, style }
-  }
-
-  // Canvas click = deselect
-  const onCanvasClick = () => {
-    if (linkMode && (linkFrom || linkTo)) {
-      setLinkFrom(null)
-      setLinkTo(null)
-      return
+  // ── WebSocket connection ──
+  const connectWs = useCallback((taskId: string) => {
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
     }
-    setSelected(null)
-  }
+    setWsConnected(false)
+    setEvents([])
 
-  const defaultCreatePos = { x: 60 + agents.length * 20, y: 60 + agents.length * 20 }
+    const ws = new WebSocket(`${SEAI_BASE.replace('http', 'ws')}/lifecycle/ws/${taskId}`)
+    wsRef.current = ws
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+    ws.onopen = () => setWsConnected(true)
+    ws.onclose = () => setWsConnected(false)
+    ws.onerror = () => setWsConnected(false)
+
+    ws.onmessage = (e) => {
+      try {
+        const ev = JSON.parse(e.data)
+        if (ev.type === 'pong') return
+        const stamped = { ...ev, id: String(++eventsIdCounter.current) }
+        setEvents(prev => [...prev.slice(-200), stamped])
+
+        // Refresh status on significant events
+        if (['node_complete', 'node_failed', 'lifecycle_started'].includes(ev.type)) {
+          refreshStatus(taskId)
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Ping keepalive
+    const ping = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }))
+    }, 25000)
+
+    ws.onclose = () => {
+      clearInterval(ping)
+      setWsConnected(false)
+    }
+  }, [refreshStatus])
+
+  // ── Select task ──
+  const handleSelectTask = useCallback((task: Task) => {
+    setSelectedTask(task)
+    setStatus(null)
+    setEvents([])
+    connectWs(task.id)
+    refreshStatus(task.id)
+  }, [connectWs, refreshStatus])
+
+  // ── Start lifecycle ──
+  const handleStart = useCallback(async () => {
+    if (!selectedTask) return
+    setStarting(true)
+    try {
+      await seaiFetch('/lifecycle/start', {
+        method: 'POST',
+        body: JSON.stringify({ task_id: selectedTask.id }),
+      })
+      setRunningIds(prev => new Set([...prev, selectedTask.id]))
+      await loadTasks()
+      setTimeout(() => refreshStatus(selectedTask.id), 1000)
+    } catch (e) {
+      setEvents(prev => [...prev, {
+        id: String(++eventsIdCounter.current),
+        type: 'error',
+        task_id: selectedTask.id,
+        ts: new Date().toISOString(),
+        error: String(e),
+      }])
+    }
+    setStarting(false)
+  }, [selectedTask, loadTasks, refreshStatus])
+
+  // ── Stop lifecycle ──
+  const handleStop = useCallback(async () => {
+    if (!selectedTask) return
+    setStopping(true)
+    try {
+      await seaiFetch(`/lifecycle/stop/${selectedTask.id}`, { method: 'POST' })
+      setRunningIds(prev => { const n = new Set(prev); n.delete(selectedTask.id); return n })
+      await loadTasks()
+      await refreshStatus(selectedTask.id)
+    } catch { /* ignore */ }
+    setStopping(false)
+  }, [selectedTask, loadTasks, refreshStatus])
+
+  // ── Human feedback ──
+  const handleFeedback = useCallback(async (fbId: string, response: string) => {
+    try {
+      await seaiFetch(`/lifecycle/feedback/${fbId}`, {
+        method: 'POST',
+        body: JSON.stringify({ user_response: response }),
+      })
+      if (selectedTask) refreshStatus(selectedTask.id)
+    } catch { /* ignore */ }
+  }, [selectedTask, refreshStatus])
+
+  // ── Cleanup ──
+  useEffect(() => {
+    return () => { wsRef.current?.close() }
+  }, [])
 
   return (
     <div className="flex h-full" style={{ height: 'calc(100vh - 120px)' }}>
-      {/* ── Canvas ── */}
-      <div className="flex-1 flex flex-col">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 p-3 border-b border-white/10 bg-black/20">
-          <span className="text-white font-semibold text-sm mr-2">Agent 网络图</span>
+      {/* Left: Task Queue */}
+      <TaskQueue
+        tasks={tasks}
+        loading={tasksLoading}
+        selectedId={selectedTask?.id ?? null}
+        runningIds={runningIds}
+        onSelect={handleSelectTask}
+      />
 
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-xs rounded-lg font-medium transition-colors"
-          >
-            <Plus size={13} /> 新建 Agent
-          </button>
+      {/* Middle: Lifecycle Controls */}
+      <LifecyclePanel
+        task={selectedTask}
+        status={status}
+        starting={starting}
+        stopping={stopping}
+        onStart={handleStart}
+        onStop={handleStop}
+        onRefreshStatus={() => selectedTask && refreshStatus(selectedTask.id)}
+      />
 
-          <button
-            onClick={() => {
-              setLinkMode(!linkMode)
-              setLinkFrom(null)
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
-              linkMode
-                ? 'bg-amber-500 text-black'
-                : 'bg-slate-700 hover:bg-slate-600 text-neutral-300'
-            }`}
-          >
-            <Link size={13} /> {linkMode ? (linkFrom ? '选择目标节点' : '选择源节点') : '连接节点'}
-          </button>
-
-          <button
-            onClick={load}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-neutral-300 text-xs rounded-lg transition-colors"
-          >
-            <RefreshCw size={13} /> 刷新
-          </button>
-
-          {agents.length === 0 && (
-            <span className="ml-2 text-xs text-neutral-500">
-              点击「新建 Agent」开始构建你的 Agent 网络
-            </span>
-          )}
-        </div>
-
-        {/* SVG Canvas */}
-        <div
-          className="flex-1 overflow-hidden relative bg-slate-950"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
-        >
-          <svg
-            ref={svgRef}
-            width="100%"
-            height="100%"
-            className="select-none"
-            onClick={onCanvasClick}
-          >
-            <defs>
-              <marker
-                id="arrow-sequential"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="3"
-                orient="auto"
-              >
-                <path d="M 0 0 L 8 3 L 0 6 Z" fill="rgba(148,163,184,0.7)" />
-              </marker>
-              <marker
-                id="arrow-parallel"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="3"
-                orient="auto"
-              >
-                <path d="M 0 0 L 8 3 L 0 6 Z" fill="rgba(74,222,128,0.8)" />
-              </marker>
-              <marker
-                id="arrow-causal"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="3"
-                orient="auto"
-              >
-                <path d="M 0 0 L 8 3 L 0 6 Z" fill="rgba(167,139,250,0.8)" />
-              </marker>
-            </defs>
-
-            {/* Edges */}
-            {relations.map((rel) => {
-              const edge = getEdgePath(rel)
-              if (!edge) return null
-              return (
-                <g key={rel.id}>
-                  <path
-                    d={edge.d}
-                    fill="none"
-                    stroke={edge.style.stroke}
-                    strokeWidth="1.5"
-                    strokeDasharray={
-                      edge.style.dashArray === 'none' ? undefined : edge.style.dashArray
-                    }
-                    markerEnd={`url(#${edge.style.arrowId})`}
-                  />
-                  {/* delete hit area */}
-                  <path
-                    d={edge.d}
-                    fill="none"
-                    stroke="transparent"
-                    strokeWidth="12"
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (confirm('删除此连接?')) handleDeleteRelation(rel.id)
-                    }}
-                  />
-                </g>
-              )
-            })}
-
-            {/* Nodes */}
-            {agents.map((agent) => {
-              const pos = getPos(agent)
-              const isSelected = selected?.id === agent.id
-              const isLinkSrc = linkFrom === agent.id
-              return (
-                <g
-                  key={agent.id}
-                  transform={`translate(${pos.x}, ${pos.y})`}
-                  style={{ cursor: linkMode ? 'pointer' : 'grab' }}
-                  onMouseDown={(e) => onNodeMouseDown(e, agent.id)}
-                  onClick={(e) => onNodeClick(e, agent.id)}
-                >
-                  {/* Shadow */}
-                  <rect x="2" y="4" width={NODE_W} height={NODE_H} rx="12" fill="rgba(0,0,0,0.4)" />
-
-                  {/* Card */}
-                  <rect
-                    width={NODE_W}
-                    height={NODE_H}
-                    rx="12"
-                    fill={isSelected ? 'rgba(99,102,241,0.25)' : 'rgba(30,41,59,0.95)'}
-                    stroke={
-                      isLinkSrc ? '#f59e0b' : isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'
-                    }
-                    strokeWidth={isSelected || isLinkSrc ? 2 : 1}
-                  />
-
-                  {/* Status dot */}
-                  <circle
-                    cx={NODE_W - 16}
-                    cy={14}
-                    r={5}
-                    fill={
-                      agent.status === 'running'
-                        ? '#4ade80'
-                        : agent.status === 'error'
-                          ? '#f87171'
-                          : '#475569'
-                    }
-                  />
-
-                  {/* Icon */}
-                  <text x="14" y="30" fontSize="18" dominantBaseline="middle">
-                    {TYPE_ICON[agent.type] || '🤖'}
-                  </text>
-
-                  {/* Name */}
-                  <text
-                    x="38"
-                    y="26"
-                    fill="white"
-                    fontSize="12"
-                    fontWeight="600"
-                    className="font-medium"
-                  >
-                    {agent.name.length > 14 ? agent.name.slice(0, 13) + '…' : agent.name}
-                  </text>
-
-                  {/* Role */}
-                  <text x="38" y="42" fill="rgba(148,163,184,0.8)" fontSize="10">
-                    {agent.role}
-                  </text>
-
-                  {/* Model tag */}
-                  {agent.model && (
-                    <text x="14" y="65" fill="rgba(148,163,184,0.5)" fontSize="9">
-                      {agent.model.length > 20 ? agent.model.slice(0, 19) + '…' : agent.model}
-                    </text>
-                  )}
-                </g>
-              )
-            })}
-          </svg>
-
-          {/* Empty state overlay */}
-          {agents.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <div className="text-5xl mb-4 opacity-30">🤖</div>
-                <p className="text-neutral-500 text-sm">
-                  还没有 Agent，点击工具栏「新建 Agent」开始
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Right Panel ── */}
-      {selected && (
-        <div className="w-80 border-l border-white/10 bg-slate-900/80 flex flex-col min-h-0">
-          <MessagePanel
-            agent={selected}
-            agents={agents}
-            onClose={() => setSelected(null)}
-            onDelete={handleDelete}
-            onStatusChange={handleStatusChange}
-          />
-        </div>
-      )}
-
-      {/* ── Relation list (footer) ── */}
-      {relations.length > 0 && !selected && (
-        <div className="absolute bottom-4 right-4 bg-slate-900/90 border border-white/10 rounded-xl p-3 text-xs text-neutral-400 max-w-xs">
-          <div className="font-medium text-neutral-300 mb-2">连接关系 ({relations.length})</div>
-          {relations.slice(0, 5).map((r) => {
-            const from = agents.find((a) => a.id === r.from_agent)?.name || '?'
-            const to = agents.find((a) => a.id === r.to_agent)?.name || '?'
-            const relStyle = RELATION_STYLES[r.type] ?? RELATION_STYLES.sequential
-            return (
-              <div key={r.id} className="flex items-center gap-2 py-0.5">
-                <span className="text-neutral-300">{from}</span>
-                <span className="text-neutral-500">→</span>
-                <span className="text-neutral-300">{to}</span>
-                <span className={`text-xs ${relStyle.labelColor}`}>[{relStyle.label}]</span>
-                <button
-                  onClick={() => {
-                    if (confirm('删除?')) handleDeleteRelation(r.id)
-                  }}
-                  className="ml-auto text-red-400/60 hover:text-red-400"
-                >
-                  <X size={11} />
-                </button>
-              </div>
-            )
-          })}
-          {relations.length > 5 && (
-            <div className="text-neutral-600 mt-1">+{relations.length - 5} 更多...</div>
-          )}
-        </div>
-      )}
-
-      {showCreate && (
-        <CreateAgentModal
-          onClose={() => setShowCreate(false)}
-          onCreate={handleCreate}
-          defaultPos={defaultCreatePos}
-        />
-      )}
-
-      {/* ── Relation type selection popup ── */}
-      {linkTo && linkFrom && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-5 w-72 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold text-sm">选择连接类型</h3>
-              <button
-                onClick={() => {
-                  setLinkTo(null)
-                  setLinkFrom(null)
-                }}
-                className="text-neutral-400 hover:text-white"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <div className="text-xs text-neutral-500 mb-4">
-              {agents.find((a) => a.id === linkFrom)?.name} →{' '}
-              {agents.find((a) => a.id === linkTo)?.name}
-            </div>
-            <div className="space-y-2">
-              {(['sequential', 'parallel', 'causal'] as const).map((type) => {
-                const s = RELATION_STYLES[type]
-                return (
-                  <button
-                    key={type}
-                    onClick={() => handleCreateRelation(type)}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/5 transition-colors text-left"
-                  >
-                    <svg width="32" height="10">
-                      <line
-                        x1="0"
-                        y1="5"
-                        x2="28"
-                        y2="5"
-                        stroke={s.arrowFill}
-                        strokeWidth="1.5"
-                        strokeDasharray={s.dashArray === 'none' ? undefined : s.dashArray}
-                      />
-                      <polygon points="24,2 32,5 24,8" fill={s.arrowFill} />
-                    </svg>
-                    <div>
-                      <div className={`text-sm font-medium ${s.labelColor}`}>{s.label}</div>
-                      <div className="text-xs text-neutral-500">{type}</div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Right: Real-time stream */}
+      <StreamPanel
+        taskId={selectedTask?.id ?? null}
+        events={events}
+        connected={wsConnected}
+        pendingFeedback={status?.pending_feedback ?? []}
+        onFeedback={handleFeedback}
+      />
     </div>
   )
 }

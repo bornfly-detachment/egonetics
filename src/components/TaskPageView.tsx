@@ -1,9 +1,93 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
 import type { ApiClient, PageMeta } from './types'
 import { getToken, removeToken } from '@/lib/http'
+
+// ── Exec Step panel ─────────────────────────────────────────────
+interface ExecStepMeta {
+  id: string
+  title: string
+  icon: string
+  createdAt: string
+}
+
+const ExecStepPanel: React.FC<{ taskId: string }> = ({ taskId }) => {
+  const [steps, setSteps] = useState<ExecStepMeta[]>([])
+  const [collapsed, setCollapsed] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [activeStep, setActiveStep] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = getToken()
+    fetch(`/api/pages?taskRefId=${taskId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: ExecStepMeta[]) => {
+        setSteps(Array.isArray(data) ? data : [])
+        if (data.length > 0 && !activeStep) setActiveStep(data[data.length - 1].id)
+      })
+      .catch(() => setSteps([]))
+      .finally(() => setLoading(false))
+  }, [taskId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div
+      className="absolute bottom-0 left-0 z-10 flex flex-col bg-[#161616] border-t border-r border-white/5"
+      style={{ width: 240 }}
+    >
+      {/* Section header */}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        className="flex items-center justify-between px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 transition-colors shrink-0"
+      >
+        <span className="font-semibold uppercase tracking-widest text-[10px]">执行步骤</span>
+        <div className="flex items-center gap-1">
+          {steps.length > 0 && (
+            <span className="text-[10px] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded">
+              {steps.length}
+            </span>
+          )}
+          {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+        </div>
+      </button>
+
+      {!collapsed && (
+        <div className="overflow-y-auto" style={{ maxHeight: 180 }}>
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 size={12} className="animate-spin text-neutral-600" />
+            </div>
+          ) : steps.length === 0 ? (
+            <div className="px-3 pb-3 text-xs text-neutral-700 text-center">
+              暂无执行步骤
+            </div>
+          ) : (
+            <div className="pb-2">
+              {steps.map(step => (
+                <button
+                  key={step.id}
+                  onClick={() => setActiveStep(step.id)}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
+                    activeStep === step.id
+                      ? 'bg-amber-500/10 text-amber-300'
+                      : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/5'
+                  }`}
+                >
+                  <span className="shrink-0">{step.icon || '⚙️'}</span>
+                  <span className="truncate">{step.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const KANBAN_API_BASE = '/api'
 
@@ -292,9 +376,10 @@ const TaskPageView: React.FC = () => {
         </div>
       )}
 
-      {/* PageManager 内容区 */}
-      <div className="flex-1 overflow-hidden">
+      {/* PageManager 内容区 + exec step overlay */}
+      <div className="flex-1 overflow-hidden relative">
         <PageManager api={apiClient} />
+        <ExecStepPanel taskId={taskId} />
       </div>
     </div>
   )

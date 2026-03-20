@@ -216,6 +216,30 @@ router.put('/tasks/:id', (req, res) => {
   });
 });
 
+router.patch('/tasks/:id', (req, res) => {
+  const taskId = req.params.id;
+  const u = req.body;
+  const fields = [], values = [];
+
+  if (u.title        !== undefined) { fields.push('title = ?');        values.push(u.title); }
+  if (u.column_id    !== undefined) { fields.push('column_id = ?');    values.push(u.column_id); }
+  if (u.task_summary !== undefined) { fields.push('task_summary = ?'); values.push(u.task_summary); }
+  if (u.task_outcome !== undefined) { fields.push('task_outcome = ?'); values.push(u.task_outcome); }
+  if (u.priority     !== undefined) { fields.push('priority = ?');     values.push(u.priority); }
+  if (u.assignee     !== undefined) { fields.push('assignee = ?');     values.push(u.assignee); }
+
+  if (fields.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
+  fields.push('updated_at = ?');
+  values.push(new Date().toISOString());
+  values.push(taskId);
+
+  pagesDb.run(`UPDATE pages SET ${fields.join(', ')} WHERE id = ? AND page_type = 'task'`, values, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+    res.json({ success: true, id: taskId });
+  });
+});
+
 router.delete('/tasks/:id', (req, res) => {
   const taskId = req.params.id;
 

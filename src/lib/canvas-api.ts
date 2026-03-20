@@ -10,6 +10,8 @@ export interface Canvas {
   title: string
   description: string
   creator: string
+  canvas_type: 'semantic' | 'execution'
+  task_ref_id: string | null
   node_count: number
   created_at: string
   updated_at: string

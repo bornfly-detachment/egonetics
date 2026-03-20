@@ -38,7 +38,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api', authRouter.init(authDb));
 
 // Global auth middleware
-const AGENT_MUTATION_PATHS = ['/tasks', '/kanban', '/agents', '/notion'];
+const AGENT_MUTATION_PATHS = ['/tasks', '/kanban', '/agents', '/notion', '/canvases', '/pages', '/relations'];
 
 app.use('/api', (req, res, next) => {
   if (req.path === '/health' || req.path.startsWith('/auth')) return next();

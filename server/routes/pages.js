@@ -59,11 +59,28 @@ function checkTitleUnique(parentId, title, excludeId, cb) {
 }
 
 // ── GET /api/pages ──────────────────────────────────────────────
-// ?type=xxx      — 按 page_type 过滤
-// ?refId=xxx     — CTE 递归返回整棵子树（忽略 type）
-// ?rootOnly=true — 只返回根页面（parent_id IS NULL）
+// ?type=xxx         — 按 page_type 过滤
+// ?refId=xxx        — CTE 递归返回整棵子树（忽略 type）
+// ?taskRefId=xxx    — 返回 ref_id=xxx 且 page_type='exec_step' 的页面，
+//                     平铺线性，按 created_at ASC（执行过程记录用）
+// ?rootOnly=true    — 只返回根页面（parent_id IS NULL）
 router.get('/pages', (req, res) => {
-  const { type, refId, rootOnly } = req.query;
+  const { type, refId, taskRefId, rootOnly } = req.query;
+
+  // exec_step 线性过程记录（不做 CTE 递归，保持过程顺序）
+  if (taskRefId) {
+    pagesDb.all(
+      `SELECT ${PAGE_COLS} FROM pages
+       WHERE ref_id = ? AND page_type = 'exec_step'
+       ORDER BY created_at ASC`,
+      [taskRefId],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows.map(parseRow));
+      }
+    );
+    return;
+  }
 
   if (refId) {
     const sql = `
@@ -130,9 +147,12 @@ router.post('/pages', (req, res) => {
   const titleTrimmed = title.trim();
   if (!titleTrimmed) return res.status(400).json({ error: '标题不能为空' });
 
+  // exec_step pages are agent-generated execution records — skip title uniqueness
+  const skipDupCheck = pageType === 'exec_step';
+
   checkTitleUnique(parentId || null, titleTrimmed, null, (err, dup) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (dup) return res.status(409).json({ error: `同级目录下已存在标题「${titleTrimmed}」` });
+    if (dup && !skipDupCheck) return res.status(409).json({ error: `同级目录下已存在标题「${titleTrimmed}」` });
 
     const id = genId('page');
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
@@ -359,6 +379,38 @@ router.put('/pages/:id/blocks', async (req, res) => {
     pagesDb.run('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── POST /api/pages/:id/blocks/append ───────────────────────────
+// Agent 用：追加单个 block，不影响已有内容
+router.post('/pages/:id/blocks/append', (req, res) => {
+  const pageId = req.params.id;
+  const { type = 'paragraph', content = {}, creator = 'agent' } = req.body;
+
+  // Get max position
+  pagesDb.get('SELECT MAX(position) as maxPos FROM blocks WHERE page_id = ?', [pageId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const nextPos = ((row && row.maxPos) || 0) + 1;
+    const blockId = genId('block');
+    const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
+    const ts = new Date().toISOString();
+
+    pagesDb.run(
+      `INSERT INTO blocks (id, page_id, type, content, position, creator, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [blockId, pageId, type, contentStr, nextPos, creator, ts, ts],
+      function(insertErr) {
+        if (insertErr) return res.status(500).json({ error: insertErr.message });
+        // Update page updated_at
+        pagesDb.run('UPDATE pages SET updated_at = ? WHERE id = ?', [ts, pageId]);
+        res.status(201).json({
+          id: blockId, page_id: pageId, type,
+          content: typeof content === 'string' ? JSON.parse(content || '{}') : content,
+          position: nextPos, creator, created_at: ts,
+        });
+      }
+    );
+  });
 });
 
 // ── PATCH /api/blocks/:blockId/meta ─────────────────────────────

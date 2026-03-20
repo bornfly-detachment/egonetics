@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS pages (
 
 -- 根节点标题唯一（parent_id IS NULL）
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_root_title
-  ON pages(title) WHERE parent_id IS NULL;
+  ON pages(title) WHERE parent_id IS NULL AND page_type != 'exec_step';
 
 -- ── 块内容表 ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS blocks (
@@ -181,21 +181,35 @@ CREATE TABLE IF NOT EXISTS canvases (
   title       TEXT NOT NULL DEFAULT '新画布',
   description TEXT NOT NULL DEFAULT '',
   created_by  TEXT NOT NULL DEFAULT 'user',
+  canvas_type TEXT NOT NULL DEFAULT 'semantic',
+  -- 'semantic'   — 用户手建语义图，节点是 Page
+  -- 'execution'  — Agent 创建执行图，节点是 Action（有生命周期）
+  task_ref_id TEXT,
+  -- execution canvas 专用：指向发起执行的 task page id
   created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ── Canvas Nodes（画布节点位置） ──────────────────────────────
+-- ── Canvas Nodes（画布节点位置 + 执行语义） ────────────────────
 CREATE TABLE IF NOT EXISTS canvas_nodes (
-  id             TEXT PRIMARY KEY,
-  canvas_id      TEXT NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
-  entity_type    TEXT NOT NULL,
-  entity_id      TEXT NOT NULL,
-  x              REAL    NOT NULL DEFAULT 0,
-  y              REAL    NOT NULL DEFAULT 0,
-  expanded_level INTEGER NOT NULL DEFAULT 0,  -- 保留兼容
-  collapsed      INTEGER NOT NULL DEFAULT 0,  -- 卡片折叠到标题栏
-  tree_expanded  INTEGER NOT NULL DEFAULT 0,  -- 子节点已在画布展开
+  id              TEXT PRIMARY KEY,
+  canvas_id       TEXT NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
+  entity_type     TEXT NOT NULL,
+  entity_id       TEXT NOT NULL,
+  x               REAL    NOT NULL DEFAULT 0,
+  y               REAL    NOT NULL DEFAULT 0,
+  expanded_level  INTEGER NOT NULL DEFAULT 0,  -- 保留兼容
+  collapsed       INTEGER NOT NULL DEFAULT 0,  -- 卡片折叠到标题栏
+  tree_expanded   INTEGER NOT NULL DEFAULT 0,  -- 子节点已在画布展开
+
+  -- SubjectiveEgoneticsAI Agent 执行字段
+  node_kind       TEXT NOT NULL DEFAULT 'entity',
+  -- 'entity'|'llm_call'|'tool_call'|'local_judge'|'rule_branch'|'human_gate'|'lifecycle'|'cost_tracker'
+  lifecycle_state TEXT NOT NULL DEFAULT 'pending',
+  -- 'pending'|'running'|'success'|'failed'|'timeout'|'loop_detected'|'budget_exceeded'|'waiting_human'
+  exec_config     TEXT NOT NULL DEFAULT '{}',  -- 执行参数 JSON（按 node_kind 不同）
+  cost_snapshot   TEXT NOT NULL DEFAULT '{}',  -- 执行完成后写入 cost 向量 JSON
+
   created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (canvas_id, entity_id)
