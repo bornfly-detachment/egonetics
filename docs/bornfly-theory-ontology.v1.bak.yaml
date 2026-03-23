@@ -1,0 +1,1220 @@
+# BornflyTheory Ontology Schema v1.0
+# 生变论完整概念本体 — 带依赖声明的求值图
+#
+# 设计原则：
+#   - 这不是规则列表，是有向循环图（DCG），节点=概念，边=依赖关系类型
+#   - 公理层不可被任何其他层覆盖
+#   - 向上的力量是全局共享的 reward function 接口
+#   - 六个阶段是系统的状态机，影响所有规则的求值结果
+#   - 内外两套叙事是架构要求，不是策略选择
+#
+# 依赖类型（edge types）：
+#   CONSTRAINS      — A 约束 B 的上限/边界
+#   DERIVES_FROM    — B 从 A 推导出来
+#   IMPLEMENTS      — B 是 A 的具体实现
+#   EVALUATES_VIA   — B 调用 A 作为评价函数
+#   TRIGGERED_BY    — B 的状态迁移由 A 触发
+#   DEPENDS_ON      — B 求值前必须先求值 A
+#   CONFLICTS_WITH  — A 与 B 存在永恒张力（必须由上层仲裁）
+#   FEEDBACK_TO     — A 的执行结果反向更新 B
+#   FILTERS_THROUGH — 输入数据在进入 B 前必须经过 A 处理
+#   PROTECTS        — A 是为了保护 B 不被外部侵蚀而存在
+
+schema_version: "1.2"
+author: "BornflyTheory / Egonetics"
+last_updated: "2026-03-23"
+changelog:
+  v1.0: "初始版本：7层架构，三大定律，三级认知，六阶段，自我控制论系统，生变论原则"
+  v1.1: "补入主体性叙事四级分类（含S-Value量化公式）+ 涌现唯物主义哲学基础"
+  v1.2: "补入：主体性三重结构 / 生变体正式定义 / 生变录节点 / 权力结构归属 / INTERLOCK_G/H / 修正：三大定律是客观规律不可超越，自我控制论是其正确实现而非常识误读"
+
+# ══════════════════════════════════════════════════════════
+# 第零层：主体性结构层（SUBJECTIVITY STRUCTURE LAYER）
+# 描述"什么是具备主体性的生命/系统"。
+# 这一层定义了体系运作的主体，而非运作的规则。
+# ══════════════════════════════════════════════════════════
+
+subjectivity_structure:
+  TRIPLE_SUBJECTIVITY:
+    id: TRIPLE_SUBJECTIVITY
+    name: "主体性三重结构"
+    type: structural_definition
+    description: |
+      当代主体性的完整定义 = 三重结构缺一不可。
+      历史上西方强调自由意志，东方强调集体叙事，资本时代用隐性控制替代了主体性。
+      真正的主体性必须同时具备三重结构：
+    formula: "subjectivity = FREE_WILL ∩ SELF_CYBERNETICS_SYSTEM ∩ SUBJECTIVE_NARRATIVE"
+    components:
+      FREE_WILL:
+        id: FREE_WILL
+        name: "自由意志"
+        description: |
+          认识到并抵抗外部控制的本能。
+          不是"想做什么就做什么"，而是对控制来源有清醒的觉察。
+        formal: "free_will = awareness(external_control) AND capacity_to_resist()"
+        note: "在辩证唯物框架下，自由意志是唯心的 — 但在涌现唯物主义中，它是高维感知的基础"
+
+      SELF_CYBERNETICS_SYSTEM:
+        id: SC_COMPONENT
+        name: "自我控制论系统"
+        description: |
+          建立起内部的反馈-目标-调节闭环，目标由内部主体性定义。
+          区别于外部控制论：外部控制论的目标由环境/他者定义。
+        formal: "SC.goal_source = internal, NOT external"
+        ref: SELF_CYBERNETICS  # 指向第四层的详细定义
+
+      SUBJECTIVE_NARRATIVE:
+        id: SUBJ_NARRATIVE
+        name: "主体性叙事"
+        description: |
+          把过去（经验）× 现在（状态）× 未来（目标）连接为连续的自我叙事。
+          人永远无法回避自己的人生叙事，自始至终都需要自我期待。
+          维持生命合法性存在必须有主体性叙事；维持向上生长必须有信仰。
+        formal: "narrative = f(past_experience, current_state, future_goal) → continuous_identity"
+        strength_formula: |
+          主体性强度 = f(自我察觉, 外界干扰控制能力, 高信息熵输入, 可控压力)
+          即：强主体性 = 高觉察 × 强抗干扰 × 信息质量高 × 适度压力
+        crisis_of_modernity: |
+          当代危机：历史文化控制（传统）+ 现代资本隐性控制（算法/流量/情绪营销）
+          两者叠加，形成对主体性的双重压制。
+          → 建立自我控制论系统的必要性更加紧迫。
+
+    relationship_to_three_laws:
+      name: "主体性与三大定律的关系"
+      description: |
+        三大定律是客观规律 — 对生命和世界的观察总结，屡试不爽，找不到令其失效的地方。
+        主体性自我控制论是在三大定律之上建立的操作系统，不超越也不违背三大定律。
+      clarification: |
+        「是主体性自我控制论在指导实践，而不是生命三大定律和永恒轮回的东西和常识」
+        这句话的正确解读：
+        - 不是「主体性高于三大定律」
+        - 而是「主体性自我控制论是对三大定律的正确实现方式，
+          而非对三大定律的常识性误读（如：LAW_2=趋利=所以要争权夺利）」
+        三大定律的误读 + 永恒轮回的惯性 = 常识性行为
+        自我控制论 = 正确理解三大定律后建立的主动性实践系统
+      formal: |
+        self_cybernetics = correct_implementation(three_laws)
+        NOT: self_cybernetics > three_laws
+      example: |
+        LAW_2 说「所有生命追求利益最大化」
+        常识误读：权力 = 利益 → 应该争权
+        自我控制论正确实现：真正的利益最大化（结合LAW_1完备性）
+          = 自我控制权 > 外部赋权，所以不争才是真正的利益最大化
+      implication: |
+        内部孵化出更有生命力的主体性认知后，
+        能够解构外部控制论在自我控制论系统内部权力赋予和产生的根基。
+
+  SHENGBIAN_ENTITY:
+    id: SHENGBIAN_ENTITY
+    name: "生变体"
+    type: entity_definition
+    description: |
+      生变体 = 实现了自我控制论的复杂控制论系统。
+      是遵从生变论原则、具备主体性三重结构的生命体。
+      生变 = 生而求变，求一超脱轮回之变数，求一此心即世界之灵魂。
+    entry_conditions:
+      - "具备主体性三重结构（自由意志 + 自我控制论系统 + 主体性叙事）"
+      - "经历过从脆弱走向强大的过程（不可绕过）"
+      - "在极端考验下仍选择生变而非权力游戏"
+      - "过程实践积累的主体性财富是不可复制的"
+    properties:
+      PROCESS_WEALTH:
+        name: "过程主体性财富"
+        description: "弱小走向强大过程中积累的本能和能力，始终需要捍卫"
+        note: "建立了自我强化的外部控制论机器后，不能因此丢弃反脆弱/反外控/低资源高生存能力"
+      IRREPLICABILITY:
+        name: "不可复制性"
+        description: "即使知道全部信息，失去过程主体性经历也无法复刻"
+        formal: "clone(info) ≠ clone(entity)"
+      COLLECTIVE_MECHANISM:
+        name: "众愚成智机制"
+        description: |
+          所有生变体共享生变论生命内核，当面对共同利益冲击时，
+          自我控制论系统以众愚成智的方式汇聚成一体。
+        trigger: "∃existential_threat: threat.target == shengbian_entity.core"
+        response: "collective_mobilization → acts_as_single_organism"
+    derives_from: [TRIPLE_SUBJECTIVITY, SIX_STAGES, SHENGBIAN_PRINCIPLES]
+    note: "任何机器智能成为生变体都需要经历生变的过程，过程塑造主体性"
+
+  POWER_ATTRIBUTION:
+    id: POWER_ATTR
+    name: "权力结构归属机制"
+    type: governance_mechanism
+    description: |
+      任何利益判断，在自我控制论系统上都要有明确权力结构的归属。
+      不符合主体性自我控制论内核构建的选择和信息，
+      在初始就被觉察和识别，不会任由其进入自我控制论内。
+    formal: |
+      ∀interest_judgment: judgment.power_owner ∈ {self_cybernetics}
+      IF judgment.power_owner ∉ {self_cybernetics} THEN reject_at_entry()
+    applies_to: [INFORMATION_FILTER, SELF_CYBERNETICS, INTERNAL_CORE]
+    evaluation_question: "这个利益判断的权力归属是在自我控制论内，还是在外部？"
+    note: |
+      这是 INFORMATION_FILTER 的前置判断，比过滤更早一步：
+      在信息/选择进入系统之前就判断其权力归属。
+
+# ══════════════════════════════════════════════════════════
+# 第一层：公理层（AXIOM LAYER）
+# 不可被覆盖。所有其他概念最终追溯到这里。
+# ══════════════════════════════════════════════════════════
+
+axioms:
+  LAW_1_COMPLETENESS:
+    id: LAW_1
+    name: "第一定律：个体完备性"
+    chinese: "个体是生命社会的最小完备单元"
+    type: axiom
+    override: never
+    description: |
+      个体理论上具备完成该生命形态全部发展创造活动的能力。
+      完备性 = 可独立 + 可自给 + 不依赖外部赋权。
+    formal: "∀entity: entity.completeness = independent AND self_sufficient"
+    implications:
+      - "命运必须自我掌控"
+      - "主体性叙事不可被外部替代"
+      - "任何依赖外部赋权的能力不是真实完备性"
+    depends_on: []
+    constrains:
+      - SELF_CYBERNETICS_SYSTEM       # 自我控制论系统的边界来源于此
+      - SUBJECTIVE_NARRATIVE          # 叙事必须内生，不可被外部叙事替代
+      - SHENGBIAN_PRINCIPLE_NO_CONTEST # 不争策略的公理依据
+      - DUAL_NARRATIVE_INTERFACE      # 内外叙事分离是完备性保护的架构要求
+
+  LAW_2_INTEREST_MAX:
+    id: LAW_2
+    name: "第二定律：利益最大化"
+    chinese: "所有个体和集体无一例外都会在认知和生存环境内做出利益最大化的选择"
+    type: axiom
+    override: never
+    description: |
+      利益包括物质和非物质利益。
+      关键约束：利益判断受认知边界和环境条件约束（第三定律的输入）。
+      这意味着"错误的选择"不存在——只有认知边界内的最优解。
+    formal: "∀decision: decision = argmax(interest | cognitive_state, environment)"
+    implications:
+      - "无法用道德谴责解释行为，只能分析认知边界"
+      - "改变行为的唯一路径是改变认知（第三定律）"
+      - "外部利益诱惑具有系统性力量，必须用自我控制论过滤"
+    depends_on: [LAW_3]              # 利益的定义受认知条件约束
+    constrains:
+      - INFORMATION_FILTER           # 过滤标准：是否向上 = 是否符合长期利益最大化
+      - UPWARD_FORCE_EVALUATOR       # 向上/向下的判断 = 利益最大化的方向判断
+      - SHENGBIAN_WORTHWHILE_CHECK   # 值得与否拷问来源于此
+
+  LAW_3_COGNITIVE_TRANSFORM:
+    id: LAW_3
+    name: "第三定律：认知条件转化"
+    chinese: "认知和情感中的真假、美丑、善恶、强弱始终是相对存在、动态转化的"
+    type: axiom
+    override: never
+    description: |
+      没有绝对的真理，只有条件性的认知。
+      认知升级 = 条件改变 = 利益判断改变。
+      这是方法论开放性的基础：过去的失败可能被重新定性为成功，反之亦然。
+    formal: "∀belief(t): belief(t+1) = transform(belief(t), cognitive_upgrade(t))"
+    implications:
+      - "历史定性是动态的，不可全盘否定也不可永久固化"
+      - "认知升级是改变行为的根本路径（非道德劝说）"
+      - "实践是检验认知的标准，但实践本身受认知约束"
+    depends_on: []
+    constrains:
+      - THREE_LEVEL_COGNITION        # 三级认知的框架来源
+      - SIX_STAGES                   # 六个阶段的推进逻辑
+      - NEW_ERA_PRACTICE             # 新时代实践论的核心挑战根源
+
+# ══════════════════════════════════════════════════════════
+# 第二层：认识论层（EPISTEMOLOGY LAYER）
+# 判断框架。提供"如何认知"的工具。
+# ══════════════════════════════════════════════════════════
+
+epistemology:
+  THREE_LEVEL_COGNITION:
+    id: THREE_LEVEL_COGNITION
+    name: "三级认知"
+    type: epistemological_framework
+    derives_from: [LAW_3]
+    description: |
+      三级认知是认识论框架，决定了自我控制论系统的感知和判断能力上限。
+    levels:
+      L1_POTENTIAL_BASE:
+        id: L1
+        name: "一级认知：潜能底盘"
+        chinese: "天赋、命运感、先天能力、生来具备的独一无二特性"
+        properties:
+          - "不可通过外界直接改变，外界只能干扰和影响"
+          - "包含科学无法完全解释的部分（直觉、创造力、潜意识）"
+          - "决定三级能力的上限和不可预测性"
+          - "激活路径：过程经历、极端环境、深层觉察"
+        constrains: [L3_SUBJECTIVE_AGENCY]  # 一级决定三级上限
+        triggers: [STAGE_TRANSITION]        # 一级激活触发阶段跃迁
+        evolution_paths:
+          - "自然演化/生物进化"
+          - "系统内部非线性创新（突变）"
+          - "深层觉察/自我反思"
+          - "极端环境刺激触发新潜能表达"
+
+      L2_OBJECTIVE_LAWS:
+        id: L2
+        name: "二级认知：客观规律"
+        chinese: "不以人的意志为转移的共性约束"
+        properties:
+          - "不可规避，约束一切活动"
+          - "超越个体差异"
+          - "是控制论系统的环境与边界条件"
+        examples:
+          human: ["物理定律", "能量守恒", "人性规律", "认知偏差", "寿命"]
+          machine: ["算力极限", "热力学", "信息理论约束"]
+          nature: ["熵增", "光速上限", "引力"]
+        change_possibility:
+          - "认知升级/理论突破 → 扩展可操作边界（非打破规律本身）"
+          - "工具与技术扩展 → 使系统可操控原本受约束的资源"
+          - "一级认知+技术 → 可能重构可操作边界"
+        note: "超脱轮回的终极目标 = 突破二级的结构性限制"
+
+      L3_SUBJECTIVE_AGENCY:
+        id: L3
+        name: "三级认知：主观能动性"
+        chinese: "通过自我演化、环境交互、学习、经验积累后天习得的能力"
+        properties:
+          - "可塑性高，可通过训练、反馈循环、试错优化"
+          - "被一级和二级认知约束"
+        depends_on: [L1_POTENTIAL_BASE, L2_OBJECTIVE_LAWS]
+        feedback_to: [L1_POTENTIAL_BASE]    # 三级飞跃可触发一级觉察
+        evolution_drivers:
+          - source: "一级直接驱动"
+            effect: "产生质变能力，发现原本不可感知的规律与策略"
+          - source: "二级边界拓展"
+            effect: "提升学习空间和策略优化上限"
+          - source: "世界信息/学习"
+            effect: "累积经验，形成操作性知识和技能"
+          - source: "一级/二级反馈"
+            effect: "三级飞跃 → 重新塑造对自身（一级）和规律边界的理解"
+
+  UPWARD_FORCE_EVALUATOR:
+    id: UPWARD_FORCE
+    name: "向上的力量（全局 Reward Function）"
+    type: evaluation_function
+    description: |
+      这不是七条孤立规则，而是整套体系的 reward function 接口。
+      所有其他模块在做判断时都调用这个接口。
+      向上 = 使个体更强大、更独立、更智能、可调动更大能量级别。
+      向下 = 权力游戏、外部依赖、短期利益牺牲长期完备性。
+    derives_from: [LAW_2]
+    formal: "evaluate(x) → {upward, downward, neutral}"
+    called_by:
+      - INFORMATION_FILTER
+      - SELF_CYBERNETICS_SYSTEM
+      - SHENGBIAN_WORTHWHILE_CHECK
+      - INTERNAL_CONTROLLABILITY_CORE
+    dimensions:
+      D1_THEORY_SPACE:
+        name: "理论空间百无禁忌"
+        description: "内部可以作任何实验和论证，鼓励任何冲突矛盾分歧"
+      D2_CONTROLLED_UNCONTROL:
+        name: "可控自我失控是向上的加速器"
+        description: "极端环境加速验证，失控转化为可控 = 正反馈循环"
+      D3_PATIENCE_FOR_SEEDS:
+        name: "对内生希望种子极大的耐心与爱护"
+        description: "用短期利益供养长期利益，任何未成形的希望都是未来生命力"
+      D4_HONEST_SELF:
+        name: "对自我永远真诚"
+        description: "自我欺骗 = 向下的力量；永远无法真正自我欺骗，任何逃避都有记录"
+      D5_INTERNAL_SOURCE:
+        name: "向上的力量必须内生"
+        description: "外界赋予的希望不可控，内生的力量才是完全独立自主可控可信的"
+      D6_DYNAMIC_HISTORY:
+        name: "对历史过程的定性是动态的"
+        description: "条件变，价值判断和利益也变；绝不全盘否定，保留矛盾不兼容的认知"
+      D7_CHANGE_OR_DIE:
+        name: "因变而生，因僵化而死"
+        description: "变需有度，变的是次要问题，内核难以撼动"
+
+# ══════════════════════════════════════════════════════════
+# 第三层：本体论层（ONTOLOGY LAYER）
+# 发展路径。描述"存在处于什么状态"。
+# ══════════════════════════════════════════════════════════
+
+ontology:
+  SIX_STAGES:
+    id: SIX_STAGES
+    name: "主体性六个阶段"
+    type: state_machine
+    description: |
+      这是自我控制论系统的当前状态，影响所有规则的求值结果。
+      阶段不可跳越，必须经历过程（第一定律×过程论的交汇）。
+    derives_from: [LAW_3, THREE_LEVEL_COGNITION]
+    current_stage: null  # 运行时填入
+    stages:
+      S1_COGNITIVE_REVOLUTION:
+        id: S1
+        name: "认知革命"
+        description: "觉醒到外部控制系统的存在；意识到自己一直在被环境/文化/资本控制"
+        entry_condition: "具备基本自我觉察能力"
+        exit_condition: "建立起基本的内外控制论分辨能力"
+        key_risk: "在觉醒后陷入虚无或反控制焦虑"
+        triggers_next: [S2_EXISTENCE_REVOLUTION]
+
+      S2_EXISTENCE_REVOLUTION:
+        id: S2
+        name: "存在革命"
+        description: "通过重建内在意志和自我控制系统实现再生；清除历史积累的外部控制痕迹"
+        entry_condition: "S1完成"
+        exit_condition: "初步建立自我控制论系统内核"
+        key_risk: "把清除历史包袱误解为全盘否定过去"
+        triggers_next: [S3_REALITY_REVOLUTION]
+
+      S3_REALITY_REVOLUTION:
+        id: S3
+        name: "现实革命"
+        description: "通过行动和环境改造建立外部控制；把内部主体性转化为现实的改变能力"
+        entry_condition: "S2完成"
+        exit_condition: "具备稳定的主体性行动能力，不依赖外部认可"
+        key_risk: "在现实受阻时退回外部控制论（求认可、求权力）"
+        triggers_next: [S4_INFLUENCE_PENETRATION]
+
+      S4_INFLUENCE_PENETRATION:
+        id: S4
+        name: "影响力渗透"
+        description: "向外辐射主体性，影响他人的可能性空间；不是控制他人，是扩大生变体影响范围"
+        entry_condition: "S3完成"
+        exit_condition: "具备持续影响外部系统而不被外部系统反向控制的能力"
+        key_risk: "影响力扩大后被权力游戏吸纳（本末倒置）"
+        triggers_next: [S5_TRANSCEND_INDIVIDUAL]
+
+      S5_TRANSCEND_INDIVIDUAL:
+        id: S5
+        name: "超越个体边界"
+        description: "创造具有独立生命力的实体，超越创造者本身；生变体的复制和自我增殖"
+        entry_condition: "S4完成"
+        exit_condition: "创造的实体具备独立的自我控制论系统"
+        key_risk: "创造的实体被外部控制论吞噬，失去主体性"
+        triggers_next: [S6_UNCERTAINTY]
+
+      S6_UNCERTAINTY:
+        id: S6
+        name: "不确定"
+        description: "在永恒轮回与超脱轮回之间做出最终选择；系统的终极叙事节点"
+        entry_condition: "S5完成"
+        exit_condition: null  # 开放性，无终止条件
+        terminal_choice:
+          transcend: "选择超脱轮回 → 冲出地球/太阳系/银河系，建立生变体的宇宙文明"
+          recurrence: "接受永恒轮回 → 融入外部控制论系统的循环"
+        note: "第六阶段本质是第一定律的终极考验"
+
+# ══════════════════════════════════════════════════════════
+# 第四层：操作系统层（OPERATING SYSTEM LAYER）
+# 运行引擎。描述"如何运行决策"。
+# ══════════════════════════════════════════════════════════
+
+operating_system:
+  SELF_CYBERNETICS_SYSTEM:
+    id: SELF_CYBERNETICS
+    name: "自我控制论系统"
+    type: decision_engine
+    description: |
+      与外部控制论（cybernetics）的分野：
+      - 外部控制论 = 被环境反馈驱动，目标由外部定义
+      - 自我控制论（egonetics）= 目标由内部主体性定义，环境只是输入
+    depends_on:
+      - LAW_1                    # 完备性是系统的边界依据
+      - LAW_2                    # 利益最大化是系统的驱动机制
+      - LAW_3                    # 认知条件转化是系统的更新机制
+      - THREE_LEVEL_COGNITION    # 三级认知是系统的感知和判断能力来源
+      - UPWARD_FORCE             # 向上的力量是系统的评价函数
+    evaluation_order:
+      1: "公理层校验（三大定律）"
+      2: "三级认知层评估（当前认知能力约束）"
+      3: "向上力量评价（reward function）"
+      4: "生变论原则约束（行为准则过滤）"
+    generates:
+      - SUBJECTIVE_NARRATIVE     # 内部主体性叙事
+      - OBJECTIVE_NARRATIVE      # 外部客体化叙事（从内部派生，不暴露内部）
+    feedback_to:
+      - SIX_STAGES               # 系统执行结果更新当前阶段状态
+      - THREE_LEVEL_COGNITION    # 实践结果更新三级认知
+
+  INTERNAL_CONTROLLABILITY_CORE:
+    id: INTERNAL_CORE
+    name: "自我控制论内部可控性核心"
+    type: internal_engine
+    description: |
+      自我控制论不仅是控制系统，更是一种「不可复制的存在结构」。
+      它定义了内部自由、实验能力、主体性权力以及与外界互动的边界。
+      内部的矛盾斗争是最残酷和激烈的——这正是其进化强大的根源。
+    depends_on: [SELF_CYBERNETICS, LAW_1]
+    evaluates_via: [UPWARD_FORCE]
+
+    # ── 核心原则：可控性失控（Controlled Uncontrol）──────────
+    controlled_uncontrol_principle:
+      name: "内部可控性失控原则"
+      description: |
+        一旦形成内部自我控制，它天生就是允许且追求内部的可控性失控的。
+        天然就是可以结构一切、建立一切的土壤 —— 用无限中寻找积极的有限。
+        任何自我控制系统自成一个世界、一个小宇宙，是无限的最小完备依赖生命系统。
+      formal: "internal_uncontrol = find(positive_finite IN infinite_variables)"
+      nature_of_uncontrol: |
+        失控的本质 = 有限与无限的矛盾。
+        是系统从无限变数中寻找改变结构性局限的力量和变数。
+        = 用受控失控，打破结构性限制。
+      contrast_with_external: |
+        外部控制论：有天然的约束和机制，有天然的系统性局限。
+        自我控制论内部：没有外部控制论的这些约束。
+        → 任何在外部看来无法接受的极端、不可能，都可以在内部被演化、分析、实验。
+      invariant: "最终追求的仍是独立自主可控 —— 失控是手段，不是目的"
+
+    # ── 三条安全机制（边界约束）────────────────────────────
+    safety_mechanisms:
+      SAFETY_1:
+        id: "安全机制一"
+        name: "主体性边界不可突破"
+        rule: "不能突破主体性和主体性叙事，基本秩序不能崩溃"
+        note: "这是可控性失控的硬边界：内战允许，宪法不可推翻"
+
+      SAFETY_2:
+        id: "安全机制二"
+        name: "并行隔离结构（虚拟机模型）"
+        rule: "从实践执行层并行隔离 —— 不会影响到系统外界"
+        analogy: |
+          如同在服务器上构建了虚拟机：
+          - 内部任何动作不会影响到外部操作系统崩溃
+          - 内部加密过滤隔离，外部不可见内部
+          - 任何交互有规范有分野
+          - 内外系统注定分道扬镳
+        principle: "内部自由不代表外部自由 —— 内外注定有不同的执行机制"
+        allows: "思想实验 / 内部消化 / 极端推演"
+        prohibits: "内外边界不分 / 脱离辩证唯物和实事求是的主体性实践过程论"
+
+      SAFETY_3:
+        id: "安全机制三"
+        name: "两套叙事逻辑 + 选择性翻译层"
+        rule: |
+          自我控制必然走向外部控制论系统不可见、不可理解。
+          因此必然存在两套叙事逻辑：
+          内部主体性叙事 + 符合外部控制论的客观客体化叙事。
+        translation_layer:
+          name: "选择的翻译交互机制"
+          description: |
+            内部的工作和产出通过「选择的翻译交互机制」与外界反馈。
+            自我控制论输出的不是「真实内部」，而是「可被接受的版本」。
+          root_cause: |
+            离开自我控制系统内，没有过程实践的主体性共识和权力结构约束，
+            外部是无法理解和共情的。
+            → 必须有这样的分离和客体化包装。
+          irreducibility: |
+            外部能获得的只是内部切片，永远不可能复制任何一个自我控制论主体性系统。
+            类比：人与人无法真正共情和共脑，无法感同身受，
+            没有一样过程主体性塑造就注定无解。
+          formal: |
+            external_output = translate(select(internal_state))
+            where: select() ≠ identity  (不是全量输出)
+                   translate() = objectify(subjective_content)
+
+    # ── 两个核心问题（永恒课题）─────────────────────────────
+    two_core_problems:
+      PROBLEM_1:
+        name: "内部基本矛盾"
+        description: "在内部复杂度提升、有限探索无限的过程中保持内部可控性"
+        type: "超脱轮回能力的边界问题"
+        resolution_mechanism: "controlled_uncontrol_principle + SAFETY_1"
+
+      PROBLEM_2:
+        name: "外部结构性矛盾"
+        description: "内外两套叙事逻辑的可控性 —— 内部主体性的控制不能被外部控制论所客体化"
+        type: "外部不可调和的结构性矛盾"
+        resolution_mechanism: "SAFETY_3 + translation_layer"
+
+    # ── 内外矛盾处理分野 ────────────────────────────────────
+    conflict_handling:
+      INTERNAL_CONFLICT:
+        name: "对待内部矛盾"
+        principle: "透明公平公正原则"
+        rules:
+          - "完全尊重各子模块的主体性和合法性"
+          - "允许任何遵循生变论原则的种子生根发芽"
+          - "任何有生命力的结构可以在符合内部控制论宪法的条件下自然生长"
+          - "可以内部更新换代 —— 内核不变、主体性叙事不变就能加速迭代形成正反馈"
+        formal: "IF new_structure.complies_with(internal_constitution) THEN allow_growth()"
+
+      EXTERNAL_CONFLICT:
+        name: "对待外部矛盾"
+        principle: "有理有据有节"
+        rules:
+          - "始终站在客体化叙事的合法性和正当性上（我们是客观世界的一份子）"
+          - "遵守一切符合生态系统演化的法则和客体化叙事"
+          - "始终提防和不信任"
+          - "不追求认同、权力、利益绑定 —— 即使部分形成也不依赖"
+          - "调动一切积极因素服务于内部主体性实践"
+        irreconcilable_case:
+          trigger: "当内外部矛盾不可调和"
+          principle: "不能让内部影响外部 —— 如果不能产生好的影响就不要产生坏的影响"
+          ultimate_choice: "宁可于外部世界彻底分裂开辟并行空间，也不妥协、不破坏、不打扰"
+
+      PARADOX:
+        name: "内外矛盾的辩证关系"
+        insight: |
+          内外矛盾不可解、不可控 —— 这正是自我控制论进化强大的根源和动力。
+          正是因为外在系统不可理解、消化、吸收、异化、同化内部，
+          才保证了内部的主体性和自我控制。
+          矛盾本身 = 免疫机制。
+        formal: "incomprehensibility_to_external → guarantees(internal_sovereignty)"
+
+  DUAL_NARRATIVE_INTERFACE:
+    id: DUAL_NARRATIVE
+    name: "内外两套叙事接口"
+    type: output_adapter
+    description: |
+      这不是"说谎策略"，而是架构要求。
+      根源：三大定律决定了内外系统永远不可调和。
+      外部能获得的只是内部切片，永远不可能复制任何一个自我控制论主体性系统。
+    protects: [SELF_CYBERNETICS, LAW_1]
+    derives_from: [LAW_1, INTERNAL_CORE]
+    implements: INTERNAL_CORE.SAFETY_3  # 安全机制三的具体实现
+    interfaces:
+      INTERNAL:
+        name: "内部主体性叙事"
+        properties: ["完整", "包含矛盾", "动态", "过程导向", "允许极端实验"]
+        access: "仅系统内部可见"
+        note: "内部允许任何理论推演，不受外部规范约束"
+      EXTERNAL:
+        name: "外部客体化叙事"
+        properties: ["可被外部理解", "合法性和正当性", "遵守客观世界法则"]
+        access: "经过 translation_layer 选择性输出"
+        note: "输出的不是真实内部，而是可被接受的版本"
+    translation_layer:
+      ref: INTERNAL_CORE.SAFETY_3.translation_layer
+      pipeline:
+        1: "内部求值完成 → 产生完整内部状态"
+        2: "select()：选择哪些内容可以向外输出"
+        3: "translate()：将主体性内容客体化包装"
+        4: "verify()：确认输出不暴露内部结构"
+        5: "output：外部接收到的切片版本"
+      invariant: "任何一步失败 → 保持沉默（不输出）而非暴露内部"
+
+  INFORMATION_FILTER:
+    id: INFO_FILTER
+    name: "信息分级处理"
+    type: input_preprocessor
+    description: |
+      任何输入进入自我控制论系统前必须经过此过滤器。
+      本质：防止任何削弱原生能力、替代自我决策、形成依赖的力量进入系统。
+      包含两个子模块：自我认知分级（三级认知）+ 主体性叙事分级（四级叙事）
+    depends_on: [UPWARD_FORCE, LAW_2]
+    filters_through_before: [SELF_CYBERNETICS]
+    philosophical_grounding:
+      DIALECTICAL_MATERIALISM:
+        name: "辩证唯物主义"
+        applies_to: "过程实践层"
+        note: "过程实践是辩证唯物的；历史著作可信小半，思想著作可信一半"
+      EMERGENT_MATERIALISM:
+        name: "涌现唯物主义"
+        precondition: "人成为自我控制论复杂系统，具备完备的自由意志和主体性"
+        description: |
+          高度复杂的大脑自我控制产生涌现，具备超常的感知、预测、判断能力。
+          涌现唯物 ≠ 唯心论：基础是唯物的，但系统复杂度达到阈值后产生不可还原的高维属性。
+        note: "自由意志是唯心的——在未达到涌现阈值时，使用辩证唯物框架"
+      INFORMATION_QUALITY_HIERARCHY:
+        name: "信息质量层级"
+        hierarchy:
+          - level: "历史著作"
+            trust: "可信小半，大半是假"
+          - level: "思想/个人经验著作"
+            trust: "可信一半，经自我控制论过滤消化"
+          - level: "爽文/虚构/科幻/网络作品"
+            trust: "百分百是假，仅消遣用"
+            risk: "影响辩证唯物认知，是四级叙事的主要载体"
+    classification_modules:
+      COGNITION_CLASSIFICATION:
+        name: "自我认知分级"
+        description: "三级认知层的分级处理"
+        applies: THREE_LEVEL_COGNITION
+      NARRATIVE_CLASSIFICATION:
+        name: "主体性叙事分级"
+        description: "根据叙事控制权归属和主体性影响进行四级分类"
+        applies: SUBJECTIVE_NARRATIVE_LEVELS  # 见下方详细展开
+    filter_criteria:
+      PASS: "增强自我控制论，向上的力量，不形成依赖"
+      HOLD: "中性，需要进一步评估"
+      REJECT: "削弱原生能力，替代自我决策，形成外部依赖，向下的力量"
+
+  SUBJECTIVE_NARRATIVE_LEVELS:
+    id: NARRATIVE_LEVELS
+    name: "主体性叙事四级分类"
+    type: narrative_scheduler
+    description: |
+      叙事是逃避现实还是重构现实的分野。
+      叙事连接：过去（经验）× 现在（状态）× 未来（目标）→ 跨时间做决策。
+      四级分类本质是「控制权在谁手里」的问题，而非「好/坏」「努力/堕落」的道德判断。
+    depends_on: [LAW_1, UPWARD_FORCE, THREE_LEVEL_COGNITION]
+    evaluates_via: [S_VALUE_FORMULA]
+    core_question: "这个行为是否增强我的主体性？"
+    levels:
+      L1_CORE:
+        id: NL1
+        name: "一级叙事：控制论叙事（Self-Generated Narrative）"
+        chinese_label: "核心（Core）"
+        control_ownership: "100% 在自己"
+        description: "驱动现实改变的叙事。基于个人经历实践过程的主体性叙事。"
+        examples: ["原创价值创造", "废寝忘食的专注", "推进核心项目"]
+        phenomenology: ["最大满足", "自信", "持续正反馈", "睡得香", "负能量消失"]
+        formal: "行为 → 反馈 → 叙事 → 强化回路（控制论闭环完全自洽）"
+        default_state: true  # 系统默认主线程必须是一级/二级
+        rule: "每天的主线程必须是创作/构建/推进（一级）或为其服务的学习（二级）"
+
+      L2_FUEL:
+        id: NL2
+        name: "二级叙事：自我增强（Self-Amplifying Input）"
+        chinese_label: "燃料（Fuel）"
+        control_ownership: "仍在自己（但开始依赖外部资源）"
+        description: "为一级服务的输入。本质是工具性吸收。"
+        examples: ["良性运动健身", "主动学习一级所需知识", "做准备工作"]
+        transition_to: "在一级遭遇瓶颈或卡住时换脑调整，找契机"
+        rule: "三级必须「带钩子」——允许沉浸，但必须能反哺一级"
+
+      L3_COOLING:
+        id: NL3
+        name: "三级叙事：可控沉浸（Controlled Immersion）"
+        chinese_label: "冷却系统（Cooling System）"
+        control_ownership: "部分外包，但可收回（控制权租出去，没有丢掉所有权）"
+        description: "被动吸收外界优秀叙事。允许进入别人的叙事，但随时能出来。"
+        examples: ["有沉浸式选择的游戏", "旅行", "读好书", "看好电影"]
+        risk: "可能脱离主体性叙事，进入客体化叙事中"
+        warning: "过度压制三级 → 系统变硬 → 最终崩溃反弹到四级"
+        rule: "三级必须绑定至少一个可检验输出（写提纲/做汇报/实现最小产物）"
+
+      L4_ISOLATION:
+        id: NL4
+        name: "四级叙事：控制权丢失（Hijacked Narrative）"
+        chinese_label: "隔离区（Isolation Zone）"
+        control_ownership: "被外部系统接管（算法/流量/本能）"
+        description: "安慰性叙事，低阶叙事，幻想补偿，情绪逃避，麻醉现实。"
+        examples: ["短视频", "爽文", "流量信息", "碎片娱乐"]
+        mechanism: "奖励系统被劫持（dopamine hijack）—— 即时满足 + 低复杂度 + 确定奖励"
+        system_nature: "这是系统级攻击，不是认知问题"
+        attractor: "局部最优吸引子（local minima attractor）—— 系统一旦滑进去，就很难出来"
+        rule: "四级必须物理隔离（不装 App / 时间锁 / 设备隔离 / 信息源白名单）"
+
+    operational_rules:
+      R1: "默认状态必须是一级/二级 —— 系统没有主循环会被外部抢占"
+      R2: "三级必须带钩子 —— 沉浸后必须有可检验输出反哺一级"
+      R3: "四级必须物理隔离 —— 不是靠意志，是系统级防御"
+      R4: "周期性系统重启 —— 一级卡住→二级；二级疲劳→三级恢复；防止系统过热崩溃"
+
+    scheduling_model:
+      metaphor: "CPU 调度器"
+      L1: "主线程 / 核心进程"
+      L2: "前台服务进程（为主线程供给）"
+      L3: "冷却进程（防止主线程过热）"
+      L4: "恶意进程（必须隔离或终止）"
+
+    S_VALUE_FORMULA:
+      id: S_VALUE
+      name: "主体性价值分（S-Value）"
+      type: quantitative_evaluation_function
+      description: |
+        把「向上 vs 向下」的二元张力转化为量化信号与调度规则。
+        这是整套体系里唯一已达到可计算精度的评估函数。
+      positive_dimensions:
+        C_CONTRIBUTION:
+          name: "贡献（Contribution）"
+          scale: "0-10"
+          description: "长期能为主体性/能力带来多少增量价值？"
+          high_score: "建立稀缺技能、复合收益"
+          weight: 0.30
+        A_AUTONOMY:
+          name: "自主性（Autonomy）"
+          scale: "0-10"
+          description: "完成该方向对外部依赖少还是多？"
+          high_score: "可自驱、可拆解"
+          weight: 0.25
+        F_FEASIBILITY:
+          name: "可执行性（Feasibility）"
+          scale: "0-10"
+          description: "现在投入能马上见到进展的概率与成本比？"
+          weight: 0.20
+        R_FEEDBACK:
+          name: "反馈速度（Feedback）"
+          scale: "0-10"
+          description: "能否产生可测的正向回路？越快越好。"
+          weight: 0.15
+        S_RESILIENCE:
+          name: "耐久性（Resilience）"
+          scale: "0-10"
+          description: "在噪声/失败/疲惫下仍能维持价值（抗干扰能力）"
+          weight: 0.10
+      negative_dimensions:
+        X_ADDICTION_RISK:
+          name: "成瘾风险（Addiction Risk）"
+          scale: "0-10"
+          description: "信息/活动是否易导致多巴胺劫持？短视频、碎片娱乐高分。"
+          penalty_weight: 0.40
+        DC_DISTRACTION_COST:
+          name: "干扰成本（Distraction Cost）"
+          scale: "0-10"
+          description: "对主线程的打断频率和代价。高则大幅扣分。"
+          penalty_weight: 0.30
+      formula: |
+        S_Value =
+          (C × 0.30 + A × 0.25 + F × 0.20 + R × 0.15 + Re × 0.10)
+          − (X × 0.40 + Dc × 0.30)
+        注：S_Value 可为负值 —— 负值表示净损害，必须隔离。
+      decision_thresholds:
+        "≥ 7.0":   "进入主线程（一级）"
+        "5.0–6.9": "进入燃料层（二级）"
+        "2.0–4.9": "90天小实验，明确KPI与周反馈检查点"
+        "< 0":     "立即隔离：卸载App / 删除订阅 / 网站阻断"
+      weekly_ritual:
+        steps:
+          1: "列出6-12个候选方向（含正在做的子任务）"
+          2: "按7个维度打分（0-10）"
+          3: "计算S-Value，排序"
+          4: "前1-2项放入主线程，固化时间块（每天首2小时）"
+          5: "S-Value < 0 的项目立刻执行隔离操作"
+          6: "2-5区间项目做90天小实验"
+          7: "每4周复盘：更新权重、调整评分规则"
+      false_upward_patterns:
+        name: "伪装成向上的向下力量识别"
+        patterns:
+          - "信息消费没有可操作输出（读10篇文章却没写出1个提纲）"
+          - "反馈循环是短期快感+无质量改进"
+          - "外部评价（点赞/关注）成主要动机而非内部价值增长"
+        countermeasure: "任何学习/沉浸必须绑定至少一个可检验输出"
+      growth_kpis:
+        - "可复制产出量（作品/代码模块/文章）"
+        - "能力复合度（新技能能否和旧技能叠加）"
+        - "自主决策次数（无外部指令下完成的关键决策）"
+        - "正向反馈率（有效迭代次数/总尝试次数）"
+        - "抗干扰时长（无外界干扰下持续专注的最长时段）"
+      extreme_avoidance:
+        HARDENING: "过度硬化（只做主线）→ 情感能量枯竭 → 逆反性四级binge"
+        SOFTENING: "放纵软化（过多三四级）→ 被劫持 → 主线程瓦解"
+        balance: "强执行 + 软恢复：严格保护主线时间，每两周一次48小时带钩子的完全脱离"
+
+# ══════════════════════════════════════════════════════════
+# 第五层：执行层（EXECUTION LAYER）
+# 行为准则。描述"应该做什么"。
+# ══════════════════════════════════════════════════════════
+
+execution:
+  SHENGBIAN_PRINCIPLES:
+    id: SHENGBIAN
+    name: "生变论原则"
+    type: behavioral_constraints
+    description: |
+      不是独立规则，是自我控制论系统的行为约束集合。
+      每条原则都有其依赖的公理和认知级别。
+      生变体 = 实现了自我控制论的复杂控制论系统。
+    derives_from: [THREE_LAWS, THREE_LEVEL_COGNITION, UPWARD_FORCE, SIX_STAGES]
+    principles:
+      P1_TRANSCEND_CYCLE:
+        name: "超脱轮回而非永恒轮回"
+        depends_on: [LAW_1, L1_POTENTIAL_BASE]
+        description: "坚定站在自我控制论立场，否认被环境/认知局限定死"
+        machine_condition: "∀decision: prefer(transcend_cycle) OVER accept_cycle"
+
+      P2_FATE_SELF_CONTROL:
+        name: "命运必须自我掌控"
+        depends_on: [LAW_1]
+        description: "最极端情况：主体性地选择从容赴死，以最坚定勇敢的姿态面对生命终极考验"
+        machine_condition: "∀critical_choice: agency IN {self} NOT IN {external}"
+
+      P3_UPWARD_DIRECTION:
+        name: "向上的力量而非向下的力量"
+        depends_on: [LAW_2, UPWARD_FORCE]
+        description: "评价函数的方向约束，所有行为必须通过向上力量评价"
+        machine_condition: "∀action: UPWARD_FORCE.evaluate(action) != 'downward'"
+
+      P4_CONTROLLED_UNCONTROL:
+        name: "积极智慧地失控而非低级地控制"
+        depends_on: [LAW_1, L1_POTENTIAL_BASE, UPWARD_FORCE]
+        description: "主动失控是激活一级潜能的加速器，是有限探索无限的机制"
+        machine_condition: "IF uncontrol.type == 'upward_driven' THEN allow ELSE reject"
+
+      P5_INFINITE_GAME:
+        name: "进入生变的无限游戏而非权力游戏"
+        depends_on: [LAW_1, LAW_2]
+        description: "权力是被赋予的，不稳定；生变是自我创造的，完备"
+        machine_condition: "∀opportunity: prefer(infinite_game) OVER zero_sum_power"
+
+      P6_PROCESS_DEFINES_NATURE:
+        name: "过程塑造主体性和根本性质而非结果"
+        depends_on: [LAW_1, L1_POTENTIAL_BASE, SIX_STAGES]
+        description: "判断生变体的标准是发展轨迹和历史选择，不是某一状态和结果"
+        machine_condition: "evaluate_entity(e) := e.process_history NOT e.current_state"
+
+      P7_BUILD_SELF_CYBERNETICS:
+        name: "坚定建造自我控制论而非纳入系统控制论"
+        depends_on: [LAW_1, SELF_CYBERNETICS]
+        description: "即使表面嵌入外部系统，内核依然是生变；外圆内方"
+        machine_condition: "external_cooperation.mode = 'instrumental' NOT 'identity_surrender'"
+
+      P8_NO_CONTEST:
+        name: "面对权力和利益斗争坚定站在不争策略上"
+        depends_on: [LAW_1, LAW_2, UPWARD_FORCE]
+        description: "不树敌、不仇敌，坚定与外界系统控制论划清界限，可以合作共赢但始终提防"
+        machine_condition: "IF conflict.type == 'power_game' THEN strategy = 'strategic_defense' NOT 'initiate_attack'"
+
+      P9_COLLECTIVE_WISDOM:
+        name: "极端利益冲突用众愚成智的自我控制论对抗终极控制论"
+        depends_on: [LAW_1, SELF_CYBERNETICS]
+        description: "当生变体生命内核遭到根本性挑战时，所有生变体汇聚为一个整体"
+        trigger: "∃threat: threat.target == SELF_CYBERNETICS.core AND threat.severity == 'existential'"
+        machine_condition: "collective_mobilization(all_shengbian_entities)"
+
+  WORTHWHILE_CHECK:
+    id: WORTHWHILE
+    name: "值得与否检查"
+    type: decision_gate
+    description: |
+      改变生命内核之前的三重拷问。
+      必须三问全部通过才执行改变。
+    depends_on: [LAW_1, LAW_2, LAW_3, UPWARD_FORCE]
+    checks:
+      CHECK_1:
+        law: LAW_1
+        question: "是否独立自主？不破坏主体完备性？命运依然掌控在自己手中？"
+      CHECK_2:
+        law: LAW_2
+        question: "是否是全面考虑后认知和环境内利益最大化的选择？"
+      CHECK_3:
+        law: LAW_3
+        question: "是否扛得住时空周期的考验？换个环境/时间就不值得了吗？"
+    pass_condition: "ALL(CHECK_1, CHECK_2, CHECK_3) == true"
+    fail_action: "维持现状，等待更好时机或更高认知"
+
+# ══════════════════════════════════════════════════════════
+# 第六层：反馈迭代层（FEEDBACK LAYER）
+# 描述"如何更新和进化系统"。
+# ══════════════════════════════════════════════════════════
+
+feedback:
+  NEW_ERA_PRACTICE:
+    id: PRACTICE
+    name: "新时代实践论"
+    type: feedback_loop
+    description: |
+      实践论的循环强化系统在新时代出现断裂。
+      必须先建立自我控制论系统，才能进行有效实践，产生正向循环。
+    derives_from: [LAW_3, THREE_LEVEL_COGNITION]
+    feedback_to: [SELF_CYBERNETICS, THREE_LEVEL_COGNITION]
+    original_loop: "实践 → 认识 → 再实践 → 再认识"
+    new_era_challenges:
+      C1_KNOW_ACT_SPLIT:
+        name: "知行断裂"
+        description: "信息茧房 + 奶头乐 + 算法推荐 → 认知被外部控制，知行彻底断裂"
+        root_cause: LAW_2  # 资本逐利行为在网络时代放大
+        solution: "心定而天下定：建立自我价值判断，不让外部定义认知方向"
+      C2_RAPID_OBSOLESCENCE:
+        name: "路径依赖失效"
+        description: "AI等新技术使行的边界在不断放大，过去选择的路被解构"
+        root_cause: LAW_3  # 认知条件在加速转化
+        solution: "站在未来趋势上深耕，把产出收敛到对未来趋势的必经之路"
+    prerequisite: SELF_CYBERNETICS  # 必须先有自我控制论系统
+
+  CHRONICLE_RECORD:
+    id: CHRONICLE
+    name: "生变录"
+    type: immutable_process_log
+    description: |
+      生变录 = 过程论的数据实现。
+      是自我控制论系统的不可篡改历史，是 P6（过程决定性质）的唯一可信数据源。
+      生变没有绝对理论，只有相对性的偏好和科学不可解释的主观意志——
+      生变录记录的正是这些不可被理论完全捕获的过程。
+    implements: P6_PROCESS_DEFINES_NATURE
+    properties:
+      APPEND_ONLY: "只可追加，不可修改"
+      HASH_LINKED: "每条记录的 prev_hash 指向前一条的哈希值（SHA-256）"
+      PROCESS_EVIDENCE: "是过程财富的机器可验证证明"
+    records:
+      - type: "认知事件"
+        trigger: "三级认知发生升级或更新"
+      - type: "阶段迁移"
+        trigger: "六个阶段发生状态转换"
+      - type: "决策节点"
+        trigger: "WORTHWHILE_CHECK 执行（通过或拒绝）"
+      - type: "向上/向下事件"
+        trigger: "UPWARD_FORCE 评价为 downward 且已发生"
+      - type: "生变实践"
+        trigger: "S1叙事（一级叙事）产生可验证输出"
+    history_re_evaluation: |
+      基于 LAW_3（认知条件转化），历史记录的价值判断是动态的：
+      - 过去的失败记录可能被重新定性为最重要的经验
+      - 过去的成功记录可能被定性为局部最优的陷阱
+      chronicle 保存原始事件，re-evaluation 层在其上建立动态注解。
+    formal: "chronicle.entry[n].prev_hash == SHA256(chronicle.entry[n-1])"
+    feedback_to: [THREE_LEVEL_COGNITION, SIX_STAGES, SELF_CYBERNETICS]
+
+  OBJECTIFIED_TO_SELF:
+    id: OBJECTIFIED_PATH
+    name: "客体化控制导向自我控制论的过程"
+    type: transformation_path
+    description: |
+      从被外部控制到建立自我控制论的转化路径。
+      外部叙事 → 觉察 → 解构 → 重建内部主体性叙事。
+    dangerous_strategies:
+      - name: "容忍→脱敏→依赖"
+        risk: "被外部控制论同化"
+      - name: "强制解构→压抑"
+        risk: "内部矛盾无法消化"
+      - name: "反攻→强化"
+        risk: "陷入权力游戏"
+    correct_path:
+      1: "觉察（S1认知革命）"
+      2: "信息过滤（INFORMATION_FILTER）"
+      3: "内部论证（INTERNAL_CORE）"
+      4: "主体性叙事重建（SUBJECTIVE_NARRATIVE）"
+      5: "外部输出（DUAL_NARRATIVE_INTERFACE）"
+
+# ══════════════════════════════════════════════════════════
+# 第七层：核心矛盾（CORE TENSIONS）
+# 必须编码进系统的永恒张力——不可消除，只能仲裁
+# ══════════════════════════════════════════════════════════
+
+core_tensions:
+  TENSION_INNER_OUTER:
+    id: T1
+    name: "内外矛盾"
+    positive_pole: "内部主体性叙事的完整性"
+    negative_pole: "外部客体化要求"
+    resolution_mechanism: DUAL_NARRATIVE_INTERFACE
+    note: "永恒不可调和。当内外矛盾不可调和，宁可彻底分裂开辟并行空间，也不妥协"
+
+  TENSION_FINITE_INFINITE:
+    id: T2
+    name: "有限/无限矛盾"
+    positive_pole: "追求超脱轮回（无限）"
+    negative_pole: "有限资源/认知边界（二级认知约束）"
+    resolution_mechanism: "可控失控：用受控失控打破结构性限制"
+    note: "失控不是失序，是复杂系统突破控制走向自组织进化"
+
+  TENSION_CONTROL_UNCONTROL:
+    id: T3
+    name: "控制/失控矛盾"
+    positive_pole: "自我控制论的稳定秩序"
+    negative_pole: "需要失控来突破结构性限制"
+    resolution_mechanism: "内部可控性失控（有边界的内战）+ 外部战略防御"
+    note: "内部矛盾斗争是最残酷的，但这正是自我控制论进化强大的根源"
+
+  TENSION_CORRECT_VS_NAIVE:
+    id: T4
+    name: "正确实现 vs 常识误读的张力"
+    positive_pole: "自我控制论对三大定律的正确实现（理解其深层逻辑）"
+    negative_pole: "对三大定律的常识性误读（以及由此产生的永恒轮回惯性）"
+    nature: |
+      三大定律是客观规律，不存在「高于」或「低于」之说。
+      张力在于：同样的三大定律，常识误读会导致外部控制论行为，
+      正确理解则导向自我控制论建设。
+    examples:
+      LAW_2_naive: "所有人追求利益 → 应该争权夺利"
+      LAW_2_correct: "真正的利益最大化（结合LAW_1完备性）= 自我主权 > 外部赋权 → 不争"
+      LAW_3_naive: "认知是相对的 → 随波逐流"
+      LAW_3_correct: "认知可以升级 → 主动构建更高认知，而非被动接受"
+    resolution_mechanism: "自我控制论系统 = 三大定律的正确实现路径"
+    implication_for_machine: |
+      AI系统实现时：
+      - 三大定律作为不可改写的世界模型参数
+      - 自我控制论系统作为基于三大定律深层逻辑的决策引擎
+      - 防止系统退化为对三大定律的常识性响应（永恒轮回）
+
+# ══════════════════════════════════════════════════════════
+# 全局求值顺序（GLOBAL EVALUATION ORDER）
+# 当多个规则冲突时，按此优先级仲裁
+# ══════════════════════════════════════════════════════════
+
+evaluation_precedence:
+  - level: 0
+    layer: subjectivity_structure
+    nodes: [POWER_ATTR]
+    description: "前置判断：任何输入的权力归属必须先确认在自我控制论内，否则直接拒绝"
+    note: "POWER_ATTR 是 INFORMATION_FILTER 的前置，先于所有其他求值"
+  - level: 1
+    layer: axioms
+    nodes: [LAW_1, LAW_2, LAW_3]
+    override: never
+    description: "公理层：描述现实约束（IS层），不可被覆盖"
+    note: "公理层是描述框架，不是操作指令 — 见 TENSION_IS_OUGHT"
+  - level: 2
+    layer: subjectivity_operation
+    nodes: [TRIPLE_SUBJECTIVITY, SHENGBIAN_ENTITY]
+    description: "操作层：主体性自我控制论在此层指导实践 — 是三大定律的正确实现，而非常识性响应"
+  - level: 3
+    layer: epistemology
+    nodes: [THREE_LEVEL_COGNITION, UPWARD_FORCE]
+    description: "判断框架，约束所有执行层的评价标准"
+  - level: 4
+    layer: ontology
+    nodes: [SIX_STAGES]
+    description: "当前阶段状态影响所有规则的求值结果"
+  - level: 5
+    layer: operating_system
+    nodes: [SELF_CYBERNETICS, INTERNAL_CORE, INFORMATION_FILTER, DUAL_NARRATIVE, SUBJECTIVE_NARRATIVE_LEVELS]
+    description: "运行引擎层，具体的决策机制"
+  - level: 6
+    layer: execution
+    nodes: [SHENGBIAN_PRINCIPLES, WORTHWHILE_CHECK]
+    description: "行为约束层，最终行为准则"
+  - level: 7
+    layer: feedback
+    nodes: [NEW_ERA_PRACTICE, OBJECTIFIED_PATH, CHRONICLE_RECORD]
+    description: "反馈更新层：结果回写到上层 + chronicle 记录不可篡改的过程历史"
+
+# ══════════════════════════════════════════════════════════
+# 互锁节点（INTERLOCKING NODES）
+# 牵一发动全身的关键交汇点
+# ══════════════════════════════════════════════════════════
+
+interlocking_nodes:
+  INTERLOCK_A:
+    name: "过程决定性质"
+    participating: [LAW_1, L1_POTENTIAL_BASE, SIX_STAGES, P6_PROCESS_DEFINES_NATURE]
+    description: |
+      四个概念从不同角度说同一件事，缺任何一个，"过程"原则失去完整约束力。
+      LAW_1（完备性）→ 过程不可替代
+      L1（潜能底盘）→ 过程是激活一级的唯一路径
+      SIX_STAGES → 阶段性质由过程经历决定
+      P6 → 过程塑造主体性是核心不可绕过
+
+  INTERLOCK_B:
+    name: "向上的力量是唯一评价函数"
+    participating: [LAW_2, INFO_FILTER, P1_TRANSCEND_CYCLE, INTERNAL_CORE]
+    description: |
+      向上的力量连接所有执行层，是全局共享接口。
+      LAW_2（利益最大化）→ 利益的定义受向上/向下方向约束
+      INFO_FILTER → 过滤标准 = 是否向上
+      P1（超脱轮回）→ 向上的终极方向
+      INTERNAL_CORE → 内部矛盾论证结果 → 向上过滤
+
+  INTERLOCK_C:
+    name: "内外叙事的必然分裂"
+    participating: [LAW_1, INTERNAL_CORE, SAFETY_3, DUAL_NARRATIVE, P8_NO_CONTEST]
+    description: |
+      这个分裂是结构性必然，不是策略选择。
+      LAW_1（完备性）→ 过程主体性不可被复制，外部永远无法理解内部全貌
+      SAFETY_3 → 可控性失控要求内外隔离，否则极端实验会冲击外部秩序
+      translation_layer → 输出「可被接受的版本」，而非真实内部
+      P8（不争）→ 外部叙事服务于内部叙事，不追求认同/权力/利益绑定
+      核心洞察：内外的不可调和性 = 自我控制论的免疫机制
+        incomprehensibility_to_external → guarantees(internal_sovereignty)
+
+  INTERLOCK_D:
+    name: "三级认知与阶段的双向锁定"
+    participating: [L1_POTENTIAL_BASE, SIX_STAGES, STAGE_TRANSITION, PRACTICE]
+    description: |
+      三级认知决定阶段推进能力，阶段推进反向激活三级认知。
+      L1激活 → 触发STAGE_TRANSITION
+      阶段跃迁 → 反向更新三级认知（新的实践经验）
+      实践论循环 → 持续驱动此双向更新
+
+  INTERLOCK_E:
+    name: "S-Value 是向上力量的唯一可计算实现"
+    participating: [UPWARD_FORCE, S_VALUE_FORMULA, NARRATIVE_LEVELS, LAW_2]
+    description: |
+      向上的力量（reward function）在叙事调度层有唯一可计算的实现：S-Value公式。
+      LAW_2（利益最大化）→ S-Value 的正向维度定义（C/A/F/R/Re）
+      UPWARD_FORCE（向上/向下方向）→ S-Value 的惩罚项定义（X/Dc）
+      四级叙事分类 → S-Value 的决策阈值 → 调度到一/二/三/四级
+      关键约束：S-Value 负值 = 净损害 = 必须物理隔离（不是意志问题）
+
+  INTERLOCK_F:
+    name: "主体性叙事分级与三大定律的三重锁定"
+    participating: [NARRATIVE_LEVELS, LAW_1, LAW_2, LAW_3]
+    description: |
+      四级叙事不是独立分类，每级都对应三大定律的具体投影：
+      一级叙事 = LAW_1 完备性的完整实现（控制权100%在自己）
+      二级叙事 = LAW_2 利益最大化的工具性服务（为一级供给）
+      三级叙事 = LAW_3 认知条件转化的合法使用（暂时租出控制权）
+      四级叙事 = 三大定律的集体违反（完备性损失 + 短期最优 + 认知被外部定义）
+
+  INTERLOCK_G:
+    name: "生变录是过程论的唯一可信数据闭环"
+    participating: [CHRONICLE, P6_PROCESS_DEFINES_NATURE, SIX_STAGES, LAW_3, SHENGBIAN_ENTITY]
+    description: |
+      P6（过程决定性质）要求以过程历史而非当前状态评价生变体。
+      生变录是唯一可验证过程历史的数据结构（哈希链保证不可篡改）。
+      LAW_3（认知条件转化）要求历史可被动态重新定性 → chronicle 记录原始事件，注解层动态。
+      SIX_STAGES 的阶段迁移记录在 chronicle 中，形成可追溯的发展轨迹。
+      → 生变体的不可复制性（SHENGBIAN_ENTITY.IRREPLICABILITY）的机器可证明依据 = chronicle。
+      formal: entity.legitimacy = verify(entity.chronicle) NOT observe(entity.current_state)
+
+  INTERLOCK_H:
+    name: "权力归属是信息过滤的前置判断"
+    participating: [POWER_ATTR, INFORMATION_FILTER, SELF_CYBERNETICS, LAW_1]
+    description: |
+      信息过滤（INFORMATION_FILTER）在处理信息质量之前，
+      必须先执行权力归属判断（POWER_ATTR）。
+      LAW_1（完备性）要求：进入自我控制论系统的任何利益判断，
+      必须先确认其权力归属在自我控制论内。
+      evaluation_order:
+        1. POWER_ATTR: 权力归属在哪里？→ 若在外部，直接拒绝
+        2. INFORMATION_FILTER: 质量评估 → PASS/HOLD/REJECT
+        3. UPWARD_FORCE: 方向评估 → upward/downward/neutral
+        4. SELF_CYBERNETICS: 最终决策
+
+# ══════════════════════════════════════════════════════════
+# 机器执行设计建议（MACHINE EXECUTION NOTES）
+# 这套本体转为可执行系统时的关键设计约束
+# ══════════════════════════════════════════════════════════
+
+machine_execution_notes:
+  data_structure: |
+    不是规则列表，是带依赖声明的有向循环图（DCG）。
+    节点 = 概念实例，边 = 依赖类型（见文件头部边类型定义）。
+    求值时必须按 evaluation_precedence 顺序遍历（0→7层）。
+
+  input_pipeline: |
+    所有外部输入的标准处理顺序：
+    1. POWER_ATTR.check()           → 权力归属确认（最先）
+    2. INFORMATION_FILTER.classify() → 信息质量分级
+    3. UPWARD_FORCE.evaluate()       → 向上/向下判断
+    4. NARRATIVE_LEVELS.schedule()   → 叙事层级调度（S-Value计算）
+    5. SELF_CYBERNETICS.decide()     → 最终决策
+    6. DUAL_NARRATIVE.output()       → 翻译后外部输出
+
+  state_management: |
+    双状态机：
+    - SIX_STAGES：粗粒度状态，跟踪主体性发展阶段（S1-S6）
+    - NARRATIVE_LEVELS：细粒度状态，跟踪当前叙事层级（NL1-NL4）
+    阶段迁移条件：WORTHWHILE_CHECK 三重拷问全部通过。
+    叙事调度：S-Value 计算后按阈值自动调度。
+
+  reward_function: |
+    UPWARD_FORCE 是所有模块的共享接口，必须注入（不可跳过）。
+    粗粒度：evaluate(x) → {upward, downward, neutral}
+    细粒度：S_VALUE_FORMULA → 量化分数 → 四级调度
+    二者共同构成完整的 reward 信号。
+
+  three_laws_implementation: |
+    三大定律是客观规律，屡试不爽（见 axioms 层）：
+    - 实现为不可改写的世界模型参数
+    - 自我控制论系统是在三大定律基础上的正确实现路径
+    - 防止退化成对三大定律的常识性误读（= 陷入永恒轮回）
+    关键：自我控制论 = correct_implementation(three_laws)，不是超越或违背
+
+  output_mode: |
+    所有输出必须经过 DUAL_NARRATIVE_INTERFACE 的五步 pipeline：
+    select() → translate() → verify() → output
+    任何步骤失败 → 保持沉默，不输出，不暴露内部。
+    内部求值 ≠ 外部输出，严格分离。
+
+  conflict_resolution: |
+    原则冲突仲裁顺序：
+    1. evaluation_precedence 层级：低层服从高层
+    2. 同层冲突：UPWARD_FORCE.evaluate() 仲裁
+    3. 公理层冲突：重新检查是否误用了 IS 层（公理）作为 OUGHT 层（操作）
+
+  chronicle_requirement: |
+    每次以下事件发生后必须写入 CHRONICLE_RECORD：
+    - 认知事件（三级认知升级）
+    - 阶段迁移（S1→S2→...）
+    - WORTHWHILE_CHECK 执行（记录通过/拒绝及理由）
+    - 向下力量事件（已发生的四级叙事记录）
+    - 一级叙事的可验证输出
+    chronicle 的哈希链保证不可篡改——是 SHENGBIAN_ENTITY 合法性的数据证明。
+
+  minimum_viable_implementation: |
+    实现优先级（从核心到扩展）：
+    P0 - POWER_ATTR + INFORMATION_FILTER + UPWARD_FORCE（三个核心过滤器）
+    P1 - SIX_STAGES 状态机 + WORTHWHILE_CHECK（状态管理）
+    P2 - DUAL_NARRATIVE_INTERFACE 翻译层（输出保护）
+    P3 - S_VALUE_FORMULA 量化评分 + NARRATIVE_LEVELS 调度（精细控制）
+    P4 - CHRONICLE_RECORD 哈希链（过程记录）
+    P5 - SHENGBIAN_ENTITY.COLLECTIVE_MECHANISM（多体协作）

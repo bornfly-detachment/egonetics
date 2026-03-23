@@ -58,6 +58,7 @@ export interface UIState {
     | 'project-detail'
     | 'blog'
     | 'agents'
+    | 'cybernetics'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'

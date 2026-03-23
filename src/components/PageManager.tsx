@@ -14,6 +14,7 @@
 //    <PageManager api={createApiClient()} />
 // ============================================================
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ChevronRight,
   ChevronDown,
@@ -237,10 +238,12 @@ function SidebarNode({
   const [editingTitle, setEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState(page.title)
   const [showMenu, setShowMenu] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
   const [dropZone, setDropZone] = useState<'before' | 'after' | 'inside' | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (editingTitle)
@@ -372,18 +375,24 @@ function SidebarNode({
           )}
           {!readOnly && <div className="relative">
             <button
+              ref={menuBtnRef}
               onClick={(e) => {
                 e.stopPropagation()
+                if (!showMenu) {
+                  const r = menuBtnRef.current?.getBoundingClientRect()
+                  if (r) setMenuPos({ top: r.bottom + 4, left: r.left })
+                }
                 setShowMenu((v) => !v)
               }}
               className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/15 text-neutral-500 hover:text-neutral-200"
             >
               <MoreHorizontal size={10} />
             </button>
-            {showMenu && (
+            {showMenu && menuPos && createPortal(
               <div
                 ref={menuRef}
-                className="absolute left-0 top-6 z-50 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl w-36 py-1 text-sm"
+                style={{ top: menuPos.top, left: menuPos.left }}
+                className="fixed z-[9999] bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl w-36 py-1 text-sm"
               >
                 <button
                   onClick={(e) => {
@@ -406,7 +415,8 @@ function SidebarNode({
                 >
                   <Trash2 size={12} /> 删除页面
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>}
           {!readOnly && (
@@ -592,9 +602,14 @@ export default function PageManager({
     async (parentId: string | null) => {
       const siblings = getPageChildren(pages, parentId)
       const lastPos = siblings.length ? siblings[siblings.length - 1].position : 0
+      // 自动计算不重复标题（"新页面" → "新页面 2" → "新页面 3" …）
+      const existingTitles = new Set(siblings.map((s) => s.title))
+      let title = '新页面'
+      let n = 2
+      while (existingTitles.has(title)) title = `新页面 ${n++}`
       const p = await api.createPage({
         parentId,
-        title: '新页面',
+        title,
         icon: '📄',
         position: lastPos + 1,
       })
@@ -621,7 +636,7 @@ export default function PageManager({
             id: generateBlockId(),
             parentId: null,
             type: 'subpage',
-            content: { rich_text: [], subpageId: p.id, subpageTitle: '新页面', subpageIcon: '📄' },
+            content: { rich_text: [], subpageId: p.id, subpageTitle: title, subpageIcon: '📄' },
             position: lastBlockPos + 1,
           }
           const updated = { ...prev, [parentId]: [...parentBlocks, subpageBlock] }

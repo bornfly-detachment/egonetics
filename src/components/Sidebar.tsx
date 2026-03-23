@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Home,
   LogOut,
+  Zap,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
@@ -23,14 +24,15 @@ const Sidebar: React.FC = () => {
   const { user, logout } = useAuthStore()
 
   const ALL_NAV_ITEMS = [
-    { id: 'home',      label: language === 'zh' ? '主页'    : 'Home',      icon: Home,        color: 'text-neutral-300' },
-    { id: 'memory',    label: t.memory,                                      icon: Calendar,    color: 'text-blue-400' },
-    { id: 'theory',    label: t.theory,                                      icon: Brain,       color: 'text-yellow-400' },
-    { id: 'chronicle', label: t.chronicle,                                   icon: History,     color: 'text-primary-400' },
-    { id: 'egonetics', label: t.principles,                                  icon: Shield,      color: 'text-red-400' },
-    { id: 'tasks',     label: t.tasks,                                       icon: CheckSquare, color: 'text-green-400' },
-    { id: 'blog',      label: language === 'zh' ? '博客'    : 'Blog',        icon: BookOpen,    color: 'text-sky-400' },
-    { id: 'agents',    label: t.agents,                                      icon: Cpu,         color: 'text-purple-400' },
+    { id: 'home',        label: language === 'zh' ? '主页'       : 'Home',       icon: Home,        color: 'text-neutral-300' },
+    { id: 'memory',      label: t.memory,                                           icon: Calendar,    color: 'text-blue-400' },
+    { id: 'theory',      label: t.theory,                                           icon: Brain,       color: 'text-yellow-400' },
+    { id: 'chronicle',   label: t.chronicle,                                        icon: History,     color: 'text-primary-400' },
+    { id: 'egonetics',   label: language === 'zh' ? '主体图谱'   : 'Subjects',      icon: Shield,      color: 'text-red-400' },
+    { id: 'tasks',       label: t.tasks,                                            icon: CheckSquare, color: 'text-green-400' },
+    { id: 'blog',        label: language === 'zh' ? '博客'       : 'Blog',          icon: BookOpen,    color: 'text-sky-400' },
+    { id: 'agents',      label: t.agents,                                           icon: Cpu,         color: 'text-purple-400' },
+    { id: 'cybernetics', label: language === 'zh' ? '控制论内核' : 'Core Kernel',   icon: Zap,         color: 'text-violet-400' },
   ]
 
   const visibleIds = user ? new Set(getVisibleNavItems(user.role)) : new Set(['home'])

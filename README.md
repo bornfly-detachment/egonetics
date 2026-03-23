@@ -127,6 +127,14 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **New files**: `server/routes/relations.js`, `server/scripts/migrate-blocks-v2.js`, `server/scripts/migrate-blocks-v3.js`, `src/lib/block-graph-api.ts`
   - **Migrations**: `cd server && npm run migrate-v2` (schema) → `npm run migrate-v3` (draft_explanation)
 
+- **PRVS 公理集 + 控制论 Hub 重构** *(2026-03-23)*
+  - **PRVS Axiom Sets CRUD**: P/R/V/S each primitive has a leveled axiom hierarchy — Level 1 公理 (minimal complete set), Level 2 推论 (corollaries), Level 3 推理 (inferences). Full CRUD with BlockEditor per entry for rich text annotation. Backend: 5 REST endpoints backed by `docs/prvs-axiom-sets.json`
+  - **Cybernetics Hub** (`/cybernetics`): Merged Constitution Editor + Ontology Graph into a single full-screen tab hub, removing redundant standalone routes `/constitution` and `/ontology`
+  - **Ontology Graph redesign**: warm opaque node colors, text centered, node width auto-sizes to label length, removed redundant metadata lines, cleaner bezier edges
+  - **PRVSPanel typography**: eliminated all sub-12px font sizes, upgraded to `text-xs`/`text-sm` minimum across all tabs
+  - **Sidebar rename**: `cybernetics` → 控制论内核, `egonetics` → 主体图谱
+  - **fix: PageManager dropdown menu clipped by overflow-hidden**: Rewrote menu rendering using `createPortal` + `fixed` positioning calculated from `getBoundingClientRect()`, so the delete/rename menu is never clipped by ancestor `overflow-hidden` containers
+
 - **Notion Knowledge Base Import** *(2026-03-16)*
   - `POST /api/notion/import` — server calls Notion API directly, zero Claude token consumption, fully automated
   - Recursive children-first import: child pages imported before parent's blocks are saved, so `subpageId` values are always valid
@@ -542,6 +550,14 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - **新增 API**：`PATCH /blocks/:id/meta`、`POST /blocks/:id/publish`、`GET /blocks/:id/versions`；`/relations/*` 完整 CRUD + 发布/版本历史
   - **新增文件**：`server/routes/relations.js`、`server/scripts/migrate-blocks-v2.js`、`server/scripts/migrate-blocks-v3.js`、`src/lib/block-graph-api.ts`
   - **迁移命令**：`cd server && npm run migrate-v2`（建表）→ `npm run migrate-v3`（draft_explanation 列）
+
+- **PRVS 公理集 + 控制论 Hub 重构** *(2026-03-23)*
+  - **PRVS 公理集 CRUD**：P/R/V/S 各原语支持层级公理管理 — 1级公理（最小完备集）、2级推论、3级推理。每条条目内嵌 BlockEditor 进行富文本标注，支持依赖关系追溯。后端：5 个 REST 端点，数据持久化到 `docs/prvs-axiom-sets.json`
+  - **控制论 Hub** (`/cybernetics`)：将宪法编辑器与生变论本体图合并为统一全屏 Tab Hub，移除冗余独立路由 `/constitution` 和 `/ontology`
+  - **生变论本体图重设计**：节点改为暖色调不透明配色，文字居中，节点宽度自适应文本长度，移除冗余元信息行，曲线边更简洁
+  - **PRVSPanel 排版升级**：消除所有 9px/10px/11px 细字，全面升级到 `text-xs`/`text-sm` 最低标准
+  - **侧边栏重命名**：`cybernetics` → 控制论内核，`egonetics` → 主体图谱
+  - **fix：PageManager 下拉菜单被裁切**：改用 `createPortal` + `fixed` 定位（坐标由 `getBoundingClientRect()` 实时计算），彻底解决删除/重命名菜单被祖先 `overflow-hidden` 容器遮挡的问题
 
 - **Notion 知识库导入** *(2026-03-16)*
   - `POST /api/notion/import` — 服务端直接调 Notion API，零 Claude token 消耗，完全自动化

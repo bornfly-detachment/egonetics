@@ -1,0 +1,57 @@
+[
+  {
+    "id": "tc-001",
+    "name": "识别主体性核心概念",
+    "operation": "P.recognize",
+    "input": { "input": "主体性三重结构", "top_k": 5 },
+    "expected_notes": "应匹配到 TRIPLE_SUBJECTIVITY，score ≥ 10",
+    "tags": ["P", "smoke", "subjectivity"],
+    "last_result": null,
+    "last_run_at": null,
+    "created_at": "2026-03-23"
+  },
+  {
+    "id": "tc-002",
+    "name": "分类因果关系输入",
+    "operation": "P.classify",
+    "input": { "input": "因果关系是如何建立的" },
+    "expected_notes": "best_layer 应为 epistemology 或 ontology",
+    "tags": ["P", "classify"],
+    "last_result": null,
+    "last_run_at": null,
+    "created_at": "2026-03-23"
+  },
+  {
+    "id": "tc-003",
+    "name": "从主体性出发2层扩散",
+    "operation": "R.propagate",
+    "input": { "node_id": "TRIPLE_SUBJECTIVITY", "depth": 2, "direction": "out" },
+    "expected_notes": "应返回 node_count > 3，包含直接关联的认识论/行动节点",
+    "tags": ["R", "propagate"],
+    "last_result": null,
+    "last_run_at": null,
+    "created_at": "2026-03-23"
+  },
+  {
+    "id": "tc-004",
+    "name": "全图V权重排行Top5",
+    "operation": "V.rank",
+    "input": { "top_k": 5 },
+    "expected_notes": "公理层节点应出现在前5，weight > 0.3",
+    "tags": ["V", "rank"],
+    "last_result": null,
+    "last_run_at": null,
+    "created_at": "2026-03-23"
+  },
+  {
+    "id": "tc-005",
+    "name": "当前S快照（空状态）",
+    "operation": "S.snapshot",
+    "input": {},
+    "expected_notes": "activated_nodes 为空数组，timestamp 有值",
+    "tags": ["S", "smoke"],
+    "last_result": null,
+    "last_run_at": null,
+    "created_at": "2026-03-23"
+  }
+]

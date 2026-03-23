@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   BrowserRouter as Router,
   Routes,
@@ -18,9 +18,11 @@ import TaskDetailPage from './components/taskBoard/TaskDetailPage'
 import ChronicleView from './components/ChronicleView'
 import AgentsView from './components/AgentsView'
 import TheoryPageView from './components/TheoryPageView'
+import CyberneticsSystemView from './components/CyberneticsSystemView'
 import BlogPage from './components/BlogPage'
 import HomeView from './components/HomeView'
 import LoginPage from './components/LoginPage'
+import LLMChatDialog from './components/LLMChatDialog'
 import { useChronicleStore } from './stores/useChronicleStore'
 import { useAuthStore } from './stores/useAuthStore'
 import { isPathAllowed } from './components/AuthGuard'
@@ -65,6 +67,8 @@ const RouteSync: React.FC = () => {
       view = 'blog'
     } else if (path === '/agents') {
       view = 'agents'
+    } else if (path === '/cybernetics') {
+      view = 'cybernetics'
     } else {
       view = 'memory'
     }
@@ -123,6 +127,9 @@ const RouteSync: React.FC = () => {
       case 'agents':
         targetPath = '/agents'
         break
+      case 'cybernetics':
+        targetPath = '/cybernetics'
+        break
       default:
         targetPath = '/memory'
     }
@@ -142,6 +149,7 @@ const RouteSync: React.FC = () => {
 // 主应用内容
 const AppContent: React.FC = () => {
   const { uiState, initialize } = useChronicleStore()
+  const [chatOpen, setChatOpen] = useState(false)
 
   useEffect(() => {
     console.log('Egonetics App initializing...')
@@ -182,11 +190,24 @@ const AppContent: React.FC = () => {
               {/* <Route path="/editor1" element={<NewNotionStyleEditor />} /> */}
               {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
               <Route path="/agents" element={<AgentsView />} />
+              <Route path="/cybernetics" element={<CyberneticsSystemView />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
         </main>
       </div>
+
+      {/* Global LLM Chat */}
+      <button
+        onClick={() => setChatOpen(v => !v)}
+        className="fixed bottom-14 right-5 z-40 w-10 h-10 rounded-full flex items-center justify-center bg-violet-600/25 border border-violet-500/40 text-violet-400 hover:bg-violet-600/40 shadow-lg shadow-violet-900/30 transition-all"
+        title="AI 对话助手"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+      <LLMChatDialog open={chatOpen} onClose={() => setChatOpen(false)} title="AI 助手" />
 
       {/* Status Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-black/50 backdrop-blur-lg border-t border-white/10 p-3">

@@ -1,0 +1,106 @@
+{
+  "P": [
+    {
+      "id": "p_ax_1",
+      "primitive": "P",
+      "level": 1,
+      "name": "差异存在",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "p_ax_2",
+      "primitive": "P",
+      "level": 1,
+      "name": "差异可识别",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "p_cor_1",
+      "primitive": "P",
+      "level": 2,
+      "name": "模式化差异",
+      "derivedFrom": ["p_ax_1", "p_ax_2"],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    }
+  ],
+  "R": [
+    {
+      "id": "r_ax_1",
+      "primitive": "R",
+      "level": 1,
+      "name": "差异间存在连接",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "r_ax_2",
+      "primitive": "R",
+      "level": 1,
+      "name": "连接有方向与强度",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "r_cor_1",
+      "primitive": "R",
+      "level": 2,
+      "name": "连接的确定性分层",
+      "derivedFrom": ["r_ax_1", "r_ax_2"],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    }
+  ],
+  "V": [
+    {
+      "id": "v_ax_1",
+      "primitive": "V",
+      "level": 1,
+      "name": "差异有权重",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "v_ax_2",
+      "primitive": "V",
+      "level": 1,
+      "name": "权重可比较",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "v_cor_1",
+      "primitive": "V",
+      "level": 2,
+      "name": "权重分布可计算",
+      "derivedFrom": ["v_ax_1", "v_ax_2"],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    }
+  ],
+  "S": [
+    {
+      "id": "s_ax_1",
+      "primitive": "S",
+      "level": 1,
+      "name": "系统有当前位置",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "s_ax_2",
+      "primitive": "S",
+      "level": 1,
+      "name": "位置可被激活",
+      "derivedFrom": [],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "id": "s_cor_1",
+      "primitive": "S",
+      "level": 2,
+      "name": "激活集合即当前状态",
+      "derivedFrom": ["s_ax_1", "s_ax_2"],
+      "created_at": "2026-03-23T00:00:00.000Z"
+    }
+  ]
+}
