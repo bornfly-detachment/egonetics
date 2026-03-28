@@ -150,6 +150,32 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **New server file**: `server/routes/notion-import.js`
   - **New env var**: `NOTION_TOKEN` (your Notion integration token)
 
+- **AI-Native Design System + PRVSE Protocol CRUD** *(2026-03-28)*
+  - **5-layer AI Design System**: Design Tokens → Headless Primitives → Styled Components → AI-aware Components → Agent UI Layer
+  - **`src/design/tokens.ts`** — Static design token source of truth: node colors (P/R/V/S/E), permission layers (l₀/l₁/l₂), edge styles (directed/constraint/mutual_constraint/contains/derives/signal), interaction tokens
+  - **`TokenProvider.tsx`** — React Context that fetches `hm_protocol` overrides at runtime, deep-merges with static tokens, silent-fails to static defaults. All components consume `useTokens()` — no hardcoded colors anywhere
+  - **`src/design/primitives.ts`** — Headless behavior hooks: `usePRVSEConstraint`, `useLayerPermission`, `useRewardGate`, `useNodeInteraction`, `useCollapsible`
+  - **Styled components** (Layer 3): `Arrow.tsx` (SVG edge with ×/⊂ markers, unique per-edge SVG defs), `LayerBadge.tsx`, `SliderWidget.tsx` (矛盾↔统一), `TimelineWidget.tsx`, `InteractionChip.tsx` (Lucide icons, no obscure Unicode), `StateMachineVisual.tsx`, `VRewardVisual.tsx`
+  - **`/protocol` page** — Human-Machine Collaboration Protocol CRUD: full table with inline visual rendering + JSON toggle, category filter tabs, `VisualTemplatePicker` (grid of clickable template cards for new entries)
+  - **`hm_protocol` table** in `pages.db` — 50+ seeded entries across: interaction, layer, R relations, P patterns, V values, AOP stubs, S states
+  - **PRVSEGraph rewrite**: all colors/styles driven by `useTokens()`, edge type selector from token map, per-edge unique SVG marker IDs
+
+- **Task State Machine — PRVSE Schema Definition** *(2026-03-28)*
+  - Three state machine dimensions defined as S protocol entries: `lifecycle` (building→running→waiting→suspended→archived), `feedback` (positive_loop↔negative_loop), `execution` (retrying→success/failure)
+  - State transitions carry `guard: 'V_reward >= threshold'` annotations — guards are PRVSE graph evaluations (P→R+V→S), not standalone functions
+  - **`StateMachineVisual`**: dimension-specific animated UIs — `DirectedFlow` (state chain with path-following animation), `FeedbackLoop` (↺↻ with bidirectional V-gate), `OutcomeTree` (branching success/failure with guard pills), scanline background texture, `SCHEMA` badge with pulse indicator
+  - XState-compatible `machine_lang` JSON stored per entry for future runtime consumption
+
+- **V Reward / Value System — Complete Schema Definition** *(2026-03-28)*
+  - **V = {objective, external, internal}** — 3D reward vector:
+    - **V1 objective** (5 types): `counter` (uint), `timer` (float/s), `token_consumption` (K/M/B input+output pair), `usage_pct/success_rate` (float [0,1], precision 2, dual-format 0.70=70.00%), `binary` (0/1 ✅❎ signal)
+    - **V2 external** (7 types): confidence, relevance_prob, causal_prob, prediction_prob, narrative_legitimacy, narrative_completeness, narrative_logic — all 0~1 probability
+    - **V3 internal** (5 types): constitutional_rule (template, instantiable), value_alignment, cognitive_eval, narrative_consistency, prediction_prob_internal
+  - **φ functions** (4, independently defined): `φ_causal` (P(B|do(A))·C(E), maps R:derives/signal), `φ_temporal` (P(B|A,t_A≺t_B), maps R:directed), `φ_contradiction` (1−|P(A)−P(B)|·tension, maps R:mutual_constraint), `φ_dependency` (P(B|A)·I(A→B), maps R:constraint/contains)
+  - V2/V3 entries declare type only; φ functions are independently defined; runtime dynamically composes `P(G) = ∏ φ(Node, Edge, Constraint)` over PRVSE graph — **factor graph probability model**
+  - **`VRewardVisual`**: V1=animated live widgets (counter ticker, timer clock, token pair, probability bar, binary toggle), V2/V3=pulsing probability bar with φ-capable chips, φ=formula display + R-edge mapping + "1:N" label
+  - **Design principle**: Policy = PRVSE Graph itself (P→R+V→S); layered decision emerges from graph topology, not a separate weighting function
+
 **In Progress**
 - Chronicle hash chain integrity verification
 - Theory page locking & versioning

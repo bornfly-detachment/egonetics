@@ -1,0 +1,441 @@
+[
+  {
+    "id": "tag-p",
+    "name": "P — Pattern",
+    "color": "#7c3aed",
+    "children": [
+      {
+        "id": "tag-p-source",
+        "name": "从哪来 Source",
+        "color": "#0ea5e9",
+        "children": [
+          {
+            "id": "tag-p-src-external",
+            "name": "外部来源",
+            "color": "#38bdf8",
+            "children": [
+              {
+                "id": "tag-p-s1",
+                "name": "S1 用户输入",
+                "color": "#7dd3fc"
+              },
+              {
+                "id": "tag-p-s2",
+                "name": "S2 环境感知",
+                "color": "#7dd3fc"
+              },
+              {
+                "id": "tag-p-s3",
+                "name": "S3 外部检索",
+                "color": "#7dd3fc"
+              },
+              {
+                "id": "tag-p-s4",
+                "name": "S4 外部推送",
+                "color": "#7dd3fc"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-src-internal",
+            "name": "内部来源",
+            "color": "#0284c7",
+            "children": [
+              {
+                "id": "tag-p-s5",
+                "name": "S5 执行产出",
+                "color": "#38bdf8"
+              },
+              {
+                "id": "tag-p-s6",
+                "name": "S6 自我感知",
+                "color": "#38bdf8"
+              },
+              {
+                "id": "tag-p-s7",
+                "name": "S7 认知加工",
+                "color": "#38bdf8"
+              },
+              {
+                "id": "tag-p-s8",
+                "name": "S8 记忆激活",
+                "color": "#38bdf8"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tag-p-nature",
+        "name": "是什么 Nature",
+        "color": "#8b5cf6",
+        "children": [
+          {
+            "id": "tag-p-a",
+            "name": "A 物理结构",
+            "color": "#a78bfa",
+            "children": [
+              {
+                "id": "tag-p-a-text",
+                "name": "文本",
+                "color": "#c4b5fd"
+              },
+              {
+                "id": "tag-p-a-number",
+                "name": "数值",
+                "color": "#c4b5fd"
+              },
+              {
+                "id": "tag-p-a-image",
+                "name": "图像",
+                "color": "#c4b5fd"
+              },
+              {
+                "id": "tag-p-a-audio",
+                "name": "音频",
+                "color": "#c4b5fd"
+              },
+              {
+                "id": "tag-p-a-code",
+                "name": "代码",
+                "color": "#c4b5fd"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-b",
+            "name": "B 语义结构",
+            "color": "#818cf8",
+            "children": [
+              {
+                "id": "tag-p-b-fact",
+                "name": "事实",
+                "color": "#a5b4fc"
+              },
+              {
+                "id": "tag-p-b-rule",
+                "name": "规则",
+                "color": "#a5b4fc"
+              },
+              {
+                "id": "tag-p-b-process",
+                "name": "过程",
+                "color": "#a5b4fc"
+              },
+              {
+                "id": "tag-p-b-relation",
+                "name": "关系",
+                "color": "#a5b4fc"
+              },
+              {
+                "id": "tag-p-b-evaluation",
+                "name": "评估",
+                "color": "#a5b4fc"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-c",
+            "name": "C 认识论性质",
+            "color": "#6366f1",
+            "children": [
+              {
+                "id": "tag-p-c-certainty",
+                "name": "确定性〔单选〕",
+                "color": "#818cf8",
+                "children": [
+                  {
+                    "id": "tag-p-c-certain",
+                    "name": "确定",
+                    "color": "#a5b4fc"
+                  },
+                  {
+                    "id": "tag-p-c-uncertain",
+                    "name": "不确定",
+                    "color": "#a5b4fc"
+                  }
+                ]
+              },
+              {
+                "id": "tag-p-c-completeness",
+                "name": "完备性〔单选〕",
+                "color": "#818cf8",
+                "children": [
+                  {
+                    "id": "tag-p-c-complete",
+                    "name": "完整",
+                    "color": "#a5b4fc"
+                  },
+                  {
+                    "id": "tag-p-c-incomplete",
+                    "name": "残缺",
+                    "color": "#a5b4fc"
+                  }
+                ]
+              },
+              {
+                "id": "tag-p-c-truth",
+                "name": "真值〔单选〕",
+                "color": "#818cf8",
+                "children": [
+                  {
+                    "id": "tag-p-c-true",
+                    "name": "真",
+                    "color": "#a5b4fc"
+                  },
+                  {
+                    "id": "tag-p-c-false",
+                    "name": "假",
+                    "color": "#a5b4fc"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "tag-p-d-func",
+            "name": "D 功能性质",
+            "color": "#4f46e5",
+            "children": [
+              {
+                "id": "tag-p-d-p1",
+                "name": "P1 指令信息 Instruction",
+                "color": "#6366f1"
+              },
+              {
+                "id": "tag-p-d-p2",
+                "name": "P2 获取信息 Retrieval",
+                "color": "#6366f1"
+              },
+              {
+                "id": "tag-p-d-p3",
+                "name": "P3 执行信息 Execution",
+                "color": "#6366f1"
+              },
+              {
+                "id": "tag-p-d-p4",
+                "name": "P4 交互反馈 Interaction",
+                "color": "#6366f1"
+              },
+              {
+                "id": "tag-p-d-p5",
+                "name": "P5 内省信息 Introspection",
+                "color": "#6366f1"
+              },
+              {
+                "id": "tag-p-d-p6",
+                "name": "P6 推理信息 Reasoning",
+                "color": "#6366f1"
+              },
+              {
+                "id": "tag-p-d-p7",
+                "name": "P7 记忆信息 Memory",
+                "color": "#6366f1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tag-p-dest",
+        "name": "去哪里 Destination",
+        "color": "#059669",
+        "children": [
+          {
+            "id": "tag-p-dest-task",
+            "name": "对当前任务的作用",
+            "color": "#10b981",
+            "children": [
+              {
+                "id": "tag-p-d1",
+                "name": "D1 驱动行动",
+                "color": "#34d399"
+              },
+              {
+                "id": "tag-p-d2",
+                "name": "D2 修正行动",
+                "color": "#34d399"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-dest-model",
+            "name": "对系统模型的作用",
+            "color": "#0d9488",
+            "children": [
+              {
+                "id": "tag-p-d3",
+                "name": "D3 更新认知",
+                "color": "#2dd4bf"
+              },
+              {
+                "id": "tag-p-d4",
+                "name": "D4 更新自我认知",
+                "color": "#2dd4bf"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-dest-memory",
+            "name": "对记忆的作用",
+            "color": "#0891b2",
+            "children": [
+              {
+                "id": "tag-p-d5",
+                "name": "D5 存入记忆",
+                "color": "#22d3ee"
+              },
+              {
+                "id": "tag-p-d6",
+                "name": "D6 激活记忆",
+                "color": "#22d3ee"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-dest-struct",
+            "name": "对系统结构的作用",
+            "color": "#0369a1",
+            "children": [
+              {
+                "id": "tag-p-d7",
+                "name": "D7 触发训练",
+                "color": "#38bdf8"
+              },
+              {
+                "id": "tag-p-d8",
+                "name": "D8 丢弃",
+                "color": "#38bdf8"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "tag-1774357343658-aa5bp",
+    "name": "执行节点",
+    "color": "#6b7280",
+    "children": [
+      {
+        "id": "tag-role",
+        "name": "角色",
+        "color": "#8b5cf6",
+        "children": [
+          {
+            "id": "tag-role-frontend",
+            "name": "前端",
+            "color": "#3b82f6"
+          },
+          {
+            "id": "tag-role-backend",
+            "name": "后端",
+            "color": "#10b981"
+          },
+          {
+            "id": "tag-role-product",
+            "name": "产品",
+            "color": "#f59e0b"
+          },
+          {
+            "id": "tag-role-ops",
+            "name": "运维",
+            "color": "#6b7280"
+          },
+          {
+            "id": "tag-role-content",
+            "name": "内容创造",
+            "color": "#ec4899"
+          },
+          {
+            "id": "tag-role-subject",
+            "name": "主体性",
+            "color": "#14b8a6"
+          }
+        ]
+      },
+      {
+        "id": "tag-tech",
+        "name": "技术栈",
+        "color": "#06b6d4",
+        "children": [
+          {
+            "id": "tag-tech-react",
+            "name": "React",
+            "color": "#61dafb"
+          },
+          {
+            "id": "tag-tech-typescript",
+            "name": "TypeScript",
+            "color": "#3178c6"
+          },
+          {
+            "id": "tag-tech-nodejs",
+            "name": "Node.js",
+            "color": "#339933"
+          },
+          {
+            "id": "tag-tech-python",
+            "name": "Python",
+            "color": "#3776ab"
+          },
+          {
+            "id": "tag-tech-sqlite",
+            "name": "SQLite",
+            "color": "#003b57"
+          }
+        ]
+      },
+      {
+        "id": "tag-status",
+        "name": "状态",
+        "color": "#f97316",
+        "children": [
+          {
+            "id": "tag-status-todo",
+            "name": "待办",
+            "color": "#ef4444"
+          },
+          {
+            "id": "tag-status-doing",
+            "name": "进行中",
+            "color": "#eab308"
+          },
+          {
+            "id": "tag-status-done",
+            "name": "已完成",
+            "color": "#22c55e"
+          },
+          {
+            "id": "tag-status-blocked",
+            "name": "阻塞",
+            "color": "#a855f7"
+          }
+        ]
+      },
+      {
+        "id": "tag-priority",
+        "name": "优先级",
+        "color": "#dc2626",
+        "children": [
+          {
+            "id": "tag-priority-high",
+            "name": "高",
+            "color": "#dc2626"
+          },
+          {
+            "id": "tag-priority-medium",
+            "name": "中",
+            "color": "#ea580c"
+          },
+          {
+            "id": "tag-priority-low",
+            "name": "低",
+            "color": "#16a34a"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,101 @@
+{
+  "name": "egonetics-notion-import",
+  "description": "将 Notion 页面导入 Egonetics 系统，支持完整内容结构（子页面、表格、代码块等）",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "create_import_task",
+      "description": "创建 Notion 导入任务，返回任务ID和下一步操作指引",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "notionPageUrl": {
+            "type": "string",
+            "description": "Notion 页面 URL，例如 https://www.notion.so/xxx"
+          },
+          "taskId": {
+            "type": "string",
+            "description": "可选：关联到现有任务ID"
+          },
+          "parentPageId": {
+            "type": "string",
+            "description": "可选：指定父页面ID"
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "是否递归导入子页面",
+            "default": true
+          }
+        },
+        "required": ["notionPageUrl"]
+      }
+    },
+    {
+      "name": "process_notion_content",
+      "description": "处理从 MCP notion_fetch 获取的 Notion 页面内容，完成导入",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "importTaskId": {
+            "type": "string",
+            "description": "导入任务ID（从 create_import_task 获得）"
+          },
+          "notionContent": {
+            "type": "object",
+            "description": "从 MCP notion_fetch 获取的完整 Notion 页面内容"
+          },
+          "createTask": {
+            "type": "boolean",
+            "description": "是否创建新任务",
+            "default": false
+          }
+        },
+        "required": ["importTaskId", "notionContent"]
+      }
+    },
+    {
+      "name": "get_import_status",
+      "description": "获取导入任务的状态和进度",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "importTaskId": {
+            "type": "string",
+            "description": "导入任务ID"
+          }
+        },
+        "required": ["importTaskId"]
+      }
+    }
+  ],
+  "endpoints": {
+    "create_import_task": "POST /api/notion/import-task",
+    "process_notion_content": "POST /api/notion/process-import",
+    "get_import_status": "GET /api/notion/import-tasks/:id"
+  },
+  "workflow": {
+    "description": "完整的 Notion 导入工作流",
+    "steps": [
+      {
+        "step": 1,
+        "action": "调用 create_import_task",
+        "description": "传入 Notion 页面 URL，创建导入任务，获取任务ID"
+      },
+      {
+        "step": 2,
+        "action": "使用 MCP notion_fetch 工具",
+        "description": "获取 Notion 页面完整内容（包括 blocks 和子页面）"
+      },
+      {
+        "step": 3,
+        "action": "调用 process_notion_content",
+        "description": "传入获取的内容和任务ID，完成导入到 Egonetics"
+      },
+      {
+        "step": 4,
+        "action": "（可选）调用 get_import_status",
+        "description": "查询导入任务最终状态"
+      }
+    ]
+  }
+}
