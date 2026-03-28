@@ -66,3 +66,10 @@ server/uploads
 # Large documentation/backup files
 *.bak
 *.md.bak
+
+# SubjectiveEgoneticsAI symlink (separate GitHub repo, do not track)
+SubjectiveEgoneticsAI
+
+# Python venv
+server/prvse/.venv/
+**/.venv/
