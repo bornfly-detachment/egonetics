@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Save, X, Code2, ChevronDown } from 'lucide-react'
 import { authFetch } from '@/lib/http'
 import ProtocolVisual from './ProtocolVisual'
+import { ResourceTierVisual } from '@/design/components/ResourceTierVisual'
+import { CommunicationPipeline } from '@/design/components/CommunicationVisual'
 
 interface ProtocolEntry {
   id: string
@@ -19,15 +21,63 @@ interface ProtocolEntry {
   sort_order: number
 }
 
-const CATEGORIES = [
-  { id: '',            label: '全部' },
-  { id: 'interaction', label: '交互操作' },
-  { id: 'layer',       label: '权限层级' },
-  { id: 'R',           label: 'R 关系' },
-  { id: 'P',           label: 'P 模式' },
-  { id: 'V',           label: 'V 价值' },
-  { id: 'AOP',         label: 'AOP' },
-  { id: 'S',           label: 'S 状态' },
+// ── TabBtn 原子组件 ───────────────────────────────────────────────
+function TabBtn({
+  active, color, onClick, children,
+}: {
+  active: boolean; color: string; onClick: () => void; children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-3 py-1 rounded text-[11px] font-medium whitespace-nowrap shrink-0 transition-all"
+      style={{
+        color: active ? color : 'rgba(255,255,255,0.35)',
+        background: active ? color + '18' : 'transparent',
+        borderBottom: active ? `2px solid ${color}` : '2px solid transparent',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ── 分组结构 ──────────────────────────────────────────────────────
+const GROUPS = [
+  {
+    label: '资源权限通信层',
+    accent: '#34d399',
+    categories: [
+      { id: 'permission-layer', label: '权限层级'     },
+      { id: 'communication',     label: '通信机制'     },
+      { id: 'resource-tier',     label: '智能资源分级' },
+    ],
+  },
+  {
+    label: '分级约束控制层',
+    accent: '#f59e0b',
+    categories: [
+      { id: 'P',   label: 'P 模式' },
+      { id: 'R',   label: 'R 关系' },
+      { id: 'V',   label: 'V 价值' },
+      { id: 'S',   label: 'S 状态' },
+      { id: 'AOP', label: 'AOP'   },
+    ],
+  },
+  {
+    label: '实践层',
+    accent: '#60a5fa',
+    categories: [
+      { id: 'interaction',   label: '交互操作'  },
+      { id: 'ui-component', label: 'UI 组件库' },
+    ],
+  },
+]
+
+// 展平供筛选逻辑使用
+const ALL_CATEGORIES = [
+  { id: '', label: '全部' },
+  ...GROUPS.flatMap(g => g.categories),
 ]
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -37,7 +87,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   P:           'text-amber-400 bg-amber-500/10 border-amber-500/30',
   V:           'text-orange-400 bg-orange-500/10 border-orange-500/30',
   AOP:         'text-pink-400 bg-pink-500/10 border-pink-500/30',
-  S:           'text-emerald-300 bg-emerald-500/15 border-emerald-400/40',
+  S:            'text-emerald-300 bg-emerald-500/15 border-emerald-400/40',
+  'ui-component': 'text-sky-300 bg-sky-500/15 border-sky-400/40',
+  'resource-tier':    'text-teal-300 bg-teal-500/15 border-teal-400/40',
+  'permission-layer': 'text-emerald-300 bg-emerald-500/15 border-emerald-400/40',
+  'communication':    'text-green-300 bg-green-500/15 border-green-400/40',
 }
 
 function prettyJson(raw: string): string {
@@ -345,7 +399,7 @@ function NewEntryForm({
       <td className="py-2 px-2 align-top">
         <select value={form.category} onChange={f('category')}
           className="w-full text-[10px] bg-[#1a1a2e] border border-white/10 rounded px-1 py-0.5 text-white/60 outline-none mb-1">
-          {CATEGORIES.filter(c => c.id).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          {ALL_CATEGORIES.filter(c => c.id).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
         <input value={form.layer} onChange={f('layer')} placeholder="layer…"
           className="w-full text-[10px] bg-transparent outline-none text-white/40 border-b border-white/10 font-mono" />
@@ -426,7 +480,14 @@ export default function ProtocolView() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const url = catFilter ? `/protocol?category=${catFilter}` : '/protocol'
+      // 前端 id → 后端 API category 映射
+      const catMap: Record<string, string> = {
+        'permission-layer': 'layer',
+        'resource-tier':   'resource-tier',
+        'communication':   'communication',
+      }
+      const apiCat = catMap[catFilter] ?? catFilter
+      const url = apiCat ? `/protocol?category=${apiCat}` : '/protocol'
       const rows = await authFetch<ProtocolEntry[]>(url)
       setEntries(rows)
     } finally {
@@ -472,19 +533,46 @@ export default function ProtocolView() {
         </div>
       </div>
 
-      {/* Category tabs */}
-      <div className="shrink-0 flex items-center gap-1 px-5 py-2 border-b border-white/[0.04] overflow-x-auto">
-        {CATEGORIES.map(c => (
-          <button key={c.id}
-            onClick={() => setCatFilter(c.id)}
-            className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors whitespace-nowrap ${
-              catFilter === c.id
-                ? 'bg-white/10 text-white/80'
-                : 'text-white/30 hover:text-white/50 hover:bg-white/[0.04]'
-            }`}
+      {/* 三层 Tab 栏 */}
+      <div className="shrink-0 border-b border-white/[0.06]">
+        {/* 全部 */}
+        <div className="flex items-center px-4 pt-2">
+          <TabBtn active={catFilter === ''} color="#ffffff" onClick={() => setCatFilter('')}>
+            全部
+          </TabBtn>
+        </div>
+
+        {/* 三个层级行 */}
+        {GROUPS.map((group) => (
+          <div
+            key={group.label}
+            className="flex items-center px-4 py-1.5 border-t border-white/[0.05]"
           >
-            {c.label}
-          </button>
+            {/* 层名标签 */}
+            <div
+              className="text-[10px] font-bold uppercase tracking-widest w-40 shrink-0 pr-3"
+              style={{ color: group.accent }}
+            >
+              {group.label}
+            </div>
+
+            {/* 该层 tabs */}
+            <div className="flex items-center gap-1 flex-wrap">
+              {group.categories.map((c) => {
+                const isActive = catFilter === c.id
+                return (
+                  <TabBtn
+                    key={c.id}
+                    active={isActive}
+                    color={group.accent}
+                    onClick={() => setCatFilter(c.id)}
+                  >
+                    {c.label}
+                  </TabBtn>
+                )
+              })}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -492,6 +580,62 @@ export default function ProtocolView() {
       <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center h-40 text-white/30 text-sm">加载中…</div>
+        ) : catFilter === 'communication' ? (
+          /* 通信机制：L0/L1/L2 流水线 */
+          <div className="flex-1 overflow-auto p-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-6">
+                <h2 className="text-base font-bold text-white/80 mb-1">通信机制</h2>
+                <p className="text-[11px] text-white/30">AI ↛ AI 直接通信 · 必须经过 Control Bus 校验</p>
+              </div>
+              <CommunicationPipeline entries={entries} />
+            </div>
+          </div>
+        ) : catFilter === 'resource-tier' ? (
+          /* 智能资源分级：流水线卡片 */
+          <div className="flex-1 overflow-auto p-6">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {/* 标题区 */}
+              <div className="text-center mb-8">
+                <h2 className="text-base font-bold text-white/80 mb-1">智能资源分级</h2>
+                <p className="text-[11px] text-white/30">Claude → Minimax → Qwen0.8B · 升级条件驱动路由</p>
+              </div>
+              {/* 流水线 */}
+              <ResourceTierVisual
+                vis={{
+                  tiers: entries.map(e => {
+                    const v = (() => { try { return JSON.parse(e.ui_visual) } catch { return {} } })()
+                    return {
+                      tier: v.tier as number,
+                      label: v.label as string,
+                      emoji: v.emoji as string,
+                      color: v.color as string,
+                      cost: v.cost_per_1k as number,
+                      note: v.rl_capable ? 'RL 可训练' : (v.skills_enabled ? 'skills 扩展' : '高成本'),
+                      escalate_if: v.escalate_if as string | undefined,
+                    }
+                  }),
+                }}
+              />
+              {/* 说明 */}
+              <div className="mt-6 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                <div className="text-[10px] text-white/30 mb-3 uppercase tracking-widest font-bold">升级规则</div>
+                <div className="space-y-2">
+                  {[
+                    { from: '三级 Qwen 0.8B', to: '二级 Minimax', cond: 'confidence < 0.6', color: '#9ca3af' },
+                    { from: '二级 Minimax', to: '一级 Claude', cond: 'complexity > 0.8', color: '#60a5fa' },
+                  ].map(rule => (
+                    <div key={rule.from} className="flex items-center gap-3 text-[11px]">
+                      <span className="font-medium" style={{ color: rule.color }}>{rule.from}</span>
+                      <span className="text-white/30">→</span>
+                      <span className="text-white/50">{rule.to}</span>
+                      <span className="ml-auto text-white/25 font-mono text-[10px]">if {rule.cond}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <table className="w-full border-collapse text-left">
             <thead className="sticky top-0 z-10 bg-[#111] border-b border-white/[0.06]">

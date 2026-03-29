@@ -11,6 +11,9 @@ import { TimelineWidget } from '@/design/components/TimelineWidget'
 import { InteractionChip } from '@/design/components/InteractionChip'
 import { StateMachineVisual } from '@/design/components/StateMachineVisual'
 import { V1MetricDisplay, VProbDisplay, PhiFunctionDisplay } from '@/design/components/VRewardVisual'
+import { UIComponentVisual } from '@/design/components/UIComponentVisual'
+import { ResourceTierVisual } from '@/design/components/ResourceTierVisual'
+import { CommunicationVisual } from '@/design/components/CommunicationVisual'
 
 interface VisualProps {
   category: string
@@ -173,6 +176,12 @@ export default function ProtocolVisual({ category, layer, uiVisual }: VisualProp
   if (category === 'AOP') return <AopStubVisual vis={vis} />
 
   if (category === 'S') return <StateMachineVisual vis={vis} layer={layer} />
+
+  if (category === 'ui-component') return <UIComponentVisual vis={vis} />
+
+  if (category === 'resource-tier') return <ResourceTierVisual vis={vis} />
+
+  if (category === 'communication') return <CommunicationVisual vis={vis} />
 
   // fallback
   const entries = Object.entries(vis).slice(0, 4)
