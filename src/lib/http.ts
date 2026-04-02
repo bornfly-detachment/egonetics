@@ -13,7 +13,9 @@ export function removeToken(): void {
 }
 
 export async function authFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getToken()
+  // 开发者模式：不发 Token，后端直接注入 admin
+  const devMode = import.meta.env.VITE_DEV_MODE === 'true'
+  const token = devMode ? null : getToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),

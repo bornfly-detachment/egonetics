@@ -46,7 +46,15 @@ coverage
 
 # Data files (large datasets)
 data
-server/data
+# server/data 是软链接，链接本身由 git 追踪，数据文件不追踪
+server/data/*.db
+server/data/*.db-shm
+server/data/*.db-wal
+server/data/*.db.wal
+server/data/*.bak.*
+server/data/code-agent/
+server/data/chat/
+server/data/cyber-repo/
 
 # macOS
 .AppleDouble
@@ -73,3 +81,4 @@ SubjectiveEgoneticsAI
 # Python venv
 server/prvse/.venv/
 **/.venv/
+server/.env

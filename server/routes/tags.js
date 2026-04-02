@@ -138,11 +138,53 @@ router.patch('/tag-trees/:id', (req, res) => {
 })
 
 // DELETE /api/tag-trees/:id  — 删除节点及子孙（CASCADE 自动处理）
+// 防护：如果节点被 hm_protocol.anchor_tag_id 引用，阻止删除
 router.delete('/tag-trees/:id', (req, res) => {
-  pagesDb.run('DELETE FROM tag_trees WHERE id = ?', [req.params.id], function(err) {
-    if (err)           return res.status(500).json({ error: err.message })
-    if (!this.changes) return res.status(404).json({ error: 'tag not found' })
-    res.json({ ok: true })
+  const tagId = req.params.id
+
+  // 收集该节点及所有子孙 ID（CASCADE 会删除的范围）
+  function collectDescendants(rootId, cb) {
+    const ids = [rootId]
+    function walk(parentId) {
+      pagesDb.all('SELECT id FROM tag_trees WHERE parent_id = ?', [parentId], (err, rows) => {
+        if (err) return cb(err)
+        if (!rows.length) return cb(null, ids)
+        let pending = rows.length
+        for (const r of rows) {
+          ids.push(r.id)
+          walk(r.id)
+          if (--pending === 0) cb(null, ids)
+        }
+      })
+    }
+    walk(rootId)
+  }
+
+  collectDescendants(tagId, (err, allIds) => {
+    if (err) return res.status(500).json({ error: err.message })
+
+    // 检查是否有 protocol 规则引用这些节点
+    const placeholders = allIds.map(() => '?').join(',')
+    pagesDb.all(
+      `SELECT id, category, substr(human_char, 1, 60) as hc, anchor_tag_id
+       FROM hm_protocol WHERE anchor_tag_id IN (${placeholders})`,
+      allIds,
+      (e2, refs) => {
+        if (e2) return res.status(500).json({ error: e2.message })
+        if (refs.length > 0) {
+          return res.status(409).json({
+            error: `该节点被 ${refs.length} 条协议规则引用，请先解除锚定`,
+            referenced_by: refs.map(r => ({ id: r.id, category: r.category, human_char: r.hc }))
+          })
+        }
+
+        pagesDb.run('DELETE FROM tag_trees WHERE id = ?', [tagId], function(e3) {
+          if (e3)           return res.status(500).json({ error: e3.message })
+          if (!this.changes) return res.status(404).json({ error: 'tag not found' })
+          res.json({ ok: true })
+        })
+      }
+    )
   })
 })
 

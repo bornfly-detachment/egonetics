@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { tasksApi, Task, TaskDetail, UpdateTaskData, CreatePropertyDefData } from '@/lib/tasks-api'
+import { tasksApi, Task, TaskDetail, UpdateTaskData, CreatePropertyDefData } from '@/lib/api/tasks'
 import { PropertyDef } from '@/types'
 
 interface TasksStore {

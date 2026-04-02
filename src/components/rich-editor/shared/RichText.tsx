@@ -1,5 +1,14 @@
 import type { RichTextSegment } from '../types'
 
+// 将含 \n 的文本渲染为带 <br/> 的节点数组
+function renderText(text: string, cls: string, baseKey: string) {
+  const lines = text.split('\n')
+  return lines.flatMap((line, li) => {
+    const node = <span key={`${baseKey}-${li}`} className={cls}>{line}</span>
+    return li < lines.length - 1 ? [node, <br key={`${baseKey}-br-${li}`} />] : [node]
+  })
+}
+
 export default function RichText({
   segments,
   placeholder = '输入内容，或按 / 插入块…',
@@ -12,7 +21,7 @@ export default function RichText({
 
   return (
     <>
-      {segments.map((seg, i) => {
+      {segments.flatMap((seg, i) => {
         const cls = [
           seg.bold ? 'font-bold' : '',
           seg.italic ? 'italic' : '',
@@ -23,21 +32,16 @@ export default function RichText({
           .filter(Boolean)
           .join(' ')
 
-        return seg.link ? (
-          <a
-            key={i}
-            href={seg.link}
-            target="_blank"
-            rel="noreferrer"
-            className={`${cls} text-blue-400 underline`}
-          >
-            {seg.text}
-          </a>
-        ) : (
-          <span key={i} className={cls}>
-            {seg.text}
-          </span>
-        )
+        if (seg.link) {
+          return [
+            <a key={i} href={seg.link} target="_blank" rel="noreferrer"
+              className={`${cls} text-blue-400 underline`}>
+              {seg.text}
+            </a>
+          ]
+        }
+
+        return renderText(seg.text, cls, String(i))
       })}
     </>
   )

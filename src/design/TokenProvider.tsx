@@ -11,7 +11,7 @@
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { DESIGN_TOKENS, type DesignTokens } from './tokens'
-import { authFetch } from '@/lib/http'
+import { getToken } from '@/lib/http'
 
 // ── R 层映射：protocol.layer → edge token key ─────────────────────
 const R_LAYER_TO_EDGE: Record<string, string> = {
@@ -95,8 +95,14 @@ export function TokenProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState<DesignTokens>(DESIGN_TOKENS)
 
   useEffect(() => {
-    authFetch<ProtocolEntry[]>('/protocol')
-      .then(entries => {
+    // 用 plain fetch（不走 authFetch），401/网络错误一律静默 fallback 到静态 tokens
+    // 原因：TokenProvider 是纯 UI 层，不应触发全局 401 redirect（会导致 /login 无限刷新）
+    const token = getToken()
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    fetch('/api/protocol', { headers })
+      .then(res => (res.ok ? res.json() : Promise.reject()))
+      .then((entries: ProtocolEntry[]) => {
         const overrides = buildOverrides(entries)
         if (Object.keys(overrides).length) {
           setTokens(deepMerge(DESIGN_TOKENS, overrides))

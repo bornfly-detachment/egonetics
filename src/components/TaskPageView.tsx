@@ -1,136 +1,19 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
-import PageManager from './PageManager'
-import { createApiClient } from './apiClient'
-import type { ApiClient, PageMeta } from './types'
-import { getToken, removeToken } from '@/lib/http'
+import { Loader2, Copy } from 'lucide-react'
+import { authFetch } from '@/lib/http'
+import PRVSEGraph from '@/components/prvse/PRVSEGraph'
 
-// ── Exec Step panel ─────────────────────────────────────────────
-interface ExecStepMeta {
-  id: string
-  title: string
-  icon: string
-  createdAt: string
-}
-
-const ExecStepPanel: React.FC<{ taskId: string }> = ({ taskId }) => {
-  const [steps, setSteps] = useState<ExecStepMeta[]>([])
-  const [collapsed, setCollapsed] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [activeStep, setActiveStep] = useState<string | null>(null)
-
-  useEffect(() => {
-    const token = getToken()
-    fetch(`/api/pages?taskRefId=${taskId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: ExecStepMeta[]) => {
-        setSteps(Array.isArray(data) ? data : [])
-        if (data.length > 0 && !activeStep) setActiveStep(data[data.length - 1].id)
-      })
-      .catch(() => setSteps([]))
-      .finally(() => setLoading(false))
-  }, [taskId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  return (
-    <div
-      className="absolute bottom-0 left-0 z-10 flex flex-col bg-[#161616] border-t border-r border-white/5"
-      style={{ width: 240 }}
-    >
-      {/* Section header */}
-      <button
-        onClick={() => setCollapsed(c => !c)}
-        className="flex items-center justify-between px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 transition-colors shrink-0"
-      >
-        <span className="font-semibold uppercase tracking-widest text-[10px]">执行步骤</span>
-        <div className="flex items-center gap-1">
-          {steps.length > 0 && (
-            <span className="text-[10px] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded">
-              {steps.length}
-            </span>
-          )}
-          {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-        </div>
-      </button>
-
-      {!collapsed && (
-        <div className="overflow-y-auto" style={{ maxHeight: 180 }}>
-          {loading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 size={12} className="animate-spin text-neutral-600" />
-            </div>
-          ) : steps.length === 0 ? (
-            <div className="px-3 pb-3 text-xs text-neutral-700 text-center">
-              暂无执行步骤
-            </div>
-          ) : (
-            <div className="pb-2">
-              {steps.map(step => (
-                <button
-                  key={step.id}
-                  onClick={() => setActiveStep(step.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
-                    activeStep === step.id
-                      ? 'bg-amber-500/10 text-amber-300'
-                      : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/5'
-                  }`}
-                >
-                  <span className="shrink-0">{step.icon || '⚙️'}</span>
-                  <span className="truncate">{step.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const KANBAN_API_BASE = '/api'
-
-interface TaskData {
+interface TaskMeta {
   id: string
   name: string
+  icon?: string
   column_id: string | null
   priority: string | null
   assignee: string | null
   start_date: string | null
   due_date: string | null
-  tags: string[]
-  icon?: string
-}
-
-// 创建 Task 专属的 API 客户端
-function createTaskPageApiClient(taskId: string): ApiClient {
-  // 使用带过滤的 baseClient，会自动添加 type=task&refId=taskId 参数
-  const baseClient = createApiClient('task', taskId)
-
-  return {
-    async listPages(): Promise<PageMeta[]> {
-      return baseClient.listPages()
-    },
-    async createPage(input) {
-      return baseClient.createPage(input)
-    },
-    async updatePage(id, patch) {
-      return baseClient.updatePage(id, patch)
-    },
-    async deletePage(id) {
-      return baseClient.deletePage(id)
-    },
-    async movePage(id, input) {
-      return baseClient.movePage(id, input)
-    },
-    async listBlocks(pageId) {
-      return baseClient.listBlocks(pageId)
-    },
-    async saveBlocks(pageId, blocks) {
-      return baseClient.saveBlocks(pageId, blocks)
-    },
-  }
+  parent_task_id?: string | null
 }
 
 const PRIORITY_OPTIONS = [
@@ -145,244 +28,154 @@ const COLUMN_OPTIONS = [
   { value: 'in-progress', label: '进行中' },
   { value: 'review',      label: '审核中' },
   { value: 'done',        label: '已完成' },
+  { value: 'templates',   label: '模板库' },
 ]
 
-const TaskPageView: React.FC = () => {
+export default function TaskPageView() {
   const { taskId } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
-  const [taskData, setTaskData] = useState<TaskData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
 
-  // 获取 task 完整信息
+  const [taskMeta, setTaskMeta] = useState<TaskMeta | null>(null)
+  const [metaLoading, setMetaLoading] = useState(true)
+  const [instantiating, setInstantiating] = useState(false)
+
   useEffect(() => {
     if (!taskId) return
-
-    fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`, {
-      headers: { Authorization: `Bearer ${getToken() || ''}` },
-    })
-      .then((res) => {
-        if (res.status === 401) {
-          removeToken()
-          window.location.href = '/login'
-          throw new Error('Unauthorized')
-        }
-        return res.json()
-      })
-      .then((data) => {
-        setTaskData({
-          id: data.id ?? taskId,
-          name: data.name ?? data.title ?? '任务详情',
-          column_id: data.column_id ?? data.columnId ?? 'planned',
-          priority: data.priority ?? 'medium',
-          assignee: data.assignee ?? '',
-          start_date: data.start_date ?? data.startDate ?? null,
-          due_date: data.due_date ?? data.dueDate ?? null,
-          tags: Array.isArray(data.tags) ? data.tags : [],
-          icon: data.icon ?? '📋',
-        })
-        setIsLoading(false)
-      })
-      .catch(() => setIsLoading(false))
+    authFetch<any>(`/kanban/tasks/${taskId}`)
+      .then(d => setTaskMeta({
+        id: d.id ?? taskId,
+        name: d.name ?? d.title ?? '任务详情',
+        icon: d.icon ?? '📋',
+        column_id: d.column_id ?? 'planned',
+        priority: d.priority ?? 'medium',
+        assignee: d.assignee ?? '',
+        start_date: d.start_date ?? null,
+        due_date: d.due_date ?? null,
+        parent_task_id: d.parent_task_id ?? null,
+      }))
+      .catch(() => {})
+      .finally(() => setMetaLoading(false))
   }, [taskId])
 
-  // PATCH task field — fires on blur / select change
-  const updateTaskField = useCallback(
-    async (field: string, value: unknown) => {
-      if (!taskId) return
-      try {
-        const res = await fetch(`${KANBAN_API_BASE}/kanban/tasks/${taskId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getToken() || ''}`,
-          },
-          body: JSON.stringify({ [field]: value }),
-        })
-        if (res.ok) {
-          const updated = await res.json()
-          setTaskData((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  column_id: updated.column_id ?? updated.columnId ?? prev.column_id,
-                  priority: updated.priority ?? prev.priority,
-                  assignee: updated.assignee ?? prev.assignee,
-                  start_date: updated.start_date ?? updated.startDate ?? prev.start_date,
-                  due_date: updated.due_date ?? updated.dueDate ?? prev.due_date,
-                  tags: Array.isArray(updated.tags) ? updated.tags : prev.tags,
-                }
-              : prev
-          )
-        }
-      } catch {
-        /* ignore */
-      }
-    },
-    [taskId]
-  )
-
-  // 创建 API 客户端 - 使用 useMemo 避免每次渲染重新创建
-  const apiClient = useMemo(() => {
-    return taskId ? createTaskPageApiClient(taskId) : null
+  const updateAttr = useCallback(async (field: string, value: unknown) => {
+    if (!taskId) return
+    await authFetch(`/kanban/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify({ [field]: value }) }).catch(() => {})
   }, [taskId])
 
-  if (!taskId || !apiClient) {
-    return (
-      <div className="h-screen flex flex-col bg-[#191919]">
-        <div className="h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 shrink-0">
-          <button
-            onClick={() => navigate('/tasks')}
-            className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            <span className="text-sm">返回任务列表</span>
-          </button>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-neutral-400">无效的任务 ID</p>
-        </div>
-      </div>
-    )
+  async function handleInstantiate() {
+    if (!taskId) return
+    setInstantiating(true)
+    try {
+      const inst = await authFetch<any>(`/tasks/${taskId}/instantiate`, { method: 'POST' })
+      navigate(`/tasks/${inst.id}`)
+    } finally { setInstantiating(false) }
   }
 
-  const priorityOpt = PRIORITY_OPTIONS.find((p) => p.value === taskData?.priority) ?? PRIORITY_OPTIONS[1]
+  if (!taskId) return (
+    <div className="h-screen flex items-center justify-center bg-[#191919]">
+      <p className="text-neutral-400">无效的任务 ID</p>
+    </div>
+  )
+
+  const priorityOpt = PRIORITY_OPTIONS.find(p => p.value === taskMeta?.priority) ?? PRIORITY_OPTIONS[1]
+  const isTemplate = taskMeta?.column_id === 'templates'
+  const isInstance = !!taskMeta?.parent_task_id
 
   return (
-    <div className="h-screen flex flex-col bg-[#191919]">
-      {/* 顶部导航栏 */}
-      <div className="h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 shrink-0">
+    <div className="h-screen flex flex-col bg-[#191919] overflow-hidden">
+
+      {/* ── Header ── */}
+      <div className="h-12 bg-[#141414] border-b border-white/5 flex items-center px-4 gap-3 shrink-0">
         <button
           onClick={() => navigate('/tasks')}
-          className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-300 transition-colors shrink-0"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          <span className="text-sm">返回任务列表</span>
+          <span className="text-[12px]">任务列表</span>
         </button>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2 text-neutral-500 text-sm">
-          <span>{taskData?.icon ?? '📝'}</span>
-          <span>{isLoading ? '加载中...' : (taskData?.name ?? '任务详情')}</span>
+
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <span className="text-base">{taskMeta?.icon ?? '📋'}</span>
+          <span className="text-neutral-100 font-semibold text-[15px]">
+            {metaLoading ? '加载中…' : (taskMeta?.name ?? '任务详情')}
+          </span>
+          {isTemplate && <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">模板</span>}
+          {isInstance && <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/20">实例</span>}
         </div>
+
+        {isTemplate && !metaLoading && (
+          <button
+            onClick={handleInstantiate}
+            disabled={instantiating}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30
+              text-violet-300 text-[11px] hover:bg-violet-600/35 disabled:opacity-50 transition-all shrink-0"
+          >
+            <Copy size={11} />
+            {instantiating ? '创建中…' : '创建实例'}
+          </button>
+        )}
       </div>
 
-      {/* 属性栏 */}
-      {taskData && !isLoading && (
-        <div className="shrink-0 border-b border-white/5 bg-[#141414] px-4 py-2 flex items-center gap-4 overflow-x-auto">
-          {/* 状态 */}
+      {/* ── Attributes bar ── */}
+      {taskMeta && !metaLoading && (
+        <div className="shrink-0 border-b border-white/5 bg-[#111] px-4 py-1.5 flex items-center gap-4 overflow-x-auto">
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] text-neutral-600">状态</span>
-            <select
-              value={taskData.column_id ?? 'planned'}
-              onChange={(e) => {
-                setTaskData((prev) => prev ? { ...prev, column_id: e.target.value } : prev)
-                updateTaskField('column_id', e.target.value)
-              }}
-              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none cursor-pointer hover:border-white/20 transition-colors"
-            >
-              {COLUMN_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <select value={taskMeta.column_id ?? 'planned'}
+              onChange={e => { setTaskMeta(p => p ? { ...p, column_id: e.target.value } : p); updateAttr('columnId', e.target.value) }}
+              className="text-[11px] bg-neutral-800 border border-white/8 rounded px-1.5 py-0.5 text-neutral-300 outline-none cursor-pointer hover:border-white/15 transition-colors"
+            >{COLUMN_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
           </div>
-
-          <div className="w-px h-4 bg-white/8 shrink-0" />
-
-          {/* 优先级 */}
+          <div className="w-px h-4 bg-white/6 shrink-0" />
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] text-neutral-600">优先级</span>
-            <select
-              value={taskData.priority ?? 'medium'}
-              onChange={(e) => {
-                setTaskData((prev) => prev ? { ...prev, priority: e.target.value } : prev)
-                updateTaskField('priority', e.target.value)
-              }}
-              className={`text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-white/20 transition-colors ${priorityOpt.cls}`}
-            >
-              {PRIORITY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <select value={taskMeta.priority ?? 'medium'}
+              onChange={e => { setTaskMeta(p => p ? { ...p, priority: e.target.value } : p); updateAttr('priority', e.target.value) }}
+              className={`text-[11px] bg-neutral-800 border border-white/8 rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-white/15 transition-colors ${priorityOpt.cls}`}
+            >{PRIORITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
           </div>
-
-          <div className="w-px h-4 bg-white/8 shrink-0" />
-
-          {/* 负责人 */}
+          <div className="w-px h-4 bg-white/6 shrink-0" />
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] text-neutral-600">负责人</span>
-            <input
-              value={taskData.assignee ?? ''}
-              onChange={(e) => setTaskData((prev) => prev ? { ...prev, assignee: e.target.value } : prev)}
-              onBlur={(e) => updateTaskField('assignee', e.target.value)}
-              placeholder="未分配"
-              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none w-24 hover:border-white/20 focus:border-blue-500/50 transition-colors placeholder-neutral-700"
+            <input value={taskMeta.assignee ?? ''} onChange={e => setTaskMeta(p => p ? { ...p, assignee: e.target.value } : p)}
+              onBlur={e => updateAttr('assignee', e.target.value)} placeholder="未分配"
+              className="text-[11px] bg-neutral-800 border border-white/8 rounded px-1.5 py-0.5 text-neutral-300 outline-none w-20 hover:border-white/15 focus:border-blue-500/40 transition-colors placeholder-neutral-700"
             />
           </div>
-
-          <div className="w-px h-4 bg-white/8 shrink-0" />
-
-          {/* 开始日期 */}
+          <div className="w-px h-4 bg-white/6 shrink-0" />
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] text-neutral-600">开始</span>
-            <input
-              type="date"
-              value={taskData.start_date ? taskData.start_date.split('T')[0] : ''}
-              onChange={(e) => {
-                const v = e.target.value || null
-                setTaskData((prev) => prev ? { ...prev, start_date: v } : prev)
-                updateTaskField('start_date', v)
-              }}
-              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/20 focus:border-blue-500/50 transition-colors"
+            <input type="date" value={taskMeta.start_date ? taskMeta.start_date.split('T')[0] : ''}
+              onChange={e => { const v = e.target.value || null; setTaskMeta(p => p ? { ...p, start_date: v } : p); updateAttr('startDate', v) }}
+              className="text-[11px] bg-neutral-800 border border-white/8 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/15 focus:border-blue-500/40 transition-colors"
             />
           </div>
-
-          {/* 截止日期 */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[10px] text-neutral-600">截止</span>
-            <input
-              type="date"
-              value={taskData.due_date ? taskData.due_date.split('T')[0] : ''}
-              onChange={(e) => {
-                const v = e.target.value || null
-                setTaskData((prev) => prev ? { ...prev, due_date: v } : prev)
-                updateTaskField('due_date', v)
-              }}
-              className="text-[11px] bg-neutral-800 border border-white/10 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/20 focus:border-blue-500/50 transition-colors"
+            <input type="date" value={taskMeta.due_date ? taskMeta.due_date.split('T')[0] : ''}
+              onChange={e => { const v = e.target.value || null; setTaskMeta(p => p ? { ...p, due_date: v } : p); updateAttr('dueDate', v) }}
+              className="text-[11px] bg-neutral-800 border border-white/8 rounded px-1.5 py-0.5 text-neutral-300 outline-none hover:border-white/15 focus:border-blue-500/40 transition-colors"
             />
           </div>
-
-          {/* 标签 */}
-          {taskData.tags.length > 0 && (
-            <>
-              <div className="w-px h-4 bg-white/8 shrink-0" />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] text-neutral-600">标签</span>
-                <div className="flex gap-1">
-                  {taskData.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] bg-neutral-700/60 text-neutral-400 px-1.5 py-0.5 rounded border border-white/5"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
         </div>
       )}
 
-      {/* PageManager 内容区 + exec step overlay */}
-      <div className="flex-1 overflow-hidden relative">
-        <PageManager api={apiClient} />
-        <ExecStepPanel taskId={taskId} />
-      </div>
+      {/* ── Body ── */}
+      {metaLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 size={20} className="animate-spin text-neutral-600" />
+        </div>
+      ) : !taskMeta ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-neutral-500 text-sm">任务不存在</p>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0">
+          <PRVSEGraph taskId={taskId} />
+        </div>
+      )}
     </div>
   )
 }
-
-export default TaskPageView

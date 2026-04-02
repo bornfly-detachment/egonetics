@@ -44,6 +44,20 @@ function getTagPath(tree: BlockTagNode[], targetId: string): string[] {
   return []
 }
 
+// 获取 targetId 节点的所有兄弟节点 id（不含自身）
+function getSiblingIds(tree: BlockTagNode[], targetId: string): string[] {
+  for (const node of tree) {
+    if (node.children) {
+      if (node.children.some(c => c.id === targetId)) {
+        return node.children.filter(c => c.id !== targetId).map(c => c.id)
+      }
+      const found = getSiblingIds(node.children, targetId)
+      if (found.length > 0 || node.children.some(c => c.id === targetId)) return found
+    }
+  }
+  return []
+}
+
 // 预设颜色选项
 const COLOR_OPTIONS = [
   '#ef4444',
@@ -70,25 +84,28 @@ function EditableTagTreeNode({
   level = 0,
   editingId,
   onStartEdit,
+  parentSelectMode = 'multi',
 }: {
   node: BlockTagNode
   path: string[]
   selectedTags: BlockTagRef[]
-  onToggle: (node: BlockTagNode, path: string[]) => void
+  onToggle: (node: BlockTagNode, path: string[], parentSelectMode: 'single' | 'multi') => void
   onEdit: (node: BlockTagNode, name: string, color: string) => void
   onDelete: (node: BlockTagNode) => void
   onAddChild: (parent: BlockTagNode) => void
   level?: number
   editingId: string | null
   onStartEdit: (node: BlockTagNode) => void
+  parentSelectMode?: 'single' | 'multi'
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [editName, setEditName] = useState(node.name)
   const [editColor, setEditColor] = useState(node.color || '#6b7280')
-  const hasChildren = node.children && node.children.length > 0
-  const isSelected = isTagSelected(selectedTags, node.id)
-  const isEditing = editingId === node.id
-  const currentPath = [...path, node.name]
+  const hasChildren    = node.children && node.children.length > 0
+  const isSelected     = isTagSelected(selectedTags, node.id)
+  const isEditing      = editingId === node.id
+  const currentPath    = [...path, node.name]
+  const isSingleChild  = parentSelectMode === 'single'  // 我在单选组里
 
   const handleSave = () => {
     if (editName.trim()) {
@@ -145,10 +162,14 @@ function EditableTagTreeNode({
     <div key={node.id} className="select-none">
       <div
         className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors group ${
-          isSelected ? 'bg-blue-500/20 text-blue-300' : 'hover:bg-white/5 text-neutral-300'
+          isSelected
+            ? isSingleChild
+              ? 'bg-amber-500/15 text-amber-300'
+              : 'bg-blue-500/20 text-blue-300'
+            : 'hover:bg-white/5 text-neutral-300'
         }`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
-        onClick={() => onToggle(node, currentPath)}
+        onClick={() => onToggle(node, currentPath, parentSelectMode)}
       >
         {hasChildren && (
           <button
@@ -173,7 +194,16 @@ function EditableTagTreeNode({
 
         <span className="flex-1 text-sm">{node.name}</span>
 
-        {isSelected && <Check size={14} className="text-blue-400 shrink-0" />}
+        {/* 选中指示：单选=实心圆，多选=勾 */}
+        {isSingleChild ? (
+          <span className={`shrink-0 w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+            isSelected ? 'border-amber-400 bg-amber-400' : 'border-neutral-600'
+          }`}>
+            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
+          </span>
+        ) : (
+          isSelected && <Check size={14} className="text-blue-400 shrink-0" />
+        )}
 
         {/* 编辑按钮 - 悬停显示 */}
         <div className="opacity-0 group-hover:opacity-100 flex gap-0.5">
@@ -211,7 +241,14 @@ function EditableTagTreeNode({
       </div>
 
       {hasChildren && isExpanded && node.children && (
-        <div>
+        <div className={node.select_mode === 'single' ? 'relative' : ''}>
+          {/* 单选组左括线 */}
+          {node.select_mode === 'single' && (
+            <div
+              className="pointer-events-none absolute top-0 bottom-0 w-px"
+              style={{ left: `${level * 12 + 14}px`, background: node.color ?? '#f59e0b', opacity: 0.3 }}
+            />
+          )}
           {node.children.map((child) => (
             <EditableTagTreeNode
               key={child.id}
@@ -225,6 +262,7 @@ function EditableTagTreeNode({
               level={level + 1}
               editingId={editingId}
               onStartEdit={onStartEdit}
+              parentSelectMode={node.select_mode ?? 'multi'}
             />
           ))}
         </div>
@@ -282,16 +320,17 @@ export function SelectedTagsList({
 }
 
 const BlockTagSelector: React.FC<BlockTagSelectorProps> = ({ selectedTags, onChange, onClose }) => {
-  const { tagTree, createTag, updateTag, deleteTag, resetToDefault } = useBlockTags()
+  const { tagTree, createTag, updateTag, deleteTag } = useBlockTags()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showManageMode, setShowManageMode] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState('#6b7280')
 
-  const handleToggleTag = (node: BlockTagNode, path: string[]) => {
+  const handleToggleTag = (node: BlockTagNode, path: string[], parentSelectMode: 'single' | 'multi') => {
     const isSelected = isTagSelected(selectedTags, node.id)
 
     if (isSelected) {
+      // 取消选中
       onChange(selectedTags.filter((t) => t.tagId !== node.id))
     } else {
       const newTag: BlockTagRef = {
@@ -300,7 +339,14 @@ const BlockTagSelector: React.FC<BlockTagSelectorProps> = ({ selectedTags, onCha
         name: node.name,
         color: node.color,
       }
-      onChange([...selectedTags, newTag])
+      if (parentSelectMode === 'single') {
+        // 单选互斥：找到父节点，移除同级已选的兄弟节点
+        const siblings = getSiblingIds(tagTree, node.id)
+        const withoutSiblings = selectedTags.filter((t) => !siblings.includes(t.tagId))
+        onChange([...withoutSiblings, newTag])
+      } else {
+        onChange([...selectedTags, newTag])
+      }
     }
   }
 
@@ -432,18 +478,6 @@ const BlockTagSelector: React.FC<BlockTagSelectorProps> = ({ selectedTags, onCha
               <Plus size={14} />
             </button>
           </div>
-          <div className="flex justify-between mt-2">
-            <button
-              onClick={() => {
-                if (confirm('确定要重置为默认标签吗？这将删除所有自定义标签。')) {
-                  resetToDefault()
-                }
-              }}
-              className="text-xs text-neutral-500 hover:text-orange-400"
-            >
-              重置默认
-            </button>
-          </div>
         </div>
       )}
 
@@ -461,6 +495,7 @@ const BlockTagSelector: React.FC<BlockTagSelectorProps> = ({ selectedTags, onCha
             onAddChild={handleAddChildTag}
             editingId={editingId}
             onStartEdit={(node) => setEditingId(node.id)}
+            parentSelectMode="multi"
           />
         ))}
       </div>

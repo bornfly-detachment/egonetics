@@ -13,7 +13,7 @@ export function isPathAllowed(pathname: string, role: UserRole): boolean {
 
 export function getVisibleNavItems(role: UserRole): string[] {
   if (role === 'admin') {
-    return ['home', 'memory', 'theory', 'chronicle', 'egonetics', 'tasks', 'blog', 'agents', 'cybernetics']
+    return ['home', 'memory', 'theory', 'chronicle', 'egonetics', 'tasks', 'blog', 'agents', 'cybernetics', 'tag-tree', 'queue', 'controller', 'protocol', 'protocol-builder', 'prvse-world', 'lab', 'mq', 'recycle']
   }
   if (role === 'agent') return ['home', 'egonetics', 'tasks', 'blog', 'agents']
   return ['home', 'egonetics', 'tasks', 'blog']

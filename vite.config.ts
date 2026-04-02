@@ -12,13 +12,20 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: true,
     open: true,
     proxy: {
+      '/seai': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/seai/, ''),
+      },
       '/api': {
         target: 'http://localhost:3002',
         changeOrigin: true,
         secure: false,
-        timeout: 60000,
+        timeout: 90000,
+        proxyTimeout: 90000,
         configure: (proxy, _) => {
           proxy.on('error', (err, _) => {
             console.log('proxy error', err)

@@ -21,7 +21,8 @@ import {
 } from 'lucide-react'
 import PageManager from '../PageManager'
 import { createApiClient } from '../apiClient'
-import { getToken, removeToken } from '@/lib/http'
+import { authFetch } from '@/lib/http'
+import ExecutionConsole from './ExecutionConsole'
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low'
 
@@ -51,18 +52,6 @@ interface Column {
 }
 
 // ─── API Helpers ──────────────────────────────────────────────────────────────
-function authHeaders(): Record<string, string> {
-  const token = getToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-function handle401(res: Response) {
-  if (res.status === 401) {
-    removeToken()
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
-}
 
 const PRI: Record<Priority, { label: string; cls: string; dot: string }> = {
   urgent: { label: '紧急', cls: 'text-red-400 bg-red-500/10 border-red-500/25', dot: '#ef4444' },
@@ -85,10 +74,7 @@ const PRI: Record<Priority, { label: string; cls: string; dot: string }> = {
 
 async function loadTask(id: string): Promise<Task | null> {
   try {
-    const res = await fetch(`/api/kanban/tasks/${id}`, { headers: authHeaders() })
-    handle401(res)
-    if (!res.ok) return null
-    return await res.json()
+    return await authFetch<Task>(`/kanban/tasks/${id}`)
   } catch {
     return null
   }
@@ -96,11 +82,8 @@ async function loadTask(id: string): Promise<Task | null> {
 
 async function loadColumns(): Promise<Column[]> {
   try {
-    const res = await fetch('/api/kanban', { headers: authHeaders() })
-    handle401(res)
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.columns ?? []
+    const res = await authFetch<{ columns?: Column[] }>('/kanban')
+    return (res as any).columns ?? []
   } catch {
     return []
   }
@@ -108,13 +91,11 @@ async function loadColumns(): Promise<Column[]> {
 
 async function patchTask(id: string, fields: Partial<Task>): Promise<boolean> {
   try {
-    const res = await fetch(`/api/kanban/tasks/${id}`, {
+    await authFetch(`/kanban/tasks/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(fields),
     })
-    handle401(res)
-    return res.ok
+    return true
   } catch {
     return false
   }
@@ -146,16 +127,10 @@ function PublishModal({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/tasks/${task.id}/send-to-chronicle`, {
+      await authFetch(`/tasks/${task.id}/send-to-chronicle`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ task_outcome: outcome, task_summary: summary.trim() || null }),
       })
-      handle401(res)
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({ error: '请求失败' }))
-        throw new Error(d.error || '请求失败')
-      }
       onDone()
     } catch (e: unknown) {
       setError((e as Error).message)
@@ -277,10 +252,12 @@ export default function TaskDetailPage() {
 
   const handleDelete = async () => {
     if (!task || !window.confirm(`确定要删除「${task.name}」？`)) return
-    const res = await fetch(`/api/kanban/tasks/${task.id}`, { method: 'DELETE', headers: authHeaders() })
-    handle401(res)
-    if (res.ok) navigate('/tasks')
-    else alert('删除失败')
+    try {
+      await authFetch(`/kanban/tasks/${task.id}`, { method: 'DELETE' })
+      navigate('/tasks')
+    } catch {
+      alert('删除失败')
+    }
   }
 
   if (loading)
@@ -454,8 +431,12 @@ export default function TaskDetailPage() {
       </div>
 
       {/* PageManager 内容区 */}
-      <div className="flex-1 overflow-hidden">
-        {taskApiClient && <PageManager api={taskApiClient} />}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden">
+          {taskApiClient && <PageManager api={taskApiClient} showPattern />}
+        </div>
+        {/* Execution Console */}
+        {taskId && <ExecutionConsole taskId={taskId} />}
       </div>
 
       {showPublish && (

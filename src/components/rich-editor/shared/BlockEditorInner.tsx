@@ -1,5 +1,5 @@
 // 编辑层路由：isEditing=true 时渲染各块的 Editor 组件
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Block, BlockType, TableCell } from '../types'
 import { getPlainText } from './blockUtils'
 import { formatCode } from '../../../lib/formatCode'
@@ -35,10 +35,20 @@ export default function BlockEditorInner({
   onTableCommit, onNavigate, onCreateSubpage, onExitEdit,
 }: Props) {
   const [draft, setDraft] = useState(getPlainText(block.content.rich_text))
+  const historyRef = useRef<string[]>([])
 
   useEffect(() => {
-    if (isEditing) setDraft(getPlainText(block.content.rich_text))
+    if (isEditing) {
+      historyRef.current = []
+      setDraft(getPlainText(block.content.rich_text))
+    }
   }, [isEditing])
+
+  const updateDraft = (val: string) => {
+    historyRef.current.push(draft)
+    if (historyRef.current.length > 200) historyRef.current.shift()
+    setDraft(val)
+  }
 
   const commit = () => onCommit(draft)
 
@@ -49,6 +59,13 @@ export default function BlockEditorInner({
   }
 
   const handleKD = (e: React.KeyboardEvent<HTMLElement>) => {
+    const isUndo = (e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey
+    if (isUndo && block.type !== 'code') {
+      e.preventDefault()
+      const prev = historyRef.current.pop()
+      if (prev !== undefined) setDraft(prev)
+      return
+    }
     if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') {
       e.preventDefault(); commit(); onKeyDown?.(e); return
     }
@@ -113,7 +130,7 @@ export default function BlockEditorInner({
         <input
           autoFocus
           type="text" value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => updateDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={handleKD as any}
           className={`${SHARED_CLS} text-sm flex-1`}
@@ -133,7 +150,7 @@ export default function BlockEditorInner({
   if (block.type === 'paragraph')
     return (
       <ParagraphEditor
-        block={block} draft={draft} onChange={setDraft} onBlur={commit}
+        block={block} draft={draft} onChange={updateDraft} onBlur={commit}
         onKeyDown={handleKD as any} onTypeChange={onTypeChange} onSlashMenu={onSlashMenu}
         autoFocus={isEditing}
       />
@@ -142,7 +159,7 @@ export default function BlockEditorInner({
   if (['heading1', 'heading2', 'heading3', 'heading4'].includes(block.type))
     return (
       <HeadingEditor
-        block={block} draft={draft} onChange={setDraft} onBlur={commit}
+        block={block} draft={draft} onChange={updateDraft} onBlur={commit}
         onKeyDown={handleKD as any} autoFocus={isEditing}
       />
     )
@@ -155,7 +172,7 @@ export default function BlockEditorInner({
     <textarea
       autoFocus
       value={draft} rows={1}
-      onChange={(e) => setDraft(e.target.value)}
+      onChange={(e) => updateDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={handleKD}
       onInput={autoResize}

@@ -38,7 +38,7 @@ function parseRow(row) {
   if (!row) return null;
   return {
     ...row,
-    tags: row.tags ? (() => { try { return JSON.parse(row.tags); } catch { return []; } })() : [],
+    tags: row.tags ? (() => { try { return JSON.parse(row.tags); } catch { return row.tags; } })() : null,
   };
 }
 
@@ -155,7 +155,7 @@ router.post('/pages', (req, res) => {
     if (dup && !skipDupCheck) return res.status(409).json({ error: `同级目录下已存在标题「${titleTrimmed}」` });
 
     const id = genId('page');
-    const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
+    const tagsJson = typeof tags === 'string' ? tags : JSON.stringify(Array.isArray(tags) ? tags : []);
 
     pagesDb.run(
       `INSERT INTO pages
@@ -245,7 +245,7 @@ router.patch('/pages/:id', (req, res) => {
     if (project        !== undefined) { updates.push('project = ?');           params.push(project); }
     if (projectIcon    !== undefined) { updates.push('project_icon = ?');      params.push(projectIcon); }
     if (sortOrder      !== undefined) { updates.push('sort_order = ?');        params.push(sortOrder); }
-    if (tags           !== undefined) { updates.push('tags = ?');              params.push(JSON.stringify(tags)); }
+    if (tags           !== undefined) { updates.push('tags = ?');              params.push(typeof tags === 'string' ? tags : JSON.stringify(tags)); }
     if (chronicleEntryId !== undefined) { updates.push('chronicle_entry_id = ?'); params.push(chronicleEntryId); }
     if (taskOutcome    !== undefined) { updates.push('task_outcome = ?');      params.push(taskOutcome); }
     if (taskSummary    !== undefined) { updates.push('task_summary = ?');      params.push(taskSummary); }
@@ -376,7 +376,7 @@ router.put('/pages/:id/blocks', async (req, res) => {
       metadata: (() => { try { return JSON.parse(b.metadata || '{}'); } catch { return {}; } })(),
     })));
   } catch (err) {
-    pagesDb.run('ROLLBACK');
+    pagesDb.run('ROLLBACK', () => {});
     res.status(500).json({ error: err.message });
   }
 });

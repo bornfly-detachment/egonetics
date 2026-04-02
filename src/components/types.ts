@@ -70,6 +70,7 @@ export interface BlockTagNode {
   id: string
   name: string
   color?: string
+  select_mode?: 'single' | 'multi'   // 子节点选择模式：单选互斥 | 多选并列（默认）
   children?: BlockTagNode[]
 }
 

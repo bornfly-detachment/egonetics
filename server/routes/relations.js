@@ -200,7 +200,7 @@ router.put('/relations/:id/blocks', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
 
     pagesDb.run('DELETE FROM relation_blocks WHERE relation_id = ?', [relationId], (err) => {
-      if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+      if (err) { pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err.message }); }
 
       if (blocks.length === 0) {
         pagesDb.run('COMMIT');
@@ -225,7 +225,7 @@ router.put('/relations/:id/blocks', (req, res) => {
             b.createdAt || null, ts, ts,
           ],
           (err) => {
-            if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+            if (err) { pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err.message }); }
             done++;
             if (done === blocks.length) {
               pagesDb.run('COMMIT');

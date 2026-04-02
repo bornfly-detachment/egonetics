@@ -8,6 +8,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **禁止"打地鼠式开发"**：修一个冒一个，根因是每次只看局部，没有全局视角。
 
+### 开发铁律 — 优先级最高，无例外
+
+**任何数据结构、配置、规则、参数的实现，必须支持完整 CRUD。**
+- 后端：必须有 GET / POST / PATCH / DELETE 路由
+- 前端：用户必须能在界面上增删改查，不能只读
+- **不满足 CRUD 的功能，不做。宁可不实现，不做残缺品。**
+
+违规案例（已发生，不得重犯）：
+- V 层 reward functions 硬编码在 Python 文件里，用户无法增删改 → 已修复为 DB 驱动 + CRUD API
+- 任何"写死在代码里的配置/常量/规则" → 必须迁移到 DB + 提供 CRUD 接口
+
+---
+
 ### 三条硬规则（违反前必须与用户沟通）
 
 **规则 1 — 先设计，后编码**

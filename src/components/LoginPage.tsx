@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Eye, EyeOff, Check, X, Loader2, Mail, User, Lock, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useTranslation } from '@/lib/translations'
 
 type Mode = 'login' | 'register' | 'verify'
 type RegisterRole = 'guest' | 'agent'
@@ -98,7 +99,9 @@ const PwField: React.FC<PwFieldProps> = ({ label, value, onChange, placeholder, 
     if (score === 3) return 'bg-blue-500'
     return 'bg-green-500'
   }
-  const barLabel = ['', '弱', '弱', '中', '强']
+  const { t } = useTranslation()
+  const pw = t.login.pwStrength
+  const barLabel = ['', pw.weak, pw.weak, pw.medium, pw.strong]
 
   return (
     <div>
@@ -150,10 +153,10 @@ const PwField: React.FC<PwFieldProps> = ({ label, value, onChange, placeholder, 
           {/* Criteria */}
           <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
             {[
-              { ok: strength.minLength, label: '最少 8 位' },
-              { ok: strength.hasUpper,  label: '大写字母' },
-              { ok: strength.hasLower,  label: '小写字母' },
-              { ok: strength.hasNumber, label: '数字' },
+              { ok: strength.minLength, label: t.login.pwCriteria.minLength },
+              { ok: strength.hasUpper,  label: t.login.pwCriteria.uppercase },
+              { ok: strength.hasLower,  label: t.login.pwCriteria.lowercase },
+              { ok: strength.hasNumber, label: t.login.pwCriteria.number },
             ].map(({ ok, label }) => (
               <span key={label} className={`flex items-center gap-1 text-xs ${ok ? 'text-green-400' : 'text-neutral-500'}`}>
                 {ok ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
@@ -186,6 +189,8 @@ function AvailBadge({ status }: { status: AvailStatus }) {
 
 const LoginPage: React.FC = () => {
   const { login, register, verifyEmail, resendCode, isLoading } = useAuthStore()
+  const { t } = useTranslation()
+  const lt = t.login
 
   const [mode, setMode] = useState<Mode>('login')
   const [role, setRole] = useState<RegisterRole>('guest')
@@ -279,8 +284,8 @@ const LoginPage: React.FC = () => {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     clearErrors()
-    if (!loginId.trim()) { setFieldErrors({ loginId: '请输入账号' }); return }
-    if (!loginPw) { setFieldErrors({ loginPw: '请输入密码' }); return }
+    if (!loginId.trim()) { setFieldErrors({ loginId: lt.errors.requireAccount }); return }
+    if (!loginPw) { setFieldErrors({ loginPw: lt.errors.requirePassword }); return }
 
     try {
       await login(loginId.trim(), loginPw)
@@ -291,7 +296,7 @@ const LoginPage: React.FC = () => {
         setPendingEmail(e.email)
         setMode('verify')
       } else {
-        setError(e.message || '登录失败')
+        setError(e.message || lt.errors.loginFailed)
       }
     }
   }
@@ -302,20 +307,20 @@ const LoginPage: React.FC = () => {
 
     const pwStrength = getPwStrength(regPw)
     if (!isPwValid(pwStrength)) {
-      setFieldErrors({ regPw: '密码不符合要求' })
+      setFieldErrors({ regPw: lt.errors.passwordInvalid })
       return
     }
     if (regPw !== regPwConfirm) {
-      setFieldErrors({ regPwConfirm: '两次密码不一致' })
+      setFieldErrors({ regPwConfirm: lt.errors.passwordMismatch })
       return
     }
 
     if (role === 'guest') {
-      if (!regEmail.trim()) { setFieldErrors({ regEmail: '请输入邮箱' }); return }
-      if (emailStatus.available === false) { setFieldErrors({ regEmail: emailStatus.error || '邮箱已被注册' }); return }
+      if (!regEmail.trim()) { setFieldErrors({ regEmail: lt.errors.requireEmail }); return }
+      if (emailStatus.available === false) { setFieldErrors({ regEmail: emailStatus.error || lt.emailTaken }); return }
     } else {
-      if (!regUsername.trim()) { setFieldErrors({ regUsername: '请输入用户名' }); return }
-      if (usernameStatus.available === false) { setFieldErrors({ regUsername: usernameStatus.error || '用户名已被占用' }); return }
+      if (!regUsername.trim()) { setFieldErrors({ regUsername: lt.errors.requireUsername }); return }
+      if (usernameStatus.available === false) { setFieldErrors({ regUsername: usernameStatus.error || lt.usernameTaken }); return }
     }
 
     try {
@@ -334,21 +339,21 @@ const LoginPage: React.FC = () => {
       // Agent: store updated → redirect handled by AppRoot
     } catch (err: unknown) {
       const e = err as { message?: string }
-      setError(e.message || '注册失败')
+      setError(e.message || lt.errors.registerFailed)
     }
   }
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault()
     clearErrors()
-    if (code.trim().length !== 6) { setFieldErrors({ code: '请输入 6 位验证码' }); return }
+    if (code.trim().length !== 6) { setFieldErrors({ code: lt.errors.invalidCode }); return }
 
     try {
       await verifyEmail(pendingEmail, code.trim())
       // user updated → redirect
     } catch (err: unknown) {
       const e = err as { message?: string }
-      setError(e.message || '验证失败')
+      setError(e.message || lt.errors.verifyFailed)
     }
   }
 
@@ -360,7 +365,7 @@ const LoginPage: React.FC = () => {
       startCooldown()
     } catch (err: unknown) {
       const e = err as { message?: string }
-      setError(e.message || '发送失败')
+      setError(e.message || lt.errors.sendFailed)
     }
   }
 
@@ -379,7 +384,7 @@ const LoginPage: React.FC = () => {
             <img src="/bornfly_logo.png" alt="Bornfly" className="h-8 w-auto" />
             <span className="text-xl font-semibold text-white tracking-wide">Egonetics</span>
           </div>
-          <p className="text-sm text-neutral-500">个人主体性演化系统</p>
+          <p className="text-sm text-neutral-500">{lt.tagline}</p>
         </div>
 
         {/* Card */}
@@ -388,7 +393,7 @@ const LoginPage: React.FC = () => {
           {/* ── Login ─────────────────────────────────────────────────── */}
           {mode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-5">
-              <h2 className="text-lg font-semibold text-white">登录</h2>
+              <h2 className="text-lg font-semibold text-white">{lt.loginTitle}</h2>
 
               {error && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
@@ -397,20 +402,20 @@ const LoginPage: React.FC = () => {
               )}
 
               <Field
-                label="邮箱 / 用户名"
+                label={lt.accountLabel}
                 value={loginId}
                 onChange={setLoginId}
-                placeholder="输入邮箱或用户名"
+                placeholder={lt.accountPlaceholder}
                 icon={<User className="w-4 h-4" />}
                 error={fieldErrors.loginId}
                 autoFocus
               />
 
               <PwField
-                label="密码"
+                label={lt.passwordLabel}
                 value={loginPw}
                 onChange={setLoginPw}
-                placeholder="输入密码"
+                placeholder={lt.passwordPlaceholder}
                 error={fieldErrors.loginPw}
               />
 
@@ -422,17 +427,17 @@ const LoginPage: React.FC = () => {
                            transition-colors flex items-center justify-center gap-2"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                登录
+                {lt.loginButton}
               </button>
 
               <p className="text-center text-sm text-neutral-500">
-                还没有账号？{' '}
+                {lt.noAccount}{' '}
                 <button
                   type="button"
                   onClick={() => switchMode('register')}
                   className="text-primary-400 hover:text-primary-300 transition-colors"
                 >
-                  注册
+                  {lt.registerLink}
                 </button>
               </p>
             </form>
@@ -441,7 +446,7 @@ const LoginPage: React.FC = () => {
           {/* ── Register ──────────────────────────────────────────────── */}
           {mode === 'register' && (
             <form onSubmit={handleRegister} className="space-y-5">
-              <h2 className="text-lg font-semibold text-white">注册</h2>
+              <h2 className="text-lg font-semibold text-white">{lt.registerTitle}</h2>
 
               {error && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
@@ -451,7 +456,7 @@ const LoginPage: React.FC = () => {
 
               {/* Role selector */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">账号类型</label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">{lt.roleLabel}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['guest', 'agent'] as const).map(r => (
                     <button
@@ -464,31 +469,29 @@ const LoginPage: React.FC = () => {
                           : 'bg-white/[0.03] border-white/[0.06] text-neutral-400 hover:border-white/20'
                         }`}
                     >
-                      {r === 'guest' ? '游客' : 'Agent'}
+                      {r === 'guest' ? lt.guestRole : lt.agentRole}
                     </button>
                   ))}
                 </div>
                 <p className="mt-1.5 text-xs text-neutral-600">
-                  {role === 'guest'
-                    ? '游客可浏览公开内容，无法修改数据'
-                    : 'Agent 拥有任务和代理资源的操作权限'}
+                  {role === 'guest' ? lt.guestDesc : lt.agentDesc}
                 </p>
               </div>
 
               {/* Guest: email */}
               {role === 'guest' && (
                 <Field
-                  label="邮箱"
+                  label={lt.emailLabel}
                   type="email"
                   value={regEmail}
                   onChange={setRegEmail}
-                  placeholder="your@email.com"
+                  placeholder={lt.emailPlaceholder}
                   icon={<Mail className="w-4 h-4" />}
-                  error={fieldErrors.regEmail || (emailStatus.available === false ? (emailStatus.error || '邮箱已被注册') : '')}
+                  error={fieldErrors.regEmail || (emailStatus.available === false ? (emailStatus.error || lt.emailTaken) : '')}
                   hint={
                     <span className="flex items-center gap-1 text-xs text-neutral-500">
                       <AvailBadge status={emailStatus} />
-                      {emailStatus.available === true && <span className="text-green-400">邮箱可用</span>}
+                      {emailStatus.available === true && <span className="text-green-400">{lt.emailAvailable}</span>}
                     </span>
                   }
                   autoFocus
@@ -498,17 +501,17 @@ const LoginPage: React.FC = () => {
               {/* Agent: username */}
               {role === 'agent' && (
                 <Field
-                  label="用户名"
+                  label={lt.usernameLabel}
                   value={regUsername}
                   onChange={setRegUsername}
-                  placeholder="3-20 位字母/数字/_ -"
+                  placeholder={lt.usernamePlaceholder}
                   icon={<User className="w-4 h-4" />}
                   maxLength={20}
-                  error={fieldErrors.regUsername || (usernameStatus.available === false ? (usernameStatus.error || '用户名已被占用') : '')}
+                  error={fieldErrors.regUsername || (usernameStatus.available === false ? (usernameStatus.error || lt.usernameTaken) : '')}
                   hint={
                     <span className="flex items-center gap-1 text-xs text-neutral-500">
                       <AvailBadge status={usernameStatus} />
-                      {usernameStatus.available === true && <span className="text-green-400">用户名可用</span>}
+                      {usernameStatus.available === true && <span className="text-green-400">{lt.usernameAvailable}</span>}
                     </span>
                   }
                   autoFocus
@@ -516,23 +519,23 @@ const LoginPage: React.FC = () => {
               )}
 
               <PwField
-                label="密码"
+                label={lt.passwordLabel}
                 value={regPw}
                 onChange={setRegPw}
-                placeholder="至少 8 位，含大小写和数字"
+                placeholder={lt.passwordHintPlaceholder}
                 error={fieldErrors.regPw}
                 showStrength
               />
 
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">确认密码</label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">{lt.confirmPasswordLabel}</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 w-4 h-4" />
                   <input
                     type="password"
                     value={regPwConfirm}
                     onChange={e => setRegPwConfirm(e.target.value)}
-                    placeholder="再次输入密码"
+                    placeholder={lt.confirmPasswordPlaceholder}
                     className={`
                       w-full bg-white/[0.05] border rounded-lg py-2.5 text-sm text-white
                       placeholder-neutral-600 outline-none transition-colors pl-10 pr-4
@@ -564,17 +567,17 @@ const LoginPage: React.FC = () => {
                            transition-colors flex items-center justify-center gap-2"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {role === 'guest' ? '注册并发送验证码' : '注册'}
+                {role === 'guest' ? lt.guestSubmit : lt.agentSubmit}
               </button>
 
               <p className="text-center text-sm text-neutral-500">
-                已有账号？{' '}
+                {lt.hasAccount}{' '}
                 <button
                   type="button"
                   onClick={() => switchMode('login')}
                   className="text-primary-400 hover:text-primary-300 transition-colors"
                 >
-                  登录
+                  {lt.loginLink}
                 </button>
               </p>
             </form>
@@ -583,14 +586,14 @@ const LoginPage: React.FC = () => {
           {/* ── Verify Email ───────────────────────────────────────────── */}
           {mode === 'verify' && (
             <form onSubmit={handleVerify} className="space-y-5">
-              <h2 className="text-lg font-semibold text-white">邮箱验证</h2>
+              <h2 className="text-lg font-semibold text-white">{lt.verifyTitle}</h2>
 
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-3">
                 <p className="text-sm text-blue-300">
-                  验证码已发送至
+                  {lt.verifyCodeSent}
                 </p>
                 <p className="text-sm font-medium text-white mt-0.5">{pendingEmail}</p>
-                <p className="text-xs text-blue-400/70 mt-1">10 分钟内有效</p>
+                <p className="text-xs text-blue-400/70 mt-1">{lt.verifyValidity}</p>
               </div>
 
               {error && (
@@ -600,12 +603,12 @@ const LoginPage: React.FC = () => {
               )}
 
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">验证码</label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">{lt.codeLabel}</label>
                 <input
                   type="text"
                   value={code}
                   onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="6 位数字验证码"
+                  placeholder={lt.codePlaceholder}
                   autoFocus
                   className={`
                     w-full bg-white/[0.05] border rounded-lg py-3 px-4 text-center
@@ -629,7 +632,7 @@ const LoginPage: React.FC = () => {
                            transition-colors flex items-center justify-center gap-2"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                验证
+                {lt.verifyButton}
               </button>
 
               <div className="flex items-center justify-between text-sm">
@@ -638,7 +641,7 @@ const LoginPage: React.FC = () => {
                   onClick={() => switchMode('register')}
                   className="text-neutral-500 hover:text-neutral-300 transition-colors"
                 >
-                  返回修改邮箱
+                  {lt.backToEdit}
                 </button>
                 <button
                   type="button"
@@ -648,7 +651,7 @@ const LoginPage: React.FC = () => {
                              disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  {resendCooldown > 0 ? `重新发送 (${resendCooldown}s)` : '重新发送'}
+                  {resendCooldown > 0 ? `${lt.resend} (${resendCooldown}s)` : lt.resend}
                 </button>
               </div>
             </form>

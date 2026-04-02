@@ -72,7 +72,14 @@ function getCurrentContent(raw, currentId) {
  */
 async function query(cypher, params = {}) {
   const conn = getConnection();
-  const result = await conn.query(cypher, params);
+  const hasParams = Object.keys(params).length > 0;
+  let result;
+  if (hasParams) {
+    const prepared = await conn.prepare(cypher);
+    result = await conn.execute(prepared, params);
+  } else {
+    result = await conn.query(cypher);
+  }
   const rows = [];
   while (result.hasNext()) {
     rows.push(await result.getNext());
@@ -85,7 +92,13 @@ async function query(cypher, params = {}) {
  */
 async function exec(cypher, params = {}) {
   const conn = getConnection();
-  await conn.query(cypher, params);
+  const hasParams = Object.keys(params).length > 0;
+  if (hasParams) {
+    const prepared = await conn.prepare(cypher);
+    await conn.execute(prepared, params);
+  } else {
+    await conn.query(cypher);
+  }
 }
 
 // ── 节点序列化 ────────────────────────────────────────────────

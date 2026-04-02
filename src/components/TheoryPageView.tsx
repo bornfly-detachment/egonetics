@@ -3,6 +3,7 @@ import PageManager from './PageManager'
 import { createApiClient } from './apiClient'
 import type { PageMeta, Block } from './types'
 import { X, Loader2 } from 'lucide-react'
+import { authFetch } from '@/lib/http'
 
 // ── Types ──────────────────────────────────────────────────
 interface ArchivedPageInfo {
@@ -16,16 +17,9 @@ interface ArchiveModal {
 }
 
 // ── Chronicle API helpers ───────────────────────────────────
-const chronicleFetch = async (path: string, opts?: RequestInit) => {
-  const r = await fetch(`/api${path}`, opts)
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
-  return r.json()
-}
-
 const chroniclePost = (path: string, body: unknown) =>
-  chronicleFetch(path, {
+  authFetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
 
@@ -43,7 +37,7 @@ const TheoryPageView: React.FC = () => {
   // ── Load existing archived Theory entries ──
   const loadArchivedPages = useCallback(async () => {
     try {
-      const data = await chronicleFetch('/chronicle/entries?type=theory')
+      const data = await authFetch<any>('/chronicle/entries?type=theory')
       const map: Record<string, ArchivedPageInfo> = {}
       for (const entry of data.entries || []) {
         // source_id maps to page id; entries are DESC so first = latest

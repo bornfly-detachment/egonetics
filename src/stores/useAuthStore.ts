@@ -43,6 +43,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   isInitialized: false,
 
   initialize: async () => {
+    // 开发者模式：跳过 Token 验证，直接以 admin 身份进入
+    if (import.meta.env.VITE_DEV_MODE === 'true') {
+      set({
+        user: { id: 0, username: 'bornfly', role: 'admin' },
+        token: 'dev-mode',
+        isInitialized: true,
+      })
+      return
+    }
+
     const token = getToken()
     if (!token) {
       set({ isInitialized: true })

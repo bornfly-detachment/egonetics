@@ -19,13 +19,26 @@ import ChronicleView from './components/ChronicleView'
 import AgentsView from './components/AgentsView'
 import TheoryPageView from './components/TheoryPageView'
 import CyberneticsSystemView from './components/CyberneticsSystemView'
+import TagTreeView from './components/TagTreeView'
 import BlogPage from './components/BlogPage'
 import HomeView from './components/HomeView'
+import QueueView from './components/QueueView'
+import ControllerView from './components/ControllerView'
+import ProtocolView from './components/ProtocolView'
+import ProtocolBuilderView from './components/ProtocolBuilderView'
+import LabView from './components/LabView'
+import RecycleBinView from './components/RecycleBinView'
+import PrvseWorldView from './components/prvse-world/PrvseWorldView'
+import MQView from './components/MQView'
+import { TokenProvider } from './design/TokenProvider'
 import LoginPage from './components/LoginPage'
 import LLMChatDialog from './components/LLMChatDialog'
 import { useChronicleStore } from './stores/useChronicleStore'
 import { useAuthStore } from './stores/useAuthStore'
 import { isPathAllowed } from './components/AuthGuard'
+import CommandPalette from './components/CommandPalette'
+import SlashCommandMenu from './components/SlashCommandMenu'
+import SpherePalette from './components/SpherePalette'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
@@ -69,6 +82,24 @@ const RouteSync: React.FC = () => {
       view = 'agents'
     } else if (path === '/cybernetics') {
       view = 'cybernetics'
+    } else if (path === '/tag-tree') {
+      view = 'tag-tree'
+    } else if (path === '/queue') {
+      view = 'queue'
+    } else if (path === '/controller') {
+      view = 'controller'
+    } else if (path === '/protocol') {
+      view = 'protocol'
+    } else if (path === '/protocol/builder') {
+      view = 'protocol-builder'
+    } else if (path === '/lab') {
+      view = 'lab'
+    } else if (path === '/mq') {
+      view = 'mq'
+    } else if (path === '/recycle') {
+      view = 'recycle'
+    } else if (path === '/prvse-world') {
+      view = 'prvse-world'
     } else {
       view = 'memory'
     }
@@ -129,6 +160,33 @@ const RouteSync: React.FC = () => {
         break
       case 'cybernetics':
         targetPath = '/cybernetics'
+        break
+      case 'tag-tree':
+        targetPath = '/tag-tree'
+        break
+      case 'queue':
+        targetPath = '/queue'
+        break
+      case 'controller':
+        targetPath = '/controller'
+        break
+      case 'protocol':
+        targetPath = '/protocol'
+        break
+      case 'protocol-builder':
+        targetPath = '/protocol/builder'
+        break
+      case 'lab':
+        targetPath = '/lab'
+        break
+      case 'mq':
+        targetPath = '/mq'
+        break
+      case 'recycle':
+        targetPath = '/recycle'
+        break
+      case 'prvse-world':
+        targetPath = '/prvse-world'
         break
       default:
         targetPath = '/memory'
@@ -191,6 +249,15 @@ const AppContent: React.FC = () => {
               {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
               <Route path="/agents" element={<AgentsView />} />
               <Route path="/cybernetics" element={<CyberneticsSystemView />} />
+              <Route path="/tag-tree" element={<TagTreeView />} />
+              <Route path="/queue" element={<QueueView />} />
+              <Route path="/controller" element={<ControllerView />} />
+              <Route path="/protocol" element={<ProtocolView />} />
+              <Route path="/protocol/builder" element={<ProtocolBuilderView />} />
+              <Route path="/lab" element={<LabView />} />
+              <Route path="/mq" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><MQView /></div>} />
+              <Route path="/recycle" element={<RecycleBinView />} />
+              <Route path="/prvse-world" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><PrvseWorldView /></div>} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
@@ -270,6 +337,9 @@ const AppRoot: React.FC = () => {
     <>
       <RouteSync />
       <AppContent />
+      <CommandPalette />
+      <SlashCommandMenu />
+      <SpherePalette />
     </>
   )
 }
@@ -277,9 +347,11 @@ const AppRoot: React.FC = () => {
 // 根 App 组件
 function App() {
   return (
-    <Router>
-      <AppRoot />
-    </Router>
+    <TokenProvider>
+      <Router>
+        <AppRoot />
+      </Router>
+    </TokenProvider>
   )
 }
 

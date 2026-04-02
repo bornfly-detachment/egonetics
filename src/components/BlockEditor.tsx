@@ -3,7 +3,8 @@
 //  依赖: react-dnd, react-dnd-html5-backend, lucide-react
 // ============================================================
 import React, { useState, useRef, useCallback, useEffect, memo } from 'react'
-import { updateBlockMeta, publishBlock, getBlockVersions } from '@/lib/block-graph-api'
+import { authFetch } from '@/lib/http'
+import { updateBlockMeta, publishBlock, getBlockVersions } from '@/lib/api/block-graph'
 import type { ProcessVersion } from './types'
 import { useAuthStore } from '@/stores/useAuthStore'
 import {
@@ -45,6 +46,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import type { Block, BlockType, RichTextSegment, TableCell, BlockPermissions } from './types'
 import BlockTagSelector, { SelectedTagsList } from './BlockTagSelector'
 import BlockWrapper from './rich-editor/shared/BlockWrapper'
+import ThreeQSelector from './prvse/ThreeQSelector'
 
 export type { Block, BlockType, RichTextSegment, TableCell, BlockPermissions }
 const DEFAULT_PERM: BlockPermissions = {
@@ -544,7 +546,7 @@ const BlockHeader = memo(function BlockHeader({
   // ── 关系 ──────────────────────────────────────────────────────
   const loadRelations = async () => {
     setLoadingR(true)
-    const { getRelations } = await import('@/lib/block-graph-api')
+    const { getRelations } = await import('@/lib/api/block-graph')
     const r = await getRelations({ source_id: block.id, source_type: 'block' })
     setRelations(r)
     setLoadingR(false)
@@ -559,7 +561,7 @@ const BlockHeader = memo(function BlockHeader({
 
   const handleCreateRelation = async () => {
     if (!relForm.target_id.trim()) return
-    const { createRelation } = await import('@/lib/block-graph-api')
+    const { createRelation } = await import('@/lib/api/block-graph')
     try {
       await createRelation({
         title: relForm.title,
@@ -578,7 +580,7 @@ const BlockHeader = memo(function BlockHeader({
   }
 
   const handleDeleteRelation = async (id: string) => {
-    const { deleteRelation } = await import('@/lib/block-graph-api')
+    const { deleteRelation } = await import('@/lib/api/block-graph')
     await deleteRelation(id).catch(() => {})
     setRelations(r => r.filter(x => x.id !== id))
   }
@@ -837,6 +839,7 @@ interface BlockNodeProps {
   onNavigate?: (pageId: string) => void
   onCreateSubpage?: (blockId: string) => Promise<string>
   perm: BlockPermissions
+  showPattern?: boolean
 }
 
 function BlockNode({
@@ -860,6 +863,7 @@ function BlockNode({
   onNavigate,
   onCreateSubpage,
   perm,
+  showPattern,
 }: BlockNodeProps) {
   const rowRef = useRef<HTMLDivElement>(null)
   const [dropZone, setDropZone] = useState<DropZone>(null)
@@ -1006,6 +1010,24 @@ function BlockNode({
             onUpdate={(updates) => onUpdate(block.id, updates)}
             canEdit={perm.canEdit}
           />
+          {/* Pattern 三问标注（从哪来/是什么/去哪）— AOP 接入 */}
+          {showPattern && (
+            <div className="mb-1.5">
+              <ThreeQSelector
+                entityId={block.id}
+                entityType="block"
+                compact
+                readOnly={!perm.canEdit}
+                defaultCollapsed
+                content={getPlainText(block.content.rich_text ?? [])}
+                sourceMeta={{
+                  type: block.creator?.startsWith('ai:') ? 'model_api' : 'human',
+                  author: block.creator ?? undefined,
+                  timestamp: block.createdAt ?? new Date().toISOString(),
+                }}
+              />
+            </div>
+          )}
           {/* 标签显示 */}
           {blockTags.length > 0 && (
             <div className="mb-1.5">
@@ -1171,6 +1193,7 @@ function BlockNode({
             onNavigate={onNavigate}
             onCreateSubpage={onCreateSubpage}
             perm={perm}
+            showPattern={showPattern}
           />
         ))}
     </div>
@@ -1186,6 +1209,8 @@ export interface BlockEditorProps {
   permissions?: Partial<BlockPermissions>
   onNavigate?: (pageId: string) => void
   onCreateSubpage?: (blockId: string, parentPageId: string) => Promise<string>
+  /** 启用 Pattern 三问标注（从哪来/是什么/去哪），仅 task 页面使用 */
+  showPattern?: boolean
 }
 
 export default function BlockEditor({
@@ -1196,6 +1221,7 @@ export default function BlockEditor({
   permissions,
   onNavigate,
   onCreateSubpage,
+  showPattern = false,
 }: BlockEditorProps) {
   const perm: BlockPermissions = {
     ...DEFAULT_PERM,
@@ -1221,33 +1247,33 @@ export default function BlockEditor({
   })
   const [editingId, setEditingId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [selfLoading, setSelfLoading] = useState(false)
   const [slashMenu, setSlashMenu] = useState<{
     anchorId: string
     pos: { top: number; left: number }
   } | null>(null)
 
+  const makeEmptyBlock = (): Map<string, Block> => {
+    const id = generateBlockId()
+    return new Map([[id, { id, parentId: null, type: 'paragraph' as BlockType, content: { rich_text: [] }, position: 1 }]])
+  }
+
   useEffect(() => {
-    if (initialBlocks.length) {
-      setBlocksMap(new Map(initialBlocks.map((b) => [b.id, b])))
-    } else {
-      const id = generateBlockId()
-      setBlocksMap(
-        new Map([
-          [
-            id,
-            {
-              id,
-              parentId: null,
-              type: 'paragraph' as BlockType,
-              content: { rich_text: [] },
-              position: 1,
-            },
-          ],
-        ])
-      )
-    }
     setEditingId(null)
     setFocusedId(null)
+    if (initialBlocks.length) {
+      // 容器已预加载，直接使用（PageManager 走此路径）
+      setBlocksMap(new Map(initialBlocks.map((b) => [b.id, b])))
+    } else {
+      // 容器未提供数据，自行从服务器加载（消灭时序依赖）
+      setSelfLoading(true)
+      authFetch<Block[]>(`/pages/${pageId}/blocks`)
+        .then(data => {
+          setBlocksMap(data.length ? new Map(data.map(b => [b.id, b])) : makeEmptyBlock())
+        })
+        .catch(() => { setBlocksMap(makeEmptyBlock()) })
+        .finally(() => setSelfLoading(false))
+    }
   }, [pageId])
 
   const emit = useCallback(
@@ -1617,6 +1643,17 @@ export default function BlockEditor({
 
   const rootBlocks = getChildren(null)
 
+  if (selfLoading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-neutral-700">
+        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+      </div>
+    )
+  }
+
   return (
     <div ref={containerRef} className="relative">
       {isFileDragging && (
@@ -1650,6 +1687,7 @@ export default function BlockEditor({
                 onNavigate={onNavigate}
                 onCreateSubpage={handleCreateSubpage}
                 perm={perm}
+                showPattern={showPattern}
               />
             ))}
           </div>

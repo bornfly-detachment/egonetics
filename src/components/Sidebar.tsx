@@ -1,17 +1,22 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CheckSquare,
-  Cpu,
   Brain,
   History,
   Calendar,
   BookOpen,
-  Shield,
   ChevronLeft,
   ChevronRight,
   Home,
   LogOut,
-  Zap,
+  Tag,
+  FileText,
+  FlaskConical,
+  Trash2,
+  Hammer,
+  Globe,
+  Waves,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
@@ -19,20 +24,26 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { getVisibleNavItems } from '@/components/AuthGuard'
 
 const Sidebar: React.FC = () => {
-  const { uiState, setUIState } = useChronicleStore()
+  const { uiState } = useChronicleStore()
   const { t, language, setLanguage } = useTranslation()
   const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
 
+  const s = t.sidebar
   const ALL_NAV_ITEMS = [
-    { id: 'home',        label: language === 'zh' ? '主页'       : 'Home',       icon: Home,        color: 'text-neutral-300' },
-    { id: 'memory',      label: t.memory,                                           icon: Calendar,    color: 'text-blue-400' },
-    { id: 'theory',      label: t.theory,                                           icon: Brain,       color: 'text-yellow-400' },
-    { id: 'chronicle',   label: t.chronicle,                                        icon: History,     color: 'text-primary-400' },
-    { id: 'egonetics',   label: language === 'zh' ? '主体图谱'   : 'Subjects',      icon: Shield,      color: 'text-red-400' },
-    { id: 'tasks',       label: t.tasks,                                            icon: CheckSquare, color: 'text-green-400' },
-    { id: 'blog',        label: language === 'zh' ? '博客'       : 'Blog',          icon: BookOpen,    color: 'text-sky-400' },
-    { id: 'agents',      label: t.agents,                                           icon: Cpu,         color: 'text-purple-400' },
-    { id: 'cybernetics', label: language === 'zh' ? '控制论内核' : 'Core Kernel',   icon: Zap,         color: 'text-violet-400' },
+    { id: 'home',             label: s.home,          icon: Home,         color: 'text-neutral-300', path: '/home'             },
+    { id: 'memory',           label: s.memory,        icon: Calendar,     color: 'text-blue-400',    path: '/memory'           },
+    { id: 'theory',           label: s.theory,        icon: Brain,        color: 'text-yellow-400',  path: '/theory'           },
+    { id: 'chronicle',        label: s.chronicle,     icon: History,      color: 'text-primary-400', path: '/chronicle'        },
+    { id: 'tasks',            label: s.tasks,         icon: CheckSquare,  color: 'text-green-400',   path: '/tasks'            },
+    { id: 'blog',             label: s.blog,          icon: BookOpen,     color: 'text-sky-400',     path: '/blog'             },
+    { id: 'tag-tree',         label: s.tagTree,       icon: Tag,          color: 'text-teal-400',    path: '/tag-tree'         },
+    { id: 'protocol',         label: s.protocol,      icon: FileText,     color: 'text-pink-400',    path: '/protocol'         },
+    { id: 'protocol-builder', label: s.protoBuilder,  icon: Hammer,       color: 'text-indigo-400',  path: '/protocol/builder' },
+    { id: 'prvse-world',      label: s.prvseWorld,    icon: Globe,        color: 'text-amber-400',   path: '/prvse-world'      },
+    { id: 'lab',              label: s.lab,           icon: FlaskConical, color: 'text-violet-400',  path: '/lab'              },
+    { id: 'mq',               label: s.mq,            icon: Waves,        color: 'text-cyan-400',    path: '/mq'               },
+    { id: 'recycle',          label: s.recycle,       icon: Trash2,       color: 'text-white/20',    path: '/recycle'          },
   ]
 
   const visibleIds = user ? new Set(getVisibleNavItems(user.role)) : new Set(['home'])
@@ -67,7 +78,7 @@ const Sidebar: React.FC = () => {
             <span className="font-semibold text-white text-sm tracking-wide">Egonetics</span>
             <button
               onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
-              className="text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10"
+              className="text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors px-2 py-1 rounded bg-white/5 hover:bg-white/10"
             >
               {language === 'zh' ? 'EN' : '中'}
             </button>
@@ -82,7 +93,7 @@ const Sidebar: React.FC = () => {
           return (
             <button
               key={item.id}
-              onClick={() => setUIState({ currentView: item.id as any })}
+              onClick={() => navigate(item.path)}
               title={!open ? item.label : undefined}
               className={`
                 flex items-center gap-3 rounded-lg
@@ -108,7 +119,7 @@ const Sidebar: React.FC = () => {
         {/* Logout */}
         <button
           onClick={logout}
-          title={!open ? '退出登录' : undefined}
+          title={!open ? s.logout : undefined}
           className={`
             w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-red-400
             hover:bg-white/[0.05] transition-all duration-150
@@ -118,7 +129,7 @@ const Sidebar: React.FC = () => {
           <LogOut className="w-4 h-4 shrink-0" />
           {open && (
             <div className="flex-1 flex items-center justify-between min-w-0">
-              <span className="text-xs truncate">{user?.username || user?.email || '退出'}</span>
+              <span className="text-xs truncate">{user?.username || user?.email || s.logout}</span>
               <span className="text-[10px] text-neutral-700 ml-1 truncate">{user?.role}</span>
             </div>
           )}
@@ -134,7 +145,7 @@ const Sidebar: React.FC = () => {
           `}
         >
           {open
-            ? <><ChevronLeft className="w-4 h-4" /><span className="text-xs">收起</span></>
+            ? <><ChevronLeft className="w-4 h-4" /><span className="text-xs">{s.collapse}</span></>
             : <ChevronRight className="w-4 h-4" />
           }
         </button>

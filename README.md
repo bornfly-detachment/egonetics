@@ -176,6 +176,26 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **`VRewardVisual`**: V1=animated live widgets (counter ticker, timer clock, token pair, probability bar, binary toggle), V2/V3=pulsing probability bar with φ-capable chips, φ=formula display + R-edge mapping + "1:N" label
   - **Design principle**: Policy = PRVSE Graph itself (P→R+V→S); layered decision emerges from graph topology, not a separate weighting function
 
+- **Protocol — Human-Machine Collaboration Protocol v2** *(2026-03-29)*
+  - **Allowed-components library** (`src/design/allowed-components/`): 42 components across 5 groups — Layout / Content / Action / Data / AI. Each component carries a PRVSE-compatible schema (category, tier, permission level)
+  - **IR Renderer** (`src/design/ir/`): Intent Representation → UI Generator → Renderer pipeline; protocol entries define `ui_visual` as IR JSON, rendered dynamically without hardcoding components
+  - **ProtocolView tab redesign**: 3-layer grouping — Resource & Permission & Communication layer / Constraint Control layer / Practice layer
+  - **Resource tiers T0/T1/T2**: pipeline cards — T0 SEAI local (zero-latency, offline) → T1 MiniMax cloud (high-throughput) → T2 Claude expert (top reasoning)
+  - **Permission layers T3/T2/T1/T0**: four-tier permission definitions anchored to tag tree nodes
+  - **Communication mechanisms L0/L1/L2**: L0 descriptive / L1 request / L2 control — typed edges in the PRVSE graph
+  - **`anchor_tag_id` on protocol entries**: each entry anchors to a tag tree node; deleting a tag that is referenced by protocol entries is blocked with a 409 error listing the referencing rules
+  - **Seed scripts**: `seed-ui-components.js`, `seed-resource-tier.js`, `seed-permission-layers.js`, `seed-communication-protocol.js`
+  - **Visuals**: `ResourceTierVisual`, `CommunicationVisual`, `UIComponentVisual` — new visual renderer routes in `ProtocolVisual`
+  - **三层 LLM 客户端** (`server/lib/llm.js`): T0 `seaiClient` (localhost:8000) / T1 `minimaxClient` (MiniMax-M2.7) / T2 `claudeClient` (claude-sonnet-4-6); `getClientForTier()` with T2→T1 graceful downgrade when `ANTHROPIC_API_KEY` absent
+
+- **Cybernetics Hub v2 — SEAI Live Integration** *(2026-04-02)*
+  - **CyberneticsSystemView** redesigned: left-side persistent tree navigation (PRVSE 5-layer × 3-question tag tree) + right-side content panel
+  - **SEAI component panel**: fetches live component tree from `http://localhost:8000/e0/components`; displays PRVSE layer assignment, weight, activation status per component
+  - **SEAIVPanel**: real-time V reward vector display from SEAI local endpoint; shows T0/T1/T2 routing status
+  - **TagTreeView integrated**: tag tree CRUD now embedded in Cybernetics Hub as a first-class panel
+  - **Global TagTreeStore** (`src/stores/useTagTreeStore.ts`): single source of truth for tag tree; `useBlockTags` hook refactored to delegate all operations to the store, enabling cross-component sync
+  - **graph.js parameter fix**: Kuzu graph queries now use `prepare + execute` for parameterized queries instead of the broken `query(cypher, params)` pattern
+
 **In Progress**
 - Chronicle hash chain integrity verification
 - Theory page locking & versioning
@@ -599,6 +619,25 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - **侧边栏与内容同步**：从侧边栏新建子页面时，自动向父页面内容末尾追加 subpage 块；删除页面时同步清理父页面中的对应 subpage 块
   - **新增服务端文件**：`server/routes/notion-import.js`
   - **新增环境变量**：`NOTION_TOKEN`（Notion Integration Token）
+
+- **人机协作协议 v2** *(2026-03-29)*
+  - **Allowed-components 组件库** (`src/design/allowed-components/`)：42 个组件，分为 5 组 — Layout / Content / Action / Data / AI，每个组件携带 PRVSE 兼容 schema（category / tier / permission level）
+  - **IR 渲染器** (`src/design/ir/`)：Intent Representation → UI Generator → Renderer 三层管道；协议条目 `ui_visual` 字段存储 IR JSON，运行时动态渲染，无需硬编码组件
+  - **ProtocolView 标签重构**：三层分组 — 资源权限通信层 / 分级约束控制层 / 实践层
+  - **资源分级 T0/T1/T2**：流水线卡片 — T0 SEAI 本地（零延迟，离线可用）→ T1 MiniMax 云端（高并发）→ T2 Claude 专家（顶级推理）
+  - **权限层级 T3/T2/T1/T0**：四层权限定义，每条规则锚定到标签树节点（`anchor_tag_id`）
+  - **通信机制 L0/L1/L2**：L0 描述型 / L1 请求型 / L2 控制型 — 类型化边，映射至 PRVSE 图中的 R 层
+  - **标签锚定保护**：删除被协议规则引用的标签节点时，返回 409 错误并列出所有引用规则，防止悬空引用
+  - **种子脚本**：`seed-ui-components.js`、`seed-resource-tier.js`、`seed-permission-layers.js`、`seed-communication-protocol.js`
+  - **三层 LLM 客户端** (`server/lib/llm.js`)：T0 `seaiClient`（localhost:8000）/ T1 `minimaxClient`（MiniMax-M2.7）/ T2 `claudeClient`（claude-sonnet-4-6）；`getClientForTier()` 支持 T2→T1 优雅降级（`ANTHROPIC_API_KEY` 未配置时自动回退）
+
+- **控制论 Hub v2 — SEAI 实时集成** *(2026-04-02)*
+  - **CyberneticsSystemView 重设计**：左侧常驻树形导航（PRVSE 5层×3问标签树）+ 右侧内容区
+  - **SEAI 组件面板**：实时从 `http://localhost:8000/e0/components` 拉取组件树；展示每个组件的 PRVSE 层级归属、权重、激活状态
+  - **SEAIVPanel**：从 SEAI 本地端点实时展示 V 奖励向量；显示 T0/T1/T2 路由状态
+  - **TagTreeView 内嵌**：标签树 CRUD 作为一等面板集成到控制论 Hub
+  - **全局 TagTreeStore** (`src/stores/useTagTreeStore.ts`)：标签树单一数据源；`useBlockTags` hook 重构为委托 store，实现跨组件实时同步
+  - **graph.js 参数化查询修复**：Kuzu 图数据库查询改用 `prepare + execute` 模式，修复带参数的 Cypher 查询失败问题
 
 **开发中**
 - Chronicle 哈希链完整性验证

@@ -354,8 +354,8 @@ async function importPage(notionPageId, { parentPageId, position }, ctx) {
   }
 
   // 保存页面记录（blocks 稍后填）
-  // 子页面始终为 'page'，只有根页面才应用 inheritedPageType / rootPageType
-  const pageType = parentPageId ? 'page' : (ctx.inheritedPageType || ctx.rootPageType || 'task');
+  // 所有导入页面统一继承父页面类型（theory/task/page），保证导入到 theory 视图的页面能在侧边栏显示
+  const pageType = ctx.inheritedPageType || ctx.rootPageType || 'task';
   try {
     await savePageToDatabase({ pagesDb }, {
       id:       pageId,

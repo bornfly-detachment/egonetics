@@ -19,6 +19,9 @@
     "migrate-canvas-exec": "node scripts/migrate-canvas-exec-fields.js",
     "migrate-canvas-type": "node scripts/migrate-canvas-type.js",
     "migrate-ontology": "node scripts/migrate-ontology-v2.js",
+    "migrate-tags": "node scripts/migrate-tag-trees.js",
+    "migrate-prvs-skeleton": "node scripts/migrate-prvs-skeleton.js",
+    "migrate-task-ctrl": "node scripts/migrate-task-controller-fields.js",
     "import": "node scripts/import-jsonl.js",
     "backup": "node ../scripts/backup-claude-projects.js",
     "backup:daemon": "node ../scripts/backup-claude-projects.js --daemon",
@@ -29,12 +32,17 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "croner": "^10.0.1",
+    "dotenv": "^17.3.1",
     "express": "^4.18.2",
     "js-yaml": "^4.1.1",
+    "jsondiffpatch": "^0.7.3",
     "jsonwebtoken": "^9.0.2",
     "kuzu": "^0.11.3",
     "resend": "^4.0.0",
-    "sqlite3": "^5.1.7"
+    "simple-git": "^3.33.0",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

@@ -30,21 +30,27 @@ function tryParse(s) {
 // pages 表行 → Kanban Task 格式（KanbanBoard.tsx 需要）
 function rowToKanbanTask(row) {
   return {
-    id:          row.id,
-    columnId:    row.column_id   || 'planned',
-    status:      row.column_id   || 'planned',
-    name:        row.title,        // pages.title → tasks.name
-    icon:        row.icon,
-    priority:    row.priority    || 'medium',
-    sortOrder:   row.sort_order  || 0,
-    assignee:    row.assignee    || null,
-    startDate:   row.start_date  || null,
-    dueDate:     row.due_date    || null,
-    project:     row.project     || null,
-    projectIcon: row.project_icon || null,
-    tags:        row.tags ? (() => { try { return JSON.parse(row.tags); } catch { return []; } })() : [],
-    created_at:  row.created_at,
-    updated_at:  row.updated_at,
+    id:           row.id,
+    columnId:     row.column_id    || 'planned',
+    column_id:    row.column_id    || 'planned',
+    status:       row.column_id    || 'planned',
+    name:         row.title,
+    icon:         row.icon,
+    priority:     row.priority     || 'medium',
+    sortOrder:    row.sort_order   || 0,
+    assignee:     row.assignee     || null,
+    startDate:    row.start_date   || null,
+    dueDate:      row.due_date     || null,
+    start_date:   row.start_date   || null,
+    due_date:     row.due_date     || null,
+    project:      row.project      || null,
+    projectIcon:  row.project_icon || null,
+    tags:         row.tags ? (() => { try { return JSON.parse(row.tags); } catch { return []; } })() : [],
+    parent_task_id: row.parent_task_id || null,
+    from_config:  (() => { try { return JSON.parse(row.from_config || '{}'); } catch { return {}; } })(),
+    what_config:  (() => { try { return JSON.parse(row.what_config || '{}'); } catch { return {}; } })(),
+    created_at:   row.created_at,
+    updated_at:   row.updated_at,
   };
 }
 
@@ -63,6 +69,12 @@ function getDefaultValue(type) {
 // ── /api/tasks ───────────────────────────────────────────────────
 
 router.get('/tasks', (req, res) => {
+  const { column_id } = req.query;
+  const where = column_id
+    ? "p.page_type = 'task' AND p.parent_id IS NULL AND p.chronicle_entry_id IS NULL AND p.column_id = ?"
+    : "p.page_type = 'task' AND p.parent_id IS NULL AND p.chronicle_entry_id IS NULL";
+  const params = column_id ? [column_id] : [];
+
   pagesDb.all(`
     SELECT p.*,
            COUNT(DISTINCT pd.id) AS property_count,
@@ -70,14 +82,14 @@ router.get('/tasks', (req, res) => {
     FROM pages p
     LEFT JOIN page_property_defs pd ON p.id = pd.page_id
     LEFT JOIN process_versions    pv ON p.id = pv.entity_id AND pv.entity_type = 'task_version'
-    WHERE p.page_type = 'task' AND p.parent_id IS NULL AND p.chronicle_entry_id IS NULL
+    WHERE ${where}
     GROUP BY p.id
     ORDER BY p.updated_at DESC
-  `, (err, rows) => {
+  `, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     const tasks = rows.map(r => ({
       ...r,
-      name: r.title,   // compat alias
+      name: r.title,
       tags: r.tags ? (() => { try { return JSON.parse(r.tags); } catch { return []; } })() : [],
     }));
     res.json({ tasks });
@@ -212,6 +224,19 @@ router.put('/tasks/:id', (req, res) => {
         [name, taskId, taskId], () => {});
       syncPageUpsert({ id: taskId, title: name, page_type: 'task', icon: icon || '📋' });
     }
+
+    // Publish to MQ when task becomes blocked
+    if (column_id === 'blocked') {
+      const mq = require('../lib/mq');
+      mq.publish({
+        channel: 'task',
+        event_type: 'blocked',
+        tier: 'T0',
+        source_id: taskId,
+        payload: { task_id: taskId, name: name || taskId },
+      }).catch(e => console.error('[mq] task blocked publish error:', e.message));
+    }
+
     res.json({ success: true, updated_at: new Date().toISOString() });
   });
 });
@@ -221,18 +246,52 @@ router.patch('/tasks/:id', (req, res) => {
   const u = req.body;
   const fields = [], values = [];
 
-  if (u.title        !== undefined) { fields.push('title = ?');        values.push(u.title); }
-  if (u.column_id    !== undefined) { fields.push('column_id = ?');    values.push(u.column_id); }
-  if (u.task_summary !== undefined) { fields.push('task_summary = ?'); values.push(u.task_summary); }
-  if (u.task_outcome !== undefined) { fields.push('task_outcome = ?'); values.push(u.task_outcome); }
-  if (u.priority     !== undefined) { fields.push('priority = ?');     values.push(u.priority); }
-  if (u.assignee     !== undefined) { fields.push('assignee = ?');     values.push(u.assignee); }
+  if (u.title         !== undefined) { fields.push('title = ?');         values.push(u.title); }
+  if (u.column_id     !== undefined) { fields.push('column_id = ?');     values.push(u.column_id); }
+  if (u.task_summary  !== undefined) { fields.push('task_summary = ?');  values.push(u.task_summary); }
+  if (u.task_outcome  !== undefined) { fields.push('task_outcome = ?');  values.push(u.task_outcome); }
+  if (u.priority      !== undefined) { fields.push('priority = ?');      values.push(u.priority); }
+  if (u.assignee      !== undefined) { fields.push('assignee = ?');      values.push(u.assignee); }
+  if (u.v_criteria    !== undefined) { fields.push('v_criteria = ?');    values.push(typeof u.v_criteria === 'string' ? u.v_criteria : JSON.stringify(u.v_criteria)); }
+  if (u.assigned_node !== undefined) { fields.push('assigned_node = ?'); values.push(u.assigned_node); }
+  if (u.from_config   !== undefined) { fields.push('from_config = ?');   values.push(typeof u.from_config === 'string' ? u.from_config : JSON.stringify(u.from_config)); }
+  if (u.what_config   !== undefined) { fields.push('what_config = ?');   values.push(typeof u.what_config === 'string' ? u.what_config : JSON.stringify(u.what_config)); }
 
   if (fields.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
   fields.push('updated_at = ?');
   values.push(new Date().toISOString());
   values.push(taskId);
 
+  // State machine validation: check column_id transition if provided
+  if (u.column_id !== undefined) {
+    const { checkTransition, recordTransition } = require('../lib/task-state-machine');
+    pagesDb.get('SELECT column_id FROM pages WHERE id = ? AND page_type = ?', [taskId, 'task'], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      const fromState = row ? row.column_id : null;
+      const check = checkTransition(fromState, u.column_id);
+      if (!check.valid) {
+        return res.status(422).json({ error: check.reason, from_state: fromState, to_state: u.column_id });
+      }
+      // Proceed with update
+      pagesDb.run(`UPDATE pages SET ${fields.join(', ')} WHERE id = ? AND page_type = 'task'`, values, function(dbErr) {
+        if (dbErr) return res.status(500).json({ error: dbErr.message });
+        if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+        // Record transition in MQ and kernel (non-blocking)
+        recordTransition(taskId, fromState, u.column_id, null)
+          .catch(e => console.error('[task-state-machine] record error:', e.message));
+        // Legacy: also publish blocked event for mq-contracts
+        if (u.column_id === 'blocked') {
+          const mqLib = require('../lib/mq');
+          mqLib.publish({ channel: 'task', event_type: 'blocked', tier: 'T0', source_id: taskId, payload: { task_id: taskId } })
+            .catch(e => console.error('[mq] task blocked publish error:', e.message));
+        }
+        res.json({ success: true, id: taskId });
+      });
+    });
+    return; // async path handled above
+  }
+
+  // No state change — just update other fields
   pagesDb.run(`UPDATE pages SET ${fields.join(', ')} WHERE id = ? AND page_type = 'task'`, values, function(err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
@@ -414,7 +473,7 @@ router.put('/tasks/:id/blocks', (req, res) => {
   pagesDb.serialize(() => {
     pagesDb.run('BEGIN TRANSACTION');
     pagesDb.run('DELETE FROM blocks WHERE page_id = ?', [pageId], (err) => {
-      if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+      if (err) { pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err.message }); }
       if (blocks.length === 0) {
         return pagesDb.run('COMMIT', (e) => {
           if (e) return res.status(500).json({ error: e.message });
@@ -431,7 +490,7 @@ router.put('/tasks/:id/blocks', (req, res) => {
           [b.id, pageId, b.parentId || null, b.type, content, metadata, b.collapsed ? 1 : 0, position],
           (err2) => {
             if (failed) return;
-            if (err2) { failed = true; pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err2.message }); }
+            if (err2) { failed = true; pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err2.message }); }
             if (++done === blocks.length) {
               pagesDb.run('COMMIT', (e) => {
                 if (e) return res.status(500).json({ error: e.message });
@@ -476,7 +535,7 @@ router.put('/kanban/columns', (req, res) => {
   pagesDb.run('BEGIN TRANSACTION', (err) => {
     if (err) return res.status(500).json({ error: err.message });
     pagesDb.run('DELETE FROM kanban_columns', [], (err) => {
-      if (err) { pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+      if (err) { pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err.message }); }
       if (columns.length === 0) { return pagesDb.run('COMMIT', () => res.json([])); }
       let done = 0, failed = false;
       columns.forEach((col, i) => {
@@ -485,7 +544,7 @@ router.put('/kanban/columns', (req, res) => {
           [col.id, col.label, col.headerBg, col.cardBg, col.accent, i],
           (err) => {
             if (failed) return;
-            if (err) { failed = true; pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+            if (err) { failed = true; pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err.message }); }
             if (++done === columns.length) pagesDb.run('COMMIT', () => res.json(columns));
           }
         );
@@ -523,7 +582,7 @@ router.put('/kanban/tasks', (req, res) => {
          id],  // ref_id = self
         (err) => {
           if (failed) return;
-          if (err) { failed = true; pagesDb.run('ROLLBACK'); return res.status(500).json({ error: err.message }); }
+          if (err) { failed = true; pagesDb.run('ROLLBACK', () => {}); return res.status(500).json({ error: err.message }); }
           if (++done === tasks.length) pagesDb.run('COMMIT', () => res.json(tasks));
         }
       );
@@ -621,6 +680,38 @@ router.post('/kanban/columns', (req, res) => {
   });
 });
 
+// ── 执行节点主动上报状态（供 claude-code / openclaw / local-agent 调用）──────
+// POST /api/tasks/:id/state
+// body: { state, output?, score?, node? }
+// state ∈ 'in-progress' | 'review' | 'done' | 'blocked'
+router.post('/tasks/:id/state', (req, res) => {
+  const taskId = req.params.id;
+  const { state, output, score, node } = req.body;
+  if (!state) return res.status(400).json({ error: 'state 必填' });
+
+  const fields = ["column_id = ?", "updated_at = datetime('now')"];
+  const values = [state];
+
+  if (output !== undefined) { fields.push('task_outcome = ?'); values.push(output); }
+  if (node   !== undefined) { fields.push('assigned_node = ?'); values.push(node); }
+  if (score  !== undefined) {
+    // 写入 task_summary 作为 V 分数记录
+    fields.push('task_summary = ?');
+    values.push(typeof score === 'object' ? JSON.stringify(score) : String(score));
+  }
+  values.push(taskId);
+
+  pagesDb.run(
+    `UPDATE pages SET ${fields.join(', ')} WHERE id = ? AND page_type = 'task'`,
+    values,
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: '任务不存在' });
+      res.json({ success: true, id: taskId, state });
+    }
+  );
+});
+
 router.delete('/kanban/columns/:id', (req, res) => {
   pagesDb.run('DELETE FROM kanban_columns WHERE id = ?', [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -628,5 +719,171 @@ router.delete('/kanban/columns/:id', (req, res) => {
     res.json({ success: true });
   });
 });
+
+// ── § 测试清单 CRUD ───────────────────────────────────────────────
+
+router.get('/tasks/:id/checklist', (req, res) => {
+  pagesDb.all(
+    'SELECT * FROM task_checklist WHERE task_id = ? ORDER BY sort_order, created_at',
+    [req.params.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows || []);
+    }
+  );
+});
+
+router.post('/tasks/:id/checklist', (req, res) => {
+  const taskId = req.params.id;
+  const { condition = '', status = 'pending' } = req.body;
+  if (!condition.trim()) return res.status(400).json({ error: 'condition 必填' });
+  const id = genId('chk');
+  pagesDb.get(
+    'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM task_checklist WHERE task_id = ?',
+    [taskId],
+    (err, row) => {
+      const sortOrder = row?.next_order ?? 1;
+      pagesDb.run(
+        'INSERT INTO task_checklist (id, task_id, condition, status, sort_order) VALUES (?, ?, ?, ?, ?)',
+        [id, taskId, condition.trim(), status, sortOrder],
+        function(err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.status(201).json({ id, task_id: taskId, condition: condition.trim(), status, sort_order: sortOrder });
+        }
+      );
+    }
+  );
+});
+
+router.patch('/tasks/:id/checklist/:cid', (req, res) => {
+  const { cid } = req.params;
+  const { condition, status } = req.body;
+  const fields = [], values = [];
+  if (condition !== undefined) { fields.push('condition = ?'); values.push(condition.trim()); }
+  if (status    !== undefined) { fields.push('status = ?');    values.push(status); }
+  if (!fields.length) return res.status(400).json({ error: '无更新字段' });
+  values.push(cid);
+  pagesDb.run(`UPDATE task_checklist SET ${fields.join(', ')} WHERE id = ?`, values, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '条目不存在' });
+    pagesDb.get('SELECT * FROM task_checklist WHERE id = ?', [cid], (_, row) => res.json(row));
+  });
+});
+
+router.delete('/tasks/:id/checklist/:cid', (req, res) => {
+  pagesDb.run('DELETE FROM task_checklist WHERE id = ?', [req.params.cid], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: '条目不存在' });
+    res.json({ success: true });
+  });
+});
+
+// ── § 资源分配 CRUD ───────────────────────────────────────────────
+
+const RESOURCE_TYPES = ['sensor', 'controller', 'tester', 'lifecycle'];
+const DEFAULT_CONFIG = { time: '', agent: '', model: 'claude-sonnet-4-6', max_tokens: 4096, reports_to: '' };
+
+router.get('/tasks/:id/resources', (req, res) => {
+  const taskId = req.params.id;
+  pagesDb.all(
+    'SELECT * FROM task_resources WHERE task_id = ?',
+    [taskId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      // 确保四种资源都返回（不存在则用默认值）
+      const map = Object.fromEntries((rows || []).map(r => [r.resource_type, r]));
+      const result = RESOURCE_TYPES.map(type => map[type] ?? {
+        id: null, task_id: taskId, resource_type: type,
+        enabled: 1, config: JSON.stringify(DEFAULT_CONFIG),
+      });
+      res.json(result.map(r => ({ ...r, config: tryParse(r.config) })));
+    }
+  );
+});
+
+router.patch('/tasks/:id/resources/:type', (req, res) => {
+  const { id: taskId, type } = req.params;
+  if (!RESOURCE_TYPES.includes(type)) return res.status(400).json({ error: '无效 resource_type' });
+  const { enabled, config } = req.body;
+  const rid = genId('res');
+  const configJson = JSON.stringify({ ...DEFAULT_CONFIG, ...(config || {}) });
+  const enabledVal = enabled !== undefined ? (enabled ? 1 : 0) : 1;
+  pagesDb.run(
+    `INSERT INTO task_resources (id, task_id, resource_type, enabled, config)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(task_id, resource_type) DO UPDATE SET
+       enabled = excluded.enabled,
+       config  = excluded.config,
+       updated_at = datetime('now')`,
+    [rid, taskId, type, enabledVal, configJson],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      pagesDb.get(
+        'SELECT * FROM task_resources WHERE task_id = ? AND resource_type = ?',
+        [taskId, type],
+        (_, row) => res.json({ ...row, config: tryParse(row?.config) })
+      );
+    }
+  );
+});
+
+// ── § 工厂：从模板创建实例 ──────────────────────────────────────
+
+router.post('/tasks/:id/instantiate', (req, res) => {
+  const templateId = req.params.id;
+  pagesDb.get("SELECT * FROM pages WHERE id = ? AND page_type = 'task'", [templateId], (err, tmpl) => {
+    if (err || !tmpl) return res.status(404).json({ error: '模板不存在' });
+
+    pagesDb.get(
+      'SELECT COUNT(*) AS n FROM pages WHERE parent_task_id = ?', [templateId],
+      (_, row) => {
+        const instanceNum = (row?.n ?? 0) + 1;
+        const instanceId = genId('t');
+        const instanceName = `${tmpl.title} #${instanceNum}`;
+
+        pagesDb.run(
+          `INSERT INTO pages
+             (id, page_type, title, icon, column_id, sort_order, priority,
+              parent_task_id, ref_id)
+           VALUES (?, 'task', ?, ?, 'planned', ?, ?, ?, ?)`,
+          [instanceId, instanceName, tmpl.icon ?? '📋', (tmpl.sort_order || 0) + instanceNum,
+           tmpl.priority ?? 'medium', templateId, instanceId],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // 复制测试清单（status 重置为 pending）
+            pagesDb.all('SELECT * FROM task_checklist WHERE task_id = ?', [templateId], (_, checks) => {
+              (checks || []).forEach((c, i) => {
+                pagesDb.run(
+                  'INSERT INTO task_checklist (id, task_id, condition, status, sort_order) VALUES (?, ?, ?, ?, ?)',
+                  [genId('chk'), instanceId, c.condition, 'pending', c.sort_order ?? i]
+                );
+              });
+            });
+
+            // 复制资源配置
+            pagesDb.all('SELECT * FROM task_resources WHERE task_id = ?', [templateId], (_, resources) => {
+              (resources || []).forEach(r => {
+                pagesDb.run(
+                  `INSERT INTO task_resources (id, task_id, resource_type, enabled, config)
+                   VALUES (?, ?, ?, ?, ?)`,
+                  [genId('res'), instanceId, r.resource_type, r.enabled, r.config]
+                );
+              });
+            });
+
+            syncPageUpsert({ id: instanceId, title: instanceName, page_type: 'task', icon: tmpl.icon });
+            res.status(201).json({
+              id: instanceId, name: instanceName, column_id: 'planned',
+              parent_task_id: templateId, instance_number: instanceNum,
+            });
+          }
+        );
+      }
+    );
+  });
+});
+
+// ── 修复 kanban/tasks/:id PATCH 也支持 parent_task_id ─────────────
 
 module.exports = { init };

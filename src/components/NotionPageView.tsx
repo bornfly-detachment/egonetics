@@ -206,8 +206,8 @@ const NotionPageView: React.FC = () => {
         </button>
         <div className="flex-1" />
         <div className="flex items-center gap-2 text-neutral-500 text-sm">
-          <span>{task.icon}</span>
-          <span>{task.name}</span>
+          <span>{task?.icon}</span>
+          <span>{task?.name}</span>
         </div>
       </div>
 

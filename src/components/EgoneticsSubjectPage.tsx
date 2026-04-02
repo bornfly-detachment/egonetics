@@ -10,6 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader, AlertCircle } from 'lucide-react'
 import PageManager from './PageManager'
 import { createEgoneticsApiClient } from './EgoneticsApiClient'
+import { authFetch } from '@/lib/http'
 
 interface Subject {
   id: string
@@ -25,9 +26,7 @@ interface Subject {
 
 async function loadSubject(id: string): Promise<Subject | null> {
   try {
-    const res = await fetch(`/api/egonetics/subjects/${id}`)
-    if (!res.ok) return null
-    return await res.json()
+    return await authFetch<Subject>(`/egonetics/subjects/${id}`)
   } catch { return null }
 }
 

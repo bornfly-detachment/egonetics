@@ -14,6 +14,7 @@ import { V1MetricDisplay, VProbDisplay, PhiFunctionDisplay } from '@/design/comp
 import { UIComponentVisual } from '@/design/components/UIComponentVisual'
 import { ResourceTierVisual } from '@/design/components/ResourceTierVisual'
 import { CommunicationVisual } from '@/design/components/CommunicationVisual'
+import { KernelComponentCard, LifecycleStateCard, GraphNodeCard } from '@/design/components/KernelVisual'
 
 interface VisualProps {
   category: string
@@ -181,7 +182,10 @@ export default function ProtocolVisual({ category, layer, uiVisual }: VisualProp
 
   if (category === 'resource-tier') return <ResourceTierVisual vis={vis} />
 
-  if (category === 'communication') return <CommunicationVisual vis={vis} />
+  if (category === 'communication')  return <CommunicationVisual vis={vis} />
+  if (category === 'kernel-comp')    return <KernelComponentCard vis={vis} />
+  if (category === 'lifecycle')      return <LifecycleStateCard vis={vis} />
+  if (category === 'graph-node')     return <GraphNodeCard vis={vis} />
 
   // fallback
   const entries = Object.entries(vis).slice(0, 4)

@@ -6,8 +6,8 @@ import { authFetch } from '../lib/http'
 import {
   listCanvasNodes, addCanvasNode, updateCanvasNode, removeCanvasNode,
   type CanvasNode,
-} from '../lib/canvas-api'
-import { getRelations, createRelation } from '../lib/block-graph-api'
+} from '../lib/api/canvas'
+import { getRelations, createRelation } from '../lib/api/block-graph'
 import type { Relation } from './types'
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -41,7 +41,8 @@ interface SidebarEntity {
   icon: string
 }
 
-const CARD_W = 264
+const CARD_W = 240          // max-width for edge/tree layout calculations
+const CARD_MIN_W = 140      // min-width so buttons don't overflow
 const TREE_GAP_X = 80   // horizontal gap between parent and children
 const TREE_GAP_Y = 100  // vertical gap between siblings
 
@@ -206,7 +207,7 @@ const EntityCard: React.FC<CardProps> = ({
       className={`absolute rounded-xl border shadow-2xl overflow-hidden select-none ${s.border} bg-[#0f0f18]
         ${isConnectMode && !isConnectSource ? 'cursor-crosshair ring-1 ring-blue-400/30 hover:ring-2 hover:ring-blue-400/60' : ''}
         ${isConnectSource ? 'ring-2 ring-purple-400' : ''}`}
-      style={{ left: node.x, top: node.y, width: CARD_W }}
+      style={{ left: node.x, top: node.y, width: 'fit-content', minWidth: CARD_MIN_W, maxWidth: CARD_W }}
       onMouseDown={e => {
         if ((e.target as HTMLElement).closest('button')) return
         if (isConnectMode) { e.stopPropagation(); onBecomeTarget() }
@@ -224,7 +225,7 @@ const EntityCard: React.FC<CardProps> = ({
 
         <span className="text-sm leading-none shrink-0">{entity?.icon ?? '📄'}</span>
         <span
-          className={`flex-1 text-[12px] font-medium text-white truncate min-w-0 ${onNavigate ? 'hover:text-primary-300 cursor-pointer' : ''}`}
+          className={`flex-1 text-[12px] font-medium text-white break-words min-w-0 ${onNavigate ? 'hover:text-primary-300 cursor-pointer' : ''}`}
           onClick={onNavigate ? e => { e.stopPropagation(); onNavigate() } : undefined}
           title={entity?.title}
         >
@@ -620,8 +621,13 @@ const CanvasView: React.FC = () => {
     relationTypes.find(t => t.id === typeId)?.color ?? '#8b5cf6'
 
   const getEntity = (node: CanvasNode) => entityMap[`${node.entity_type}:${node.entity_id}`]
-  const entityNavPath = (type: string, id: string): string | null =>
-    type === 'task' ? `/tasks/${id}` : null
+  const entityNavPath = (type: string, id: string): string | null => {
+    if (type === 'task')   return `/tasks/${id}`
+    if (type === 'theory') return `/theory?id=${id}`
+    if (type === 'blog')   return `/blog?id=${id}`
+    if (type === 'page')   return `/memory?id=${id}`
+    return null
+  }
 
   // ── Sidebar tree toggle ──────────────────────────────────────
 
@@ -917,7 +923,9 @@ const CanvasView: React.FC = () => {
   const sidebarTasks: SidebarEntity[] = allTasks.map(t => ({
     id: t.id, entityType: 'task', title: t.name || t.title || '无标题', icon: t.icon || '📋',
   }))
-  const sidebarPages: SidebarEntity[] = (allPages as any[]).map(p => ({
+  const sidebarPages: SidebarEntity[] = (allPages as any[])
+    .filter(p => p.title && p.title !== '新页面' && p.title !== 'Untitled')
+    .map(p => ({
     id: p.id, entityType: p.pageType || 'page', title: p.title || '无标题', icon: p.icon || '📄',
   }))
 

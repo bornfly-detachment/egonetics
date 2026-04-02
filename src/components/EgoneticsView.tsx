@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, LayoutTemplate, Zap, RefreshCw } from 'lucide-react'
-import { listCanvases, createCanvas, deleteCanvas, type Canvas } from '../lib/canvas-api'
+import { listCanvases, createCanvas, deleteCanvas, type Canvas } from '../lib/api/canvas'
 
 const fmtDate = (s: string) =>
   new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })

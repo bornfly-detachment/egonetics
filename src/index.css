@@ -3,12 +3,43 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-base:     #090c12;
+    --bg-surface:  #111827;
+    --bg-elevated: #1a2235;
+    --text-primary:   #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #475569;
+    --border-subtle:  rgba(255,255,255,0.08);
+    --border-default: rgba(255,255,255,0.12);
+  }
+
+  html {
+    font-size: 15px;
+  }
+
   body {
     @apply antialiased;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
   }
 
   ::selection {
-    @apply bg-primary-500/30 text-primary-100;
+    @apply bg-primary-500/25 text-primary-100;
   }
 }
 
@@ -231,6 +262,21 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* React Flow dark theme overrides */
+.react-flow__controls {
+  background: transparent;
+  box-shadow: none;
+}
+.react-flow__controls-button {
+  background: rgb(38 38 38 / 0.9);
+  border-color: rgb(255 255 255 / 0.1);
+  fill: rgb(163 163 163);
+}
+.react-flow__controls-button:hover {
+  background: rgb(64 64 64 / 0.9);
+  fill: white;
 }
 
 /* Placeholder style */

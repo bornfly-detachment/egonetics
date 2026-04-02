@@ -14,39 +14,47 @@ function genId() {
 exports.init = (db) => {
   const router = express.Router()
 
-  // GET /api/protocol
+  // GET /api/protocol  — 支持 ?category=xxx 和 ?anchor_tag_id=xxx 过滤
   router.get('/protocol', (req, res) => {
-    const { category } = req.query
-    const sql = category
-      ? 'SELECT * FROM hm_protocol WHERE category=? ORDER BY sort_order, created_at'
+    const { category, anchor_tag_id } = req.query
+    const where = []; const params = []
+    if (category)       { where.push('category = ?');       params.push(category) }
+    if (anchor_tag_id)  { where.push('anchor_tag_id = ?');  params.push(anchor_tag_id) }
+    const sql = where.length
+      ? `SELECT * FROM hm_protocol WHERE ${where.join(' AND ')} ORDER BY sort_order, created_at`
       : 'SELECT * FROM hm_protocol ORDER BY sort_order, created_at'
-    const params = category ? [category] : []
     db.all(sql, params, (err, rows) => {
       if (err) return res.status(500).json({ error: err.message })
       res.json(rows)
     })
   })
 
-  // POST /api/protocol
+  // POST /api/protocol  — anchor_tag_id 必填，引用必须存在于 tag_trees
   router.post('/protocol', (req, res) => {
-    const { category = 'universal', layer = '', human_char = '', ui_visual = '{}', machine_lang = '', notes = '', sort_order = 0 } = req.body
+    const { category = 'universal', layer = '', human_char = '', ui_visual = '{}', machine_lang = '', notes = '', sort_order = 0, anchor_tag_id } = req.body
+    if (!anchor_tag_id) return res.status(400).json({ error: 'anchor_tag_id is required — protocol rules must be anchored to a TagTree node' })
     const id = genId()
-    db.run(
-      `INSERT INTO hm_protocol (id, category, layer, human_char, ui_visual, machine_lang, notes, sort_order) VALUES (?,?,?,?,?,?,?,?)`,
-      [id, category, layer, human_char, typeof ui_visual === 'object' ? JSON.stringify(ui_visual) : ui_visual, machine_lang, notes, sort_order],
-      function (err) {
-        if (err) return res.status(500).json({ error: err.message })
-        db.get('SELECT * FROM hm_protocol WHERE id=?', [id], (e2, row) => {
+    // 校验 anchor 存在
+    db.get('SELECT id FROM tag_trees WHERE id = ?', [anchor_tag_id], (err, tag) => {
+      if (err) return res.status(500).json({ error: err.message })
+      if (!tag) return res.status(400).json({ error: `anchor_tag_id "${anchor_tag_id}" does not exist in tag_trees` })
+      db.run(
+        `INSERT INTO hm_protocol (id, category, layer, human_char, ui_visual, machine_lang, notes, sort_order, anchor_tag_id) VALUES (?,?,?,?,?,?,?,?,?)`,
+        [id, category, layer, human_char, typeof ui_visual === 'object' ? JSON.stringify(ui_visual) : ui_visual, machine_lang, notes, sort_order, anchor_tag_id],
+        function (e2) {
           if (e2) return res.status(500).json({ error: e2.message })
-          res.status(201).json(row)
-        })
-      }
-    )
+          db.get('SELECT * FROM hm_protocol WHERE id=?', [id], (e3, row) => {
+            if (e3) return res.status(500).json({ error: e3.message })
+            res.status(201).json(row)
+          })
+        }
+      )
+    })
   })
 
   // PATCH /api/protocol/:id
   router.patch('/protocol/:id', (req, res) => {
-    const fields = ['category', 'layer', 'human_char', 'ui_visual', 'machine_lang', 'notes', 'sort_order']
+    const fields = ['category', 'layer', 'human_char', 'ui_visual', 'machine_lang', 'notes', 'sort_order', 'anchor_tag_id']
     const sets = [], vals = []
     for (const f of fields) {
       if (req.body[f] !== undefined) {
@@ -55,12 +63,26 @@ exports.init = (db) => {
       }
     }
     if (!sets.length) return res.json({ ok: true })
-    sets.push('updated_at=datetime(\'now\')')
-    vals.push(req.params.id)
-    db.run(`UPDATE hm_protocol SET ${sets.join(',')} WHERE id=?`, vals, function (err) {
-      if (err) return res.status(500).json({ error: err.message })
-      res.json({ ok: true })
-    })
+
+    const doUpdate = () => {
+      sets.push('updated_at=datetime(\'now\')')
+      vals.push(req.params.id)
+      db.run(`UPDATE hm_protocol SET ${sets.join(',')} WHERE id=?`, vals, function (err) {
+        if (err) return res.status(500).json({ error: err.message })
+        res.json({ ok: true })
+      })
+    }
+
+    // 如果更新 anchor_tag_id，校验引用存在
+    if (req.body.anchor_tag_id) {
+      db.get('SELECT id FROM tag_trees WHERE id = ?', [req.body.anchor_tag_id], (err, tag) => {
+        if (err) return res.status(500).json({ error: err.message })
+        if (!tag) return res.status(400).json({ error: `anchor_tag_id "${req.body.anchor_tag_id}" does not exist in tag_trees` })
+        doUpdate()
+      })
+    } else {
+      doUpdate()
+    }
   })
 
   // DELETE /api/protocol/:id

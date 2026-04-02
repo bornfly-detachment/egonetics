@@ -511,6 +511,8 @@ interface PageManagerProps {
   archivedPages?: Record<string, { version_tag: string; entry_id: string }>
   onArchivePage?: (page: PageMeta, blocks: Block[]) => void
   readOnly?: boolean // 只读模式：禁用编辑、新建、删除
+  /** 启用 Pattern 三问标注，传递给 BlockEditor */
+  showPattern?: boolean
 }
 
 export default function PageManager({
@@ -519,6 +521,7 @@ export default function PageManager({
   archivedPages,
   onArchivePage,
   readOnly = false,
+  showPattern = false,
 }: PageManagerProps) {
   const api = apiProp ?? createMockApiClient()
 
@@ -1112,6 +1115,7 @@ export default function PageManager({
                   readOnly={readOnly}
                   onNavigate={activatePage}
                   onCreateSubpage={readOnly ? undefined : handleCreateSubpage}
+                  showPattern={showPattern}
                 />
               </div>
             ) : (

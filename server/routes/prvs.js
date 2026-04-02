@@ -26,6 +26,7 @@ const router  = express.Router()
 const fs      = require('fs')
 const path    = require('path')
 const yaml    = require('js-yaml')
+const { pagesDb } = require('../db')
 
 const ONTOLOGY_PATH   = path.join(__dirname, '../../docs/bornfly-theory-ontology.yaml')
 const SPEC_PATH       = path.join(__dirname, '../../docs/prvs-spec.json')
@@ -469,16 +470,66 @@ function saveTests(tests) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 公理集 CRUD 工具
+// 公理集 — 以 cybernetics_nodes (node_type='axiom') 为唯一数据源
+// 迁移：首次启动时将 JSON 文件中的旧数据导入 DB（幂等）
 // ═══════════════════════════════════════════════════════════════════════════
-function loadAxioms() {
-  return JSON.parse(fs.readFileSync(AXIOMS_PATH, 'utf8'))
+
+// 确保 pages 表中存在对应行（blocks FK 依赖它）
+function ensureAxiomPage(id, name, ts) {
+  const pageId = `prvs_axiom_${id}`
+  pagesDb.run(
+    `INSERT OR IGNORE INTO pages (id, page_type, title, icon, position, created_at, updated_at)
+     VALUES (?, 'axiom', ?, '📐', 1.0, ?, ?)`,
+    [pageId, name, ts, ts],
+    () => {
+      // 同步写回 cybernetics_nodes.page_id，骨架树和公理集指向同一 page
+      pagesDb.run(
+        `UPDATE cybernetics_nodes SET page_id = ? WHERE id = ? AND (page_id IS NULL OR page_id != ?)`,
+        [pageId, id, pageId]
+      )
+    }
+  )
 }
-function saveAxioms(data) {
-  fs.writeFileSync(AXIOMS_PATH, JSON.stringify(data, null, 2), 'utf8')
+
+// cybernetics_nodes 行 → AxiomEntry 格式（前端接口不变）
+function rowToAxiom(row) {
+  const meta = JSON.parse(row.meta || '{}')
+  return {
+    id:          row.id,
+    primitive:   row.layer,
+    level:       meta.axiom_level || 1,
+    name:        row.name,
+    derivedFrom: meta.derived_from || [],
+    created_at:  row.created_at || new Date().toISOString(),
+  }
 }
-function allAxiomEntries(data) {
-  return ['P','R','V','S'].flatMap(p => (data[p] || []).map(e => ({ ...e, primitive: p })))
+
+// 启动时将 JSON 旧数据迁移进 DB（若该 primitive 下还没有任何 axiom 节点）
+function migrateAxiomsFromJson() {
+  let oldData = {}
+  try { oldData = JSON.parse(fs.readFileSync(AXIOMS_PATH, 'utf8')) } catch { return }
+
+  const PRIMS = ['P','R','V','S','E']
+  for (const prim of PRIMS) {
+    const entries = oldData[prim]
+    if (!Array.isArray(entries) || entries.length === 0) continue
+
+    const parentId = `cyber-${prim}-L0`
+    const ts = new Date().toISOString()
+    for (const e of entries) {
+      const meta = JSON.stringify({ axiom_level: e.level || 1, derived_from: e.derivedFrom || [] })
+      pagesDb.run(
+        `INSERT OR IGNORE INTO cybernetics_nodes
+         (id, parent_id, layer, level, node_type, name, description, content, sort_order, is_builtin, meta, created_at, updated_at)
+         VALUES (?, ?, ?, 2, 'axiom', ?, '', '[]', ?, 0, ?, ?, ?)`,
+        [e.id, parentId, prim, e.name, (e.level || 1) * 100, meta, e.created_at || ts, ts],
+        (err) => {
+          if (!err) ensureAxiomPage(e.id, e.name, e.created_at || ts)
+        }
+      )
+    }
+    console.log(`[prvs] upserted ${entries.length} axioms for ${prim} into cybernetics_nodes`)
+  }
 }
 
 // 运行单个操作（用于测试执行）
@@ -684,82 +735,99 @@ function init() {
     } catch (e) { res.status(500).json({ error: e.message }) }
   })
 
-  // ── 公理集 CRUD ───────────────────────────────────────────────────────────
+  // ── 公理集 CRUD — 数据源: cybernetics_nodes (node_type='axiom') ──────────
 
-  // GET /prvs/axioms — 全部，按 P/R/V/S 分组
+  // GET /prvs/axioms — 全部，按 P/R/V/S/E 分组
   router.get('/prvs/axioms', (req, res) => {
-    try { res.json(loadAxioms()) }
-    catch (e) { res.status(500).json({ error: e.message }) }
+    pagesDb.all(
+      "SELECT * FROM cybernetics_nodes WHERE node_type='axiom' ORDER BY layer, sort_order, name",
+      [],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message })
+        const result = { P: [], R: [], V: [], S: [], E: [] }
+        for (const row of rows) {
+          if (result[row.layer]) result[row.layer].push(rowToAxiom(row))
+        }
+        res.json(result)
+      }
+    )
   })
 
-  // GET /prvs/axioms/:primitive — 单个原语的条目列表（P/R/V/S）
+  // GET /prvs/axioms/:primitive
   router.get('/prvs/axioms/:primitive', (req, res) => {
-    try {
-      const p = req.params.primitive.toUpperCase()
-      if (!['P','R','V','S'].includes(p)) return res.status(400).json({ error: '无效原语，必须是 P/R/V/S' })
-      const data = loadAxioms()
-      res.json(data[p] || [])
-    } catch (e) { res.status(500).json({ error: e.message }) }
+    const p = req.params.primitive.toUpperCase()
+    if (!['P','R','V','S','E'].includes(p)) return res.status(400).json({ error: '无效原语，必须是 P/R/V/S/E' })
+    pagesDb.all(
+      "SELECT * FROM cybernetics_nodes WHERE node_type='axiom' AND layer=? ORDER BY sort_order, name",
+      [p],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message })
+        res.json(rows.map(rowToAxiom))
+      }
+    )
   })
 
-  // POST /prvs/axioms — 新建条目
+  // POST /prvs/axioms — 新建条目（同时成为骨架树节点）
   router.post('/prvs/axioms', (req, res) => {
-    try {
-      const { primitive, level, name, derivedFrom = [] } = req.body
-      const p = (primitive || '').toUpperCase()
-      if (!['P','R','V','S'].includes(p)) return res.status(400).json({ error: 'primitive 必须是 P/R/V/S' })
-      if (!name || !name.trim()) return res.status(400).json({ error: 'name 为必填' })
-      if (typeof level !== 'number' || level < 1) return res.status(400).json({ error: 'level 必须是正整数' })
-      const data  = loadAxioms()
-      const id    = `${p.toLowerCase()}_${Date.now()}`
-      const entry = { id, primitive: p, level, name: name.trim(), derivedFrom: Array.isArray(derivedFrom) ? derivedFrom : [], created_at: new Date().toISOString() }
-      data[p] = [...(data[p] || []), entry]
-      // 按 level 排序
-      data[p].sort((a, b) => a.level - b.level)
-      saveAxioms(data)
-      res.status(201).json(entry)
-    } catch (e) { res.status(500).json({ error: e.message }) }
+    const { primitive, level, name, derivedFrom = [] } = req.body
+    const p = (primitive || '').toUpperCase()
+    if (!['P','R','V','S','E'].includes(p)) return res.status(400).json({ error: 'primitive 必须是 P/R/V/S/E' })
+    if (!name || !name.trim()) return res.status(400).json({ error: 'name 为必填' })
+    if (typeof level !== 'number' || level < 1) return res.status(400).json({ error: 'level 必须是正整数' })
+
+    const id       = `${p.toLowerCase()}_${Date.now()}`
+    const parentId = `cyber-${p}-L0`
+    const ts       = new Date().toISOString()
+    const meta     = JSON.stringify({ axiom_level: level, derived_from: Array.isArray(derivedFrom) ? derivedFrom : [] })
+
+    pagesDb.run(
+      `INSERT INTO cybernetics_nodes
+       (id, parent_id, layer, level, node_type, name, description, content, sort_order, is_builtin, meta, created_at, updated_at)
+       VALUES (?, ?, ?, 2, 'axiom', ?, '', '[]', ?, 0, ?, ?, ?)`,
+      [id, parentId, p, name.trim(), level * 100, meta, ts, ts],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message })
+        ensureAxiomPage(id, name.trim(), ts)
+        res.status(201).json({ id, primitive: p, level, name: name.trim(), derivedFrom: Array.isArray(derivedFrom) ? derivedFrom : [], created_at: ts })
+      }
+    )
   })
 
-  // PATCH /prvs/axioms/:id — 更新 level/name/derivedFrom
+  // PATCH /prvs/axioms/:id
   router.patch('/prvs/axioms/:id', (req, res) => {
-    try {
-      const { id } = req.params
-      const data    = loadAxioms()
-      let found     = null
-      let foundPrim = null
-      for (const p of ['P','R','V','S']) {
-        const idx = (data[p] || []).findIndex(e => e.id === id)
-        if (idx !== -1) { found = { idx, arr: data[p] }; foundPrim = p; break }
-      }
-      if (!found) return res.status(404).json({ error: '条目不存在' })
+    pagesDb.get("SELECT * FROM cybernetics_nodes WHERE id=? AND node_type='axiom'", [req.params.id], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message })
+      if (!row) return res.status(404).json({ error: '条目不存在' })
+
       const { name, level, derivedFrom } = req.body
-      const entry = { ...found.arr[found.idx] }
-      if (name !== undefined)        entry.name        = name.trim()
-      if (level !== undefined)       entry.level       = level
-      if (derivedFrom !== undefined) entry.derivedFrom = derivedFrom
-      found.arr[found.idx] = entry
-      data[foundPrim].sort((a, b) => a.level - b.level)
-      saveAxioms(data)
-      res.json(entry)
-    } catch (e) { res.status(500).json({ error: e.message }) }
+      const existingMeta = JSON.parse(row.meta || '{}')
+      if (level !== undefined)       existingMeta.axiom_level  = level
+      if (derivedFrom !== undefined) existingMeta.derived_from = derivedFrom
+
+      const updates = ['meta = ?', 'updated_at = ?']
+      const params  = [JSON.stringify(existingMeta), new Date().toISOString()]
+      if (name  !== undefined) { updates.push('name = ?');       params.push(name.trim()) }
+      if (level !== undefined) { updates.push('sort_order = ?'); params.push(level * 100) }
+      params.push(req.params.id)
+
+      pagesDb.run(`UPDATE cybernetics_nodes SET ${updates.join(', ')} WHERE id=?`, params, function(err2) {
+        if (err2) return res.status(500).json({ error: err2.message })
+        pagesDb.get('SELECT * FROM cybernetics_nodes WHERE id=?', [req.params.id], (err3, updated) => {
+          if (err3) return res.status(500).json({ error: err3.message })
+          res.json(rowToAxiom(updated))
+        })
+      })
+    })
   })
 
-  // DELETE /prvs/axioms/:id — 删除条目
+  // DELETE /prvs/axioms/:id
   router.delete('/prvs/axioms/:id', (req, res) => {
-    try {
-      const { id } = req.params
-      const data   = loadAxioms()
-      let deleted  = false
-      for (const p of ['P','R','V','S']) {
-        const before = (data[p] || []).length
-        data[p] = (data[p] || []).filter(e => e.id !== id)
-        if (data[p].length < before) { deleted = true; break }
-      }
-      if (!deleted) return res.status(404).json({ error: '条目不存在' })
-      saveAxioms(data)
-      res.json({ deleted: id })
-    } catch (e) { res.status(500).json({ error: e.message }) }
+    pagesDb.run("DELETE FROM cybernetics_nodes WHERE id=? AND node_type='axiom'", [req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: err.message })
+      if (this.changes === 0) return res.status(404).json({ error: '条目不存在' })
+      pagesDb.run('DELETE FROM blocks WHERE page_id = ?', [`prvs_axiom_${req.params.id}`])
+      res.json({ deleted: req.params.id })
+    })
   })
 
   // POST /prvs/tests/compare — A/B 对比：同一操作，两组输入
@@ -774,6 +842,17 @@ function init() {
       res.json({ operation, label_a, label_b, result_a, result_b,
                  ran_at: new Date().toISOString() })
     } catch (e) { res.status(500).json({ error: e.message }) }
+  })
+
+  // 启动时迁移旧 JSON 公理数据（幂等）
+  migrateAxiomsFromJson()
+
+  // 补建所有公理节点对应的 pages 行（修复 FK 约束，幂等）
+  pagesDb.all("SELECT id, name, created_at FROM cybernetics_nodes WHERE node_type='axiom'", [], (err, rows) => {
+    if (err) return
+    const ts = new Date().toISOString()
+    for (const row of rows) ensureAxiomPage(row.id, row.name, row.created_at || ts)
+    if (rows.length) console.log(`[prvs] ensured pages rows for ${rows.length} axiom nodes`)
   })
 
   return router

@@ -235,6 +235,57 @@ CREATE INDEX IF NOT EXISTS idx_relations_tgt     ON relations(target_id);
 CREATE INDEX IF NOT EXISTS idx_canvas_nodes_cvs  ON canvas_nodes(canvas_id);
 CREATE INDEX IF NOT EXISTS idx_canvas_nodes_eid  ON canvas_nodes(entity_id);
 
+-- ── 标签语义树（tag_trees） ──────────────────────────────────
+-- 递归树：纯分类/标签实体，不含富文本内容
+CREATE TABLE IF NOT EXISTS tag_trees (
+  id          TEXT PRIMARY KEY,
+  parent_id   TEXT REFERENCES tag_trees(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  color       TEXT NOT NULL DEFAULT '#6b7280',
+  sort_order  REAL NOT NULL DEFAULT 0,
+  select_mode TEXT NOT NULL DEFAULT 'multi',
+  -- 'multi'  = 子节点并列/正交，可同时选多个
+  -- 'single' = 子节点互斥，只能选一个
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tag_trees_parent ON tag_trees(parent_id);
+CREATE INDEX IF NOT EXISTS idx_tag_trees_sort   ON tag_trees(sort_order);
+
+CREATE TRIGGER IF NOT EXISTS trg_tag_trees_updated
+AFTER UPDATE ON tag_trees BEGIN
+  UPDATE tag_trees SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+-- ── 控制论节点树（cybernetics_nodes） ───────────────────────
+-- 递归树：每个节点可有任意子节点，支持 L0→LN 渐进展开
+-- 这棵树是整个控制论系统的地图 + 蓝图
+CREATE TABLE IF NOT EXISTS cybernetics_nodes (
+  id          TEXT PRIMARY KEY,
+  parent_id   TEXT REFERENCES cybernetics_nodes(id) ON DELETE CASCADE,
+  layer       TEXT,            -- P|R|V|S|E|null（null=跨层或根节点）
+  level       INTEGER DEFAULT 0,  -- 0=layer根, 1=L1分组, 2=L2叶节点, ...
+  node_type   TEXT DEFAULT 'concept',
+  -- 'root'|'layer'|'axiom_group'|'skeleton_group'|'impl_group'|'lifecycle_group'|'concept'
+  name        TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  content     TEXT DEFAULT '[]',  -- BlockEditor JSON，行内存储
+  sort_order  REAL DEFAULT 0,
+  is_builtin  INTEGER DEFAULT 0,
+  meta        TEXT DEFAULT '{}',  -- JSON：links/refs/外部系统 id 等
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cyber_parent ON cybernetics_nodes(parent_id);
+CREATE INDEX IF NOT EXISTS idx_cyber_layer  ON cybernetics_nodes(layer);
+
+CREATE TRIGGER IF NOT EXISTS trg_cyber_updated
+AFTER UPDATE ON cybernetics_nodes BEGIN
+  UPDATE cybernetics_nodes SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
 -- ── 触发器：自动更新 updated_at ──────────────────────────────
 CREATE TRIGGER IF NOT EXISTS trg_pages_updated
 AFTER UPDATE ON pages BEGIN

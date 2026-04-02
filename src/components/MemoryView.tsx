@@ -24,33 +24,16 @@ import {
 } from 'lucide-react'
 import BlockEditor from './BlockEditor'
 import type { Block, BlockType, RichTextSegment } from './types'
-import { getToken, removeToken } from '@/lib/http'
+import { authFetch } from '@/lib/http'
 
-const API = '/api'
-const apiFetch = async (path: string, opts?: RequestInit) => {
-  const token = getToken()
-  const headers = {
-    ...opts?.headers,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-  const r = await fetch(`${API}${path}`, { ...opts, headers })
-  if (r.status === 401) {
-    removeToken()
-    window.location.href = '/login'
-  }
-  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
-  return r.json()
-}
 const post = (path: string, body: unknown) =>
-  apiFetch(path, {
+  authFetch<any>(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
 const patch = (path: string, body: unknown) =>
-  apiFetch(path, {
+  authFetch<any>(path, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
 
@@ -100,6 +83,7 @@ interface Round {
   step_count: number
   token_input: number
   token_output: number
+  duration_ms: number
 }
 
 interface Step {
@@ -204,7 +188,7 @@ function SessionRefContent({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     setLoadingRounds(true)
-    apiFetch(`/memory/sessions/${sessionId}/rounds`)
+    authFetch<any>(`/memory/sessions/${sessionId}/rounds`)
       .then((d) => setRounds(d.rounds || []))
       .catch(() => setRounds([]))
       .finally(() => setLoadingRounds(false))
@@ -214,7 +198,7 @@ function SessionRefContent({ sessionId }: { sessionId: string }) {
     const wasExpanded = !!expanded[roundId]
     setExpanded((e) => ({ ...e, [roundId]: !wasExpanded }))
     if (!wasExpanded && !steps[roundId]) {
-      const d = await apiFetch(`/memory/rounds/${roundId}/steps`)
+      const d = await authFetch<any>(`/memory/rounds/${roundId}/steps`)
       setSteps((prev) => ({ ...prev, [roundId]: d.steps || [] }))
     }
   }
@@ -359,7 +343,7 @@ function BoardPanel() {
 
   // Load boards
   useEffect(() => {
-    apiFetch('/memory/boards')
+    authFetch<any>('/memory/boards')
       .then((d) => {
         const list = d.boards || []
         setBoards(list)
@@ -377,7 +361,7 @@ function BoardPanel() {
       return
     }
     setLoadingBlocks(true)
-    apiFetch(`/memory/boards/${activeBoardId}`)
+    authFetch<any>(`/memory/boards/${activeBoardId}`)
       .then((d) => {
         const raw: BoardBlock[] = (d.blocks || []).sort(
           (a: BoardBlock, b: BoardBlock) => a.position - b.position
@@ -431,7 +415,7 @@ function BoardPanel() {
 
   const deleteBoard = async (boardId: string) => {
     if (!window.confirm('删除此面板及所有块？')) return
-    await apiFetch(`/memory/boards/${boardId}`, { method: 'DELETE' }).catch(console.error)
+    await authFetch<any>(`/memory/boards/${boardId}`, { method: 'DELETE' }).catch(console.error)
     setBoards((prev) => {
       const next = prev.filter((b) => b.id !== boardId)
       setActiveBoardId(next.length ? next[0].id : null)
@@ -741,7 +725,7 @@ function SessionItem({
     setExpanded(opening)
     if (opening && rounds === null) {
       setLoadingRounds(true)
-      apiFetch(`/memory/sessions/${session.id}/rounds`)
+      authFetch<any>(`/memory/sessions/${session.id}/rounds`)
         .then((d) => setRounds(d.rounds || []))
         .catch(() => setRounds([]))
         .finally(() => setLoadingRounds(false))
@@ -752,7 +736,7 @@ function SessionItem({
     const wasExpanded = !!expandedRounds[roundId]
     setExpandedRounds((e) => ({ ...e, [roundId]: !wasExpanded }))
     if (!wasExpanded && !steps[roundId]) {
-      const d = await apiFetch(`/memory/rounds/${roundId}/steps`)
+      const d = await authFetch<any>(`/memory/rounds/${roundId}/steps`)
       setSteps((prev) => ({ ...prev, [roundId]: d.steps || [] }))
     }
   }
@@ -935,7 +919,7 @@ function SessionLibrary() {
   const loadSessions = useCallback(async (o: number) => {
     setLoading(true)
     try {
-      const d = await apiFetch(`/memory/sessions?limit=${LIMIT}&offset=${o}`)
+      const d = await authFetch<any>(`/memory/sessions?limit=${LIMIT}&offset=${o}`)
       if (o === 0) setSessions(d.sessions || [])
       else setSessions((prev) => [...prev, ...(d.sessions || [])])
       setTotal(d.total || 0)
@@ -957,7 +941,7 @@ function SessionLibrary() {
 
   const handleDelete = async (id: string) => {
     try {
-      await apiFetch(`/memory/sessions/${id}`, { method: 'DELETE' })
+      await authFetch<any>(`/memory/sessions/${id}`, { method: 'DELETE' })
       setSessions((prev) => prev.filter((s) => s.id !== id))
       setTotal((prev) => prev - 1)
     } catch (e) {

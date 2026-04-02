@@ -19,7 +19,7 @@ import {
   createEdgeType, updateEdgeType, deleteEdgeType,
   type OntologyNode, type OntologyEdge,
   type OntologyData, type OntologyLayer, type OntologyEdgeType,
-} from '@/lib/ontology-api'
+} from '@/lib/api/ontology'
 import { X, Edit2, Trash2, Plus, Check, GitBranch, Layers, Search, Filter, Info,
          ChevronDown, ChevronRight, PanelLeft, Network, ArrowRightLeft, Tag } from 'lucide-react'
 

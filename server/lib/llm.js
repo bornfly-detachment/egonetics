@@ -1,16 +1,56 @@
 /**
  * server/lib/llm.js
- * MiniMax LLM client（兼容 Anthropic SDK 协议）
+ * 三层 LLM 客户端：T0 SEAI 本地 / T1 MiniMax 云端 / T2 Claude 专家
+ *
+ * T0: localhost:8000 — SEAI 本地模型，零延迟，离线可用
+ * T1: minimaxi.com   — MiniMax-M2.7，高并发，兼容 Anthropic 协议
+ * T2: api.anthropic.com — claude-sonnet-4-6，顶级专家模型
  */
 const Anthropic = require('@anthropic-ai/sdk')
 
-const client = new Anthropic({
-  apiKey:  process.env.MINIMAX_API_KEY  || 'sk-cp-exbRJm3svPL7BS6YRWcuTkeErS9N07I-PMZpuVvwq6jjySoBQBjEzrgOlgDHmB9p60QxAtuDUzGEX7-EZAVMFfShUCEDkzvH322lo0pO5y6pc4Vy_qwZw1U',
+// T1 — MiniMax（默认）
+const minimaxClient = new Anthropic({
+  apiKey:  process.env.MINIMAX_API_KEY  || '',
   baseURL: process.env.MINIMAX_BASE_URL || 'https://api.minimaxi.com/anthropic',
   timeout: 3000000,
 })
 
-const DEFAULT_MODEL     = process.env.MINIMAX_MODEL       || 'MiniMax-M2.7'
+// T0 — SEAI 本地（兼容 Anthropic 协议，localhost:8000）
+const seaiClient = new Anthropic({
+  apiKey:  process.env.SEAI_API_KEY  || 'seai-local',
+  baseURL: process.env.SEAI_BASE_URL || 'http://localhost:8000',
+  timeout: 30000,  // 本地延迟低，30s 超时即可
+})
+
+// T2 — Claude 真实 API（需要 ANTHROPIC_API_KEY 环境变量）
+const claudeClient = new Anthropic({
+  apiKey:  process.env.ANTHROPIC_API_KEY || '',
+  timeout: 3000000,
+})
+
+const MODELS = {
+  T0: process.env.SEAI_MODEL      || 'seai',
+  T1: process.env.MINIMAX_MODEL   || 'MiniMax-M2.7',
+  T2: process.env.CLAUDE_MODEL    || 'claude-sonnet-4-6',
+}
+
+const DEFAULT_MODEL      = MODELS.T1
 const DEFAULT_MAX_TOKENS = parseInt(process.env.MINIMAX_MAX_TOKENS || '4096', 10)
 
-module.exports = { client, DEFAULT_MODEL, DEFAULT_MAX_TOKENS }
+/** 根据 tier 返回对应客户端和模型 */
+function getClientForTier(tier) {
+  if (tier === 'T0') return { client: seaiClient, model: MODELS.T0 }
+  if (tier === 'T2') {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // Claude API key 未配置，降级到 MiniMax
+      return { client: minimaxClient, model: MODELS.T1, downgraded: true }
+    }
+    return { client: claudeClient, model: MODELS.T2 }
+  }
+  return { client: minimaxClient, model: MODELS.T1 }  // T1 or default
+}
+
+// 保持向后兼容：其他路由仍可 require('./lib/llm').client
+const client = minimaxClient
+
+module.exports = { client, minimaxClient, seaiClient, claudeClient, MODELS, DEFAULT_MODEL, DEFAULT_MAX_TOKENS, getClientForTier }

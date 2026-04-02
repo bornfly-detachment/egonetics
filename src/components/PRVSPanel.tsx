@@ -3,10 +3,11 @@
  * P=Pattern(差异识别) R=Relation(因果连接) V=Value(系统权重) S=State(激活模式)
  * 任何控制论元操作 = PRVS 的组合
  */
-import React, { useState } from 'react'
-import { prvsApi, type PRecognizeResult, type PClassifyResult, type RPropagateResult, type RPathsResult, type VRankResult, type VWeightResult, type SState, type SDiffResult, type SPredictResult, type AxiomEntry, type AxiomSets } from '@/lib/prvs-api'
+import React, { useState, useRef } from 'react'
+import { prvsApi, type PRecognizeResult, type PClassifyResult, type RPropagateResult, type RPathsResult, type VRankResult, type VWeightResult, type SState, type SDiffResult, type SPredictResult, type AxiomEntry, type AxiomSets } from '@/lib/api/prvs'
 import { Loader2, Plus, Trash2, ChevronDown, ChevronRight, Edit2, Check, X } from 'lucide-react'
-import BlockEditor, { generateBlockId, type Block } from './BlockEditor'
+import BlockEditor, { type Block } from './BlockEditor'
+import { authFetch } from '@/lib/http'
 
 type Tab = 'axioms' | 'spec' | 'tests' | 'P' | 'R' | 'V' | 'S'
 type ResultData = PRecognizeResult | PClassifyResult | RPropagateResult | RPathsResult | VRankResult | VWeightResult | SState | SDiffResult | SPredictResult | { error: string } | null
@@ -438,17 +439,17 @@ const PRIM_COLORS: Record<string, { badge: string; dot: string; border: string }
   R: { badge: 'bg-blue-500/20 text-blue-300',     dot: 'bg-blue-400',   border: 'border-blue-500/20' },
   V: { badge: 'bg-yellow-500/20 text-yellow-300', dot: 'bg-yellow-400', border: 'border-yellow-500/20' },
   S: { badge: 'bg-green-500/20 text-green-300',   dot: 'bg-green-400',  border: 'border-green-500/20' },
+  E: { badge: 'bg-rose-500/20 text-rose-300',     dot: 'bg-rose-400',   border: 'border-rose-500/20' },
 }
 
-function makeTextBlock(text: string): Block {
-  return {
-    id: generateBlockId(),
-    parentId: null,
-    type: 'paragraph',
-    position: 0,
-    content: { rich_text: [{ text }] },
-  }
+const PRIM_META: Record<string, { label: string; desc: string }> = {
+  P: { label: 'Pattern',   desc: '识别信息性质' },
+  R: { label: 'Relation',  desc: '建立信息连接' },
+  V: { label: 'Value',     desc: '主体赋予价值' },
+  S: { label: 'State',     desc: '系统当前状态' },
+  E: { label: 'Evolution', desc: '系统自身演化' },
 }
+
 
 function AxiomRow({
   entry,
@@ -463,21 +464,33 @@ function AxiomRow({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing]   = useState(false)
+  const [nameVal, setNameVal]   = useState(entry.name)
   const [level, setLevel]       = useState(String(entry.level))
   const [derived, setDerived]   = useState(entry.derivedFrom.join(', '))
   const [saving, setSaving]     = useState(false)
 
-  // Build blocks for BlockEditor from name
-  const [blocks, setBlocks] = useState<Block[]>(() => [makeTextBlock(entry.name)])
+  const pageId = `prvs_axiom_${entry.id}`
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // blocks 变化时 debounce 保存
+  function handleBlocksChange(next: Block[]) {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      authFetch(`/pages/${pageId}/blocks`, {
+        method: 'PUT',
+        body: JSON.stringify(next),
+      }).catch(() => {})
+    }, 800)
+  }
 
   const col = PRIM_COLORS[entry.primitive]
   const lvlLabel = LEVEL_LABEL[entry.level] ?? `L${entry.level}`
 
   async function save() {
+    if (!nameVal.trim()) return
     setSaving(true)
-    const newName = blocks[0]?.content.rich_text.map(s => s.text).join('') ?? entry.name
     await onUpdate(entry.id, {
-      name: newName,
+      name: nameVal.trim(),
       level: parseInt(level, 10),
       derivedFrom: derived.split(',').map(s => s.trim()).filter(Boolean),
     })
@@ -507,45 +520,55 @@ function AxiomRow({
         </button>
       </div>
 
-      {/* Expanded: BlockEditor + edit fields */}
+      {/* Expanded: edit fields + BlockEditor for notes */}
       {expanded && (
         <div className="px-4 pb-4 flex flex-col gap-3 border-t border-white/[0.08] pt-3">
-          <BlockEditor
-            pageId={`prvs_axiom_${entry.id}`}
-            initialBlocks={blocks}
-            onChange={setBlocks}
-            readOnly={!editing}
-          />
-          {editing && (
+          {editing ? (
             <div className="flex flex-col gap-3">
+              {/* 名称 */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-white/40 uppercase tracking-widest">名称</label>
+                <input
+                  value={nameVal}
+                  onChange={e => setNameVal(e.target.value)}
+                  className="bg-[#111] border border-white/15 rounded-md px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/60"
+                />
+              </div>
               <div className="flex gap-3 items-end">
                 <div className="flex flex-col gap-1 flex-1">
-                  <label className="text-xs text-white/30 uppercase tracking-widest">层级</label>
+                  <label className="text-xs text-white/40 uppercase tracking-widest">层级</label>
                   <select value={level} onChange={e => setLevel(e.target.value)}
-                    className="bg-[#111] border border-white/10 rounded-md px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-amber-400/60">
+                    className="bg-[#111] border border-white/15 rounded-md px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-amber-400/60">
                     <option value="1" className="bg-neutral-900">1 — 公理（最小完备集）</option>
                     <option value="2" className="bg-neutral-900">2 — 推论</option>
                     <option value="3" className="bg-neutral-900">3 — 推理</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1 flex-1">
-                  <label className="text-xs text-white/30 uppercase tracking-widest">依赖 ID（逗号分隔）</label>
+                  <label className="text-xs text-white/40 uppercase tracking-widest">依赖 ID（逗号分隔）</label>
                   <input value={derived} onChange={e => setDerived(e.target.value)} placeholder="p_ax_1, p_ax_2"
-                    className="bg-[#111] border border-white/10 rounded-md px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-amber-400/60 font-mono" />
+                    className="bg-[#111] border border-white/15 rounded-md px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-amber-400/60 font-mono" />
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={save} disabled={saving}
+                <button onClick={save} disabled={saving || !nameVal.trim()}
                   className="flex items-center gap-1.5 px-4 py-2 rounded bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-sm font-semibold text-white transition-colors">
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                   保存
                 </button>
-                <button onClick={() => setEditing(false)}
+                <button onClick={() => { setEditing(false); setNameVal(entry.name) }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-sm text-white/50 transition-colors">
                   <X size={13} /> 取消
                 </button>
               </div>
             </div>
+          ) : (
+            <BlockEditor
+              key={pageId}
+              pageId={pageId}
+              onChange={handleBlocksChange}
+              readOnly={false}
+            />
           )}
           {/* Upstream deps */}
           {entry.derivedFrom.length > 0 && !editing && (
@@ -572,7 +595,7 @@ function AddAxiomForm({
   primitive,
   onAdd,
 }: {
-  primitive: 'P' | 'R' | 'V' | 'S'
+  primitive: 'P' | 'R' | 'V' | 'S' | 'E'
   onAdd: (entry: AxiomEntry) => void
 }) {
   const [open, setOpen]   = useState(false)
@@ -634,13 +657,13 @@ function AddAxiomForm({
 function AxiomsTab() {
   const [axioms, setAxioms] = useState<AxiomSets | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activePrim, setActivePrim] = useState<'P' | 'R' | 'V' | 'S'>('P')
+  const [activePrim, setActivePrim] = useState<'P' | 'R' | 'V' | 'S' | 'E'>('P')
 
   React.useEffect(() => {
     prvsApi.getAxioms().then(a => { setAxioms(a); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
-  const allEntries = axioms ? ['P','R','V','S'].flatMap(p => axioms[p as 'P'|'R'|'V'|'S']) : []
+  const allEntries = axioms ? ['P','R','V','S','E'].flatMap(p => axioms[p as 'P'|'R'|'V'|'S'|'E'] ?? []) : []
 
   async function handleUpdate(id: string, patch: Partial<Pick<AxiomEntry, 'name'|'level'|'derivedFrom'>>) {
     const updated = await prvsApi.updateAxiom(id, patch)
@@ -658,8 +681,8 @@ function AxiomsTab() {
     setAxioms(prev => {
       if (!prev) return prev
       const next = { ...prev }
-      for (const p of ['P','R','V','S'] as const) {
-        next[p] = prev[p].filter(e => e.id !== id)
+      for (const p of ['P','R','V','S','E'] as const) {
+        next[p] = (prev[p] ?? []).filter(e => e.id !== id)
       }
       return next
     })
@@ -668,28 +691,56 @@ function AxiomsTab() {
   function handleAdd(entry: AxiomEntry) {
     setAxioms(prev => {
       if (!prev) return prev
-      return { ...prev, [entry.primitive]: [...prev[entry.primitive], entry] }
+      return { ...prev, [entry.primitive]: [...(prev[entry.primitive] ?? []), entry] }
     })
   }
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 size={16} className="animate-spin text-neutral-600" /></div>
   if (!axioms)  return <div className="text-sm text-red-400 p-4">加载公理集失败</div>
 
-  const PRIMS = ['P','R','V','S'] as const
+  const PRIMS = ['P','R','V','S','E'] as const
 
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-base font-bold text-white/80">PRVS 公理集</h2>
-        <p className="text-sm text-white/50">最小完备集（一级公理）是基础；推论与推理可由公理组合推导</p>
+        <h2 className="text-base font-bold text-white/80">PRVSE 公理集</h2>
+      </div>
+
+      {/* PRVSE 序列说明 */}
+      <div className="flex items-stretch gap-0 rounded-xl overflow-hidden border border-white/[0.07]">
+        {PRIMS.map((p, i) => {
+          const col = PRIM_COLORS[p]
+          const meta = PRIM_META[p]
+          const isActive = activePrim === p
+          const isE = p === 'E'
+          return (
+            <React.Fragment key={p}>
+              <button
+                onClick={() => setActivePrim(p)}
+                className={`flex-1 flex flex-col items-center gap-1 px-3 py-3 transition-colors ${
+                  isActive ? `${col.badge}` : 'bg-white/[0.02] hover:bg-white/[0.05]'
+                } ${isE ? 'border-l border-white/10' : ''}`}
+              >
+                <span className={`text-sm font-bold font-mono ${isActive ? '' : 'text-white/50'}`}>{p}</span>
+                <span className={`text-[11px] leading-tight text-center ${isActive ? 'text-white/80' : 'text-white/30'}`}>{meta.desc}</span>
+                {isE && (
+                  <span className="text-[9px] text-rose-400/60 mt-0.5">E1 任务 · E2 认知</span>
+                )}
+              </button>
+              {i < PRIMS.length - 1 && !isE && (
+                <div className="flex items-center px-1 text-white/15 text-xs self-center">→</div>
+              )}
+            </React.Fragment>
+          )
+        })}
       </div>
 
       {/* Primitive tabs */}
       <div className="flex gap-2">
         {PRIMS.map(p => {
           const col = PRIM_COLORS[p]
-          const count = axioms[p].length
+          const count = (axioms[p] ?? []).length
           const isActive = activePrim === p
           return (
             <button key={p} onClick={() => setActivePrim(p)}
@@ -711,7 +762,7 @@ function AxiomsTab() {
 
       {/* Level groups */}
       {[1, 2, 3].map(lvl => {
-        const entries = axioms[activePrim].filter(e => e.level === lvl)
+        const entries = (axioms[activePrim] ?? []).filter(e => e.level === lvl)
         if (entries.length === 0 && lvl > 1) return null
         return (
           <div key={lvl} className="flex flex-col gap-2">
@@ -755,7 +806,7 @@ const PRIM_STYLE: Record<string, { border: string; bg: string; badge: string }> 
 }
 
 function SpecTab() {
-  const [spec, setSpec]           = useState<import('@/lib/prvs-api').PrvsSpec | null>(null)
+  const [spec, setSpec]           = useState<import('@/lib/api/prvs').PrvsSpec | null>(null)
   const [loading, setLoading]     = useState(true)
   const [expanded, setExpanded]   = useState<Set<string>>(new Set(['boundary', 'P']))
   const [editing, setEditing]     = useState<string | null>(null)   // section key being edited
@@ -792,7 +843,7 @@ function SpecTab() {
       }
       let parsed: unknown = editBuf
       try { parsed = JSON.parse(editBuf) } catch { /* keep as string */ }
-      const patch = setIn({}, path, parsed) as Partial<import('@/lib/prvs-api').PrvsSpec> & { reason: string }
+      const patch = setIn({}, path, parsed) as Partial<import('@/lib/api/prvs').PrvsSpec> & { reason: string }
       patch.reason = reason
       const updated = await prvsApi.patchSpec(patch)
       setSpec(updated)
@@ -983,7 +1034,7 @@ function SpecTab() {
 const ALL_OPS = ['P.recognize','P.classify','R.propagate','R.paths','V.rank','V.weight','S.snapshot','S.activate','S.predict','S.diff']
 
 function TestsTab() {
-  const [tests, setTests]         = useState<import('@/lib/prvs-api').PrvsTestCase[]>([])
+  const [tests, setTests]         = useState<import('@/lib/api/prvs').PrvsTestCase[]>([])
   const [loading, setLoading]     = useState(true)
   const [running, setRunning]     = useState<string | null>(null)
   const [creating, setCreating]   = useState(false)
@@ -994,7 +1045,7 @@ function TestsTab() {
   const [compareOp, setCompareOp]       = useState('P.recognize')
   const [compareA, setCompareA]         = useState('')
   const [compareB, setCompareB]         = useState('')
-  const [compareResult, setCompareResult] = useState<import('@/lib/prvs-api').PrvsCompareResult | null>(null)
+  const [compareResult, setCompareResult] = useState<import('@/lib/api/prvs').PrvsCompareResult | null>(null)
   const [comparing, setComparing]       = useState(false)
 
   React.useEffect(() => {
@@ -1178,8 +1229,8 @@ const TAB_META: TabMeta[] = [
   { id: 'S',     label: 'S',        labelFull: 'State',     activeColor: 'text-green-300',    activeBg: 'bg-green-500/15',    dot: 'bg-green-400' },
 ]
 
-export default function PRVSPanel() {
-  const [activeTab, setActiveTab] = useState<Tab>('spec')
+export default function PRVSPanel({ defaultTab }: { defaultTab?: Tab }) {
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab ?? 'spec')
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
