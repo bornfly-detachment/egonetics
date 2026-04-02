@@ -46,6 +46,7 @@ coverage
 
 # Data files (large datasets)
 data
+!server/data
 # server/data 是软链接，链接本身由 git 追踪，数据文件不追踪
 server/data/*.db
 server/data/*.db-shm
@@ -82,3 +83,13 @@ SubjectiveEgoneticsAI
 server/prvse/.venv/
 **/.venv/
 server/.env
+
+# Tool state / session files (local only)
+.omc/
+server/.omc/
+memory/session-*.md
+agent-spaces
+test-results/
+
+# Playwright
+playwright.config.ts
