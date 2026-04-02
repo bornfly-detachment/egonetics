@@ -196,6 +196,23 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **Global TagTreeStore** (`src/stores/useTagTreeStore.ts`): single source of truth for tag tree; `useBlockTags` hook refactored to delegate all operations to the store, enabling cross-component sync
   - **graph.js parameter fix**: Kuzu graph queries now use `prepare + execute` for parameterized queries instead of the broken `query(cypher, params)` pattern
 
+- **PRVSE World — Three-Tier Progressive Cybernetics System** *(2026-04-02)*
+  - Three-tier recursive control system: **L3 World** (full-screen 3D spherical canvas) / **L2 Cybernetics** (each sphere independently governed) / **L1 Granularity** (2D detail)
+  - Route `/prvse-world` — full UI layer: `PrvseWorldView`, `Minimap`, `KernelOverlay`, `HumanQueuePanel`
+  - **`src/kernel/`** — pure TypeScript zero-dependency kernel: `Constitution` / `Tick` / `Observer` / `Reality` four layers, 60+ tests
+  - **L3AIInput** — single input bar with T0/T1/T2 tier selector: T0 → SEAI local (zero-latency), T1 → MiniMax cloud (high-throughput), T2 → Claude Code Agent (top reasoning)
+  - **T2 Claude Code Agent** (tmux-based, `server/lib/code-agent.js`):
+    - Persistent `claude --dangerously-skip-permissions` running inside `egonetics-coding-agent` tmux session
+    - Input via `tmux send-keys`, output detection via `tmux capture-pane` — no spawning, no sockets, tmux IS the daemon
+    - Runs on Max subscription OAuth — `ANTHROPIC_API_KEY` explicitly unset to avoid 403
+    - Three-sphere architecture: `constitution/goals/resources` each have an independent tmux window, working directory set to `agent-spaces/{sphere}/`
+    - Per-sphere serial request queue prevents concurrent send-keys collisions
+  - **Interactive prompt relay**: when claude prompts for confirmation (numbered options, Y/N, Press Enter), options are forwarded to frontend as clickable amber buttons; user clicks from browser → `POST /api/code-agent/respond` → `tmux send-keys` reply
+  - **PRVSE World Workspace** (`prvse_world_workspace/` — sibling dir outside repo):
+    - `L2/storage/` → `egonetics/server/data` (relative symlink, tracked in git)
+    - `L2/ai-resources/{constitution,goals,resources}/` → `egonetics/agent-spaces` (relative symlink, gitignored)
+  - **`setup.sh`** — one-shot script for fresh clones: creates `prvse_world_workspace/` directory tree, recreates both symlinks
+
 **In Progress**
 - Chronicle hash chain integrity verification
 - Theory page locking & versioning
@@ -230,6 +247,9 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
 # Clone the repository
 git clone https://github.com/bornfly-detachment/egonetics.git
 cd egonetics
+
+# Initialize workspace — creates prvse_world_workspace/ + symlinks (run once on new machine)
+bash setup.sh
 
 # Install frontend dependencies
 npm install
@@ -639,6 +659,23 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - **全局 TagTreeStore** (`src/stores/useTagTreeStore.ts`)：标签树单一数据源；`useBlockTags` hook 重构为委托 store，实现跨组件实时同步
   - **graph.js 参数化查询修复**：Kuzu 图数据库查询改用 `prepare + execute` 模式，修复带参数的 Cypher 查询失败问题
 
+- **PRVSE World — 三层递进控制论系统** *(2026-04-02)*
+  - 三层递进控制论：**L3 世界**（全屏 3D 球形画布）/ **L2 控制论**（各球根独立治理）/ **L1 粒度**（2D 细节层）
+  - 路由 `/prvse-world` — 完整 UI 层：`PrvseWorldView`、`Minimap`、`KernelOverlay`、`HumanQueuePanel`
+  - **`src/kernel/`** — 纯 TypeScript 零依赖 Kernel：Constitution / Tick / Observer / Reality 四层，60+ 测试
+  - **L3AIInput** — 单一输入条，T0/T1/T2 档位选择器：T0 → SEAI 本地（零延迟）/ T1 → MiniMax 云端（高并发）/ T2 → Claude Code Agent（顶级推理）
+  - **T2 Claude Code Agent**（tmux 方案，`server/lib/code-agent.js`）：
+    - 在 `egonetics-coding-agent` tmux session 中持续运行 `claude --dangerously-skip-permissions`
+    - 输入通过 `tmux send-keys`，输出通过 `tmux capture-pane` 检测 — 无子进程 spawn，无 socket，tmux 即 daemon
+    - 使用 Max 订阅 OAuth，显式 unset `ANTHROPIC_API_KEY` 避免 403 错误
+    - 三球架构：`constitution/goals/resources` 各自独立 tmux window，工作目录指向对应 `agent-spaces/{sphere}/`
+    - 每球串行请求队列，防止并发 send-keys 冲突
+  - **交互式确认中继**：当 claude code 弹出确认框（数字选项、Y/N、Press Enter），选项实时中继到前端显示为琥珀色可点击按钮；用户在浏览器点击 → `POST /api/code-agent/respond` → `tmux send-keys` 回复
+  - **PRVSE World 工作区**（`prvse_world_workspace/`，仓库外同级目录）：
+    - `L2/storage/` → `egonetics/server/data`（相对软链接，已入库 git）
+    - `L2/ai-resources/{constitution,goals,resources}/` → `egonetics/agent-spaces`（相对软链接，gitignore 排除）
+  - **`setup.sh`** — 新机器一键初始化：创建 `prvse_world_workspace/` 目录结构并重建两个软链接
+
 **开发中**
 - Chronicle 哈希链完整性验证
 - Theory 页面锁定与版本控制
@@ -673,6 +710,9 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
 # 克隆仓库
 git clone https://github.com/bornfly-detachment/egonetics.git
 cd egonetics
+
+# 初始化工作区 — 创建 prvse_world_workspace/ + 软链接（新机器执行一次）
+bash setup.sh
 
 # 安装前端依赖
 npm install
