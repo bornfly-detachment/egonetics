@@ -15,7 +15,7 @@
  * the pipeline. Un-narrowed fields → downgrade permission, not reject.
  */
 
-import type { NodeId, ContractId } from '../types'
+import type { NodeId } from '../types'
 
 // ── Narrowable<T> — gradual typing primitive ──────────────────
 
