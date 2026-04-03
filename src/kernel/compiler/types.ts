@@ -2,7 +2,7 @@
  * PRVSE Compiler — Type System
  *
  * Bridges tag-tree semantic types → kernel execution primitives.
- * Source of truth: docs/prvse-compiler-lang.md + pages.db tag_trees
+ * Source of truth: docs/prvse-compiler-design.md + src/kernel/compiler/tag-tree.json
  *
  * Design:
  *   - PatternToken  → compiled into kernel Pattern + NodeState
@@ -42,58 +42,91 @@ export function isResolved<T>(n: Narrowable<T>): n is { resolved: true; value: T
 
 // ── P — Pattern Token (Lexer output) ──────────────────────────
 
-/** External input sources — must declare provenance */
-export type PExternalSource =
-  | 'user_input'
-  | 'env_perception'
-  | 'external_search'
-  | 'external_push'
-  | 'external_api'
-  | 'llm_api_call'
+/**
+ * Pattern State (三态)
+ *
+ * external → candidate → internal
+ *
+ * External → Internal has NO shortcut. Even internally generated
+ * hypotheses must pass through practice verification.
+ */
+export type PState = 'external' | 'candidate' | 'internal'
 
-/** Internal input sources — must declare component connection */
-export type PInternalSource =
-  | 'execution_result'
-  | 'component_output'
-  | 'process_memory'
+/**
+ * Internal origin types — 天然合法 (100% legitimate)
+ * Traceable, explainable, analyzable, reproducible.
+ * Communication has direction (A→B / broadcast).
+ */
+export type PInternalOriginType =
+  | 'user_input'       // human subject operation
+  | 'model_call'       // internal AI reasoning/generation
+  | 'module_output'    // component output / execution result
+  | 'system_event'     // state change / scheduler trigger
+  | 'process_memory'   // chronicle / life memory
 
-export type PSource =
-  | { origin: 'external'; type: PExternalSource }
-  | { origin: 'internal'; type: PInternalSource }
+/**
+ * External origin types — 需控制论过滤改造
+ * Classified by trust basis / verifiability.
+ */
+export type PExternalOriginType =
+  | 'computable'   // code repos, databases, API returns — high certainty, complete chain
+  | 'verifiable'   // papers, experiments, authoritative docs — verifiable, needs judgment
+  | 'narrative'    // social media, personal expression, AI-generated — subjective
+  | 'sensor'       // sensors, monitoring, auto-collection — physical world signals
 
-/** A — Physical structure (data carrier form) */
-export type PPhysicalType = 'text' | 'number' | 'image' | 'audio' | 'code'
+/**
+ * POrigin — chain provenance.
+ * "从哪来" is a chain structure, not a single label.
+ * Must trace to origin point.
+ */
+export type POrigin =
+  | { domain: 'internal'; type: PInternalOriginType }
+  | { domain: 'external'; type: PExternalOriginType }
 
-/** B — Semantic structure (functional pre-classification) */
-export type PSemanticType =
-  | 'fact'
-  | 'rule'
-  | 'process'
-  | 'relation'
-  | 'evaluation'
-  | 'narrative'
-  | 'goal_task'
+/**
+ * Physical type — 9 carrier forms (L0 basic classification)
+ * Pure rule-based, no semantic understanding needed.
+ */
+export type PPhysicalType =
+  | 'text'        // natural language
+  | 'number'      // numeric / measurement
+  | 'code'        // program / script / configuration
+  | 'structured'  // JSON / table / database record
+  | 'image'       // image
+  | 'audio'       // audio
+  | 'video'       // video
+  | 'stream'      // real-time event stream / sensor stream
+  | 'mixed'       // code+comments / image+text / multimodal
 
-/** C — Value attributes (pre-markers for V layer) */
-export type PCertainty = 'certain' | 'uncertain'
-export type PCompleteness = 'complete' | 'incomplete'
-export type PTruth = 'true' | 'false'
+/**
+ * Pattern Level — three-level form (三级形态)
+ *
+ * Information quantity and value increase with level —
+ * not about content volume, but scope of impact.
+ *
+ * Level ≠ Power: L1 can self-promote to L2 candidate.
+ * 谁最强谁最好就是谁 — capability determines authority.
+ */
+export type PLevel =
+  | 'L0_atom'      // minimal complete information unit
+  | 'L1_molecule'  // P+R+V combined structure
+  | 'L2_gene'      // abstraction of L1 practice
 
-/** Destination — output routing (what the pattern drives) */
-export type PDestination =
-  | 'P1_instruction'
-  | 'P2_retrieval'
-  | 'P3_execution'
-  | 'P4_interaction'
-  | 'P5_introspection'
-  | 'P6_reasoning'
-  | 'P7_memory'
+/**
+ * Communication direction
+ *
+ * Higher level ≠ greater power ≠ controls lower level.
+ */
+export type PCommunication =
+  | 'bottom_up'   // L1 emergence → L2 candidate (needs rule verification + human confirmation)
+  | 'top_down'    // high-level abstraction guides practice
+  | 'lateral'     // same-level (determined by R + constitutional rules, A→B / broadcast)
 
 /**
  * PatternToken — the output of the Lexer (scanner).
  *
- * source + destination are required (must know where info comes from and goes).
- * physical, semantic, value attrs use Narrowable — start unknown, narrow through pipeline.
+ * origin + state are required (must know provenance and current state).
+ * physical, level, communication use Narrowable — start unknown, narrow through pipeline.
  */
 export interface PatternToken {
   readonly id: string
@@ -101,28 +134,23 @@ export interface PatternToken {
   readonly rawContent: string
 
   // Required — must be declared at entry
-  readonly source: PSource
-  readonly destination: Narrowable<PDestination>
+  readonly origin: POrigin
+  readonly state: PState
 
   // Narrowable — start unknown, narrow through pipeline
   readonly physical: Narrowable<PPhysicalType>
-  readonly semantic: Narrowable<PSemanticType>
-  readonly certainty: Narrowable<PCertainty>
-  readonly completeness: Narrowable<PCompleteness>
-  readonly truth: Narrowable<PTruth>
+  readonly level: Narrowable<PLevel>
+  readonly communication: Narrowable<PCommunication>
 }
 
 /** How narrowed is this token? Determines permission level. */
 export type NarrowingLevel = 'full' | 'partial' | 'minimal'
 
 export function getNarrowingLevel(token: PatternToken): NarrowingLevel {
-  const fields = [
-    token.destination, token.physical, token.semantic,
-    token.certainty, token.completeness, token.truth,
-  ]
+  const fields = [token.physical, token.level, token.communication]
   const resolvedCount = fields.filter(isResolved).length
   if (resolvedCount === fields.length) return 'full'
-  if (resolvedCount >= 3) return 'partial'
+  if (resolvedCount >= 1) return 'partial'
   return 'minimal'
 }
 
@@ -166,7 +194,7 @@ export function getNarrowingLevel(token: PatternToken): NarrowingLevel {
  *   E watches confidence metrics on L1 nodes → triggers L1→L0 upgrade at threshold
  *   E validates L2 predictions through practice → triggers L2→L1 transition
  *
- * Maps 1:1 to InfoLevel (P's L0/L1/L2) and PermissionTier hierarchy.
+ * Maps 1:1 to PLevel (P's L0/L1/L2) and PermissionTier hierarchy.
  */
 export type RInfoLevel = 'L0_logic' | 'L1_conditional' | 'L2_existential'
 
