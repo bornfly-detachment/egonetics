@@ -31,6 +31,8 @@ Return ONLY valid JSON, no explanation, no markdown:
   "certainty": "certain" | "uncertain",
   "completeness": "complete" | "incomplete",
   "truth": null,
+  "infoLevel": "L0_signal" | "L1_objective_law" | "L2_subjective",
+  "relationLevel": "L0_logic" | "L1_conditional" | "L2_existential" | null,
   "summary": "one-line summary of what this input means in system context"
 }
 
@@ -56,7 +58,22 @@ Classification rules:
 - completeness: is the input self-contained or needs more context?
 - truth: ALWAYS null — truth requires external verification, lexer cannot judge
 
-Be precise. When in doubt between two semantics, prefer the more specific one.`
+Info Level (P layer — information credibility):
+- L0_signal: objective, deterministic, no interpretation needed (sensor data, math result)
+- L1_objective_law: verified by science/experiment, reproducible (physics laws, statistical results)
+- L2_subjective: requires human judgment, narrative, or AI inference (opinions, strategies, plans)
+
+Relation Level (R layer — if semantic is "relation", classify the relation type):
+- L0_logic: pure logical relation, computable without human/AI (1+1=2, boolean logic, gravity law)
+  Boundary: if ANY cognitive ambiguity or interpretation exists → L1
+- L1_conditional: conditional/temporal/causal, too complex to fully enumerate, needs human/AI
+  (causality, evolution, environmental dependencies, probabilistic conditions)
+- L2_existential: requires narrative for legitimacy, involves subjectivity/dialectics
+  (oppose/unify, finite/infinite, meaning, lived experience, value judgment)
+- null: if semantic is NOT "relation"
+
+The info level and relation level MUST correspond: L0↔L0, L1↔L1, L2↔L2.
+Be precise. When in doubt between two levels, choose the HIGHER level (safer).`
 
 // ── LLM Lexer ────────────────────────────────────────────────
 
