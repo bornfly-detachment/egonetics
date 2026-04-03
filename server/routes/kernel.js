@@ -222,7 +222,9 @@ exports.init = (kernelRuntime) => {
     // ── Step 3: 写入 hm_protocol（有 anchor_tag_id 时）────────
     let protoId = null
     if (anchor_tag_id && protoSpec) {
-      const tag = await dbGet('SELECT id FROM tag_trees WHERE id = ?', [anchor_tag_id])
+      const { readTree, findById } = require('./tags')
+      const tagTree = readTree()
+      const tag = findById(tagTree, anchor_tag_id)
       if (tag) {
         const pid = `proto-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`
         try {
