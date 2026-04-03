@@ -312,14 +312,16 @@ export function isChecklistPassed(checklist: VChecklist): boolean {
 
 /** L0 客观度量指标类型 — 100%可计算 */
 export type VL0MetricType =
-  | 'accuracy'    // 准确率
-  | 'recall'      // 召回率
-  | 'precision'   // 精确率
-  | 'f1'          // F1 Score
-  | 'counter'     // 计数器（执行/错误/调用次数）
-  | 'timer'       // 计时器（响应/执行/超时）
-  | 'resource'    // 资源消耗（Token/内存/存储/API成本）
-  | 'binary'      // 二值判断（通过/不通过）
+  | 'accuracy'         // 准确率
+  | 'recall'           // 召回率
+  | 'precision'        // 精确率
+  | 'f1'               // F1 Score
+  | 'counter'          // 计数器（执行/错误/调用次数）
+  | 'timer'            // 计时器（响应/执行/超时）
+  | 'resource'         // 资源消耗（Token/内存/存储/API成本）
+  | 'binary'           // 二值判断（通过/不通过）
+  | 'roi'              // 投入产出比 = output_value / input_cost
+  | 'marginal_return'  // 边际收益 — 每多投入一单位资源的产出增量，趋近0则该停
 
 export interface VL0Metric {
   readonly type: VL0MetricType
