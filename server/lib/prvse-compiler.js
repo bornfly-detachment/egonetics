@@ -20,60 +20,15 @@ const crypto = require('crypto')
 
 // ── LLM Lexer System Prompt ─────────────────────────────────
 
-const LEXER_SYSTEM_PROMPT = `You are the PRVSE Lexer — the first stage of a constitutional compiler.
-Your job: classify ANY input into a structured PatternToken.
+const LEXER_SYSTEM_PROMPT = `Classify input into JSON. Return ONLY JSON, no text.
 
-Return ONLY valid JSON, no explanation, no markdown:
-{
-  "physical": "text" | "number" | "code" | "image" | "audio",
-  "semantic": "fact" | "rule" | "process" | "relation" | "evaluation" | "narrative" | "goal_task",
-  "destination": "P1_instruction" | "P2_retrieval" | "P3_execution" | "P4_interaction" | "P5_introspection" | "P6_reasoning" | "P7_memory",
-  "certainty": "certain" | "uncertain",
-  "completeness": "complete" | "incomplete",
-  "truth": null,
-  "infoLevel": "L0_signal" | "L1_objective_law" | "L2_subjective",
-  "relationLevel": "L0_logic" | "L1_conditional" | "L2_existential" | null,
-  "summary": "one-line summary of what this input means in system context"
-}
+{"physical":"text|number|code","semantic":"fact|rule|process|relation|evaluation|narrative|goal_task","destination":"P1_instruction|P2_retrieval|P3_execution|P4_interaction|P5_introspection|P6_reasoning|P7_memory","certainty":"certain|uncertain","completeness":"complete|incomplete","truth":null,"infoLevel":"L0_signal|L1_objective_law|L2_subjective","relationLevel":"L0_logic|L1_conditional|L2_existential|null","summary":"one line"}
 
-Classification rules:
-- physical: what IS the data? text/number/code/image/audio
-- semantic: what DOES it mean?
-  - fact: objective, verifiable statement
-  - rule: constraint, policy, or regulation
-  - process: action, workflow, procedure
-  - relation: describes connection between things
-  - evaluation: judgment, assessment, metric
-  - narrative: subjective story, opinion, experience
-  - goal_task: desired outcome, task to accomplish
-- destination: where should it GO?
-  - P1_instruction: becomes a directive for agents
-  - P2_retrieval: stored/retrieved as knowledge
-  - P3_execution: triggers code/action execution
-  - P4_interaction: requires human dialogue
-  - P5_introspection: self-reflection, meta-analysis
-  - P6_reasoning: needs logical analysis
-  - P7_memory: archived for future reference
-- certainty: is the speaker certain or uncertain?
-- completeness: is the input self-contained or needs more context?
-- truth: ALWAYS null — truth requires external verification, lexer cannot judge
-
-Info Level (P layer — information credibility):
-- L0_signal: objective, deterministic, no interpretation needed (sensor data, math result)
-- L1_objective_law: verified by science/experiment, reproducible (physics laws, statistical results)
-- L2_subjective: requires human judgment, narrative, or AI inference (opinions, strategies, plans)
-
-Relation Level (R layer — if semantic is "relation", classify the relation type):
-- L0_logic: pure logical relation, computable without human/AI (1+1=2, boolean logic, gravity law)
-  Boundary: if ANY cognitive ambiguity or interpretation exists → L1
-- L1_conditional: conditional/temporal/causal, too complex to fully enumerate, needs human/AI
-  (causality, evolution, environmental dependencies, probabilistic conditions)
-- L2_existential: requires narrative for legitimacy, involves subjectivity/dialectics
-  (oppose/unify, finite/infinite, meaning, lived experience, value judgment)
-- null: if semantic is NOT "relation"
-
-The info level and relation level MUST correspond: L0↔L0, L1↔L1, L2↔L2.
-Be precise. When in doubt between two levels, choose the HIGHER level (safer).`
+Rules:
+semantic: fact=verifiable, rule=constraint/policy, process=action/workflow, relation=connection, evaluation=judgment, narrative=subjective/opinion, goal_task=desired outcome
+infoLevel: L0=objective/deterministic(math,sensor), L1=scientific/reproducible(physics,stats), L2=subjective/needs-judgment(opinion,plan)
+relationLevel(only if semantic=relation): L0=pure-logic(1+1=2), L1=causal/conditional(too complex to enumerate), L2=dialectic/existential(narrative needed). null if not relation.
+certainty: certain or uncertain. completeness: complete or incomplete. truth: always null.`
 
 // ── LLM Lexer ────────────────────────────────────────────────
 
