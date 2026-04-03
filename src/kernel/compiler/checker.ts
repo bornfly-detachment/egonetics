@@ -537,8 +537,8 @@ function checkValueGates(
     const result: GateResult = checkGate(gate)
 
     if (!result.passed) {
-      const failedMetrics = result.failures
-        .map(m => `${m.dimension}.${m.metricType}: ${m.currentValue} < ${m.threshold}`)
+      const failedReasons = result.failures
+        .map(f => `[${f.level}] ${f.reason}`)
         .join(', ')
 
       const severity: ViolationSeverity = result.action === 'reject' ? 'block'
@@ -547,7 +547,7 @@ function checkValueGates(
 
       violations.push({
         ruleId: `v_gate_${gate.id}`,
-        message: `Value gate "${gate.id}" failed: [${failedMetrics}]`,
+        message: `Value gate "${gate.id}" failed: ${failedReasons}`,
         severity,
         handler: result.action === 'reject' ? 'reject'
           : result.action === 'escalate' ? 'escalate_to_human'
