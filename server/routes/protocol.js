@@ -29,7 +29,7 @@ exports.init = (db) => {
     })
   })
 
-  // POST /api/protocol  — anchor_tag_id 必填，引用必须存在于 tag_trees
+  // POST /api/protocol  — anchor_tag_id 必填，引用必须存在于 tag-tree.json
   router.post('/protocol', (req, res) => {
     const { category = 'universal', layer = '', human_char = '', ui_visual = '{}', machine_lang = '', notes = '', sort_order = 0, anchor_tag_id } = req.body
     if (!anchor_tag_id) return res.status(400).json({ error: 'anchor_tag_id is required — protocol rules must be anchored to a TagTree node' })
