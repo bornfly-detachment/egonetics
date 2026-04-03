@@ -326,13 +326,124 @@ function checkInfoLevel(
   return violations
 }
 
+// ── Relation Level ↔ Semantic Operator Coherence ─────────────
+
+/**
+ * Validate that a relation's infoLevel matches its semantic operators.
+ *
+ * L0_logic: must use logic operators (deductive/inductive/analogical)
+ *   — computable without human/AI
+ * L1_conditional: must use causal/process operators
+ *   — too complex to enumerate, needs human/AI
+ * L2_existential: must use dialectic operators
+ *   — requires narrative, subjectivity
+ *
+ * Cross-level contamination is a constitutional violation.
+ */
+function checkRelationLevelCoherence(edge: RelationEdge): ConstitutionViolation[] {
+  const violations: ConstitutionViolation[] = []
+
+  switch (edge.infoLevel) {
+    case 'L0_logic':
+      // L0 must have logic, must NOT have dialectic
+      if (edge.dialectic) {
+        violations.push({
+          ruleId: 'r_level_coherence',
+          message: `Edge ${edge.id}: L0_logic cannot use dialectic operators (dialectic is L2_existential)`,
+          severity: 'block',
+          handler: 'reject',
+        })
+      }
+      // L0 should be deterministic
+      if (edge.certainty !== 'deterministic') {
+        violations.push({
+          ruleId: 'r_level_certainty',
+          message: `Edge ${edge.id}: L0_logic should be deterministic, got "${edge.certainty}"`,
+          severity: 'warn',
+          handler: 'escalate_to_human',
+        })
+      }
+      break
+
+    case 'L1_conditional':
+      // L1 uses causal/process; dialectic is L2 only
+      if (edge.dialectic) {
+        violations.push({
+          ruleId: 'r_level_coherence',
+          message: `Edge ${edge.id}: L1_conditional cannot use dialectic operators (dialectic is L2_existential)`,
+          severity: 'downgrade',
+          handler: 'downgrade_permission',
+        })
+      }
+      break
+
+    case 'L2_existential':
+      // L2 can use any operator (existential subsumes lower levels)
+      // But pure logic without dialectic/narrative context should be L0
+      if (edge.logic && !edge.dialectic && !edge.causal && !edge.process) {
+        violations.push({
+          ruleId: 'r_level_coherence',
+          message: `Edge ${edge.id}: L2_existential with only logic operators — should this be L0_logic?`,
+          severity: 'warn',
+          handler: 'escalate_to_human',
+        })
+      }
+      break
+  }
+
+  return violations
+}
+
+/**
+ * R info level must correspond to P info level in the context.
+ * L0 relations can exist in L1/L2 context (lower is subset of higher).
+ * But L2 relations cannot claim L0 context (escalation required).
+ */
+const R_LEVEL_RANK: Record<RInfoLevel, number> = {
+  L0_logic: 0,
+  L1_conditional: 1,
+  L2_existential: 2,
+}
+
+const INFO_LEVEL_TO_R_LEVEL: Record<InfoLevel, RInfoLevel> = {
+  L0_signal: 'L0_logic',
+  L1_objective_law: 'L1_conditional',
+  L2_subjective: 'L2_existential',
+}
+
+function checkRelationVsContext(
+  edges: readonly RelationEdge[],
+  ctx: CheckerContext,
+): ConstitutionViolation[] {
+  const violations: ConstitutionViolation[] = []
+  const contextRLevel = INFO_LEVEL_TO_R_LEVEL[ctx.infoLevel]
+  const contextRank = R_LEVEL_RANK[contextRLevel]
+
+  for (const edge of edges) {
+    const edgeRank = R_LEVEL_RANK[edge.infoLevel]
+
+    // Edge claims higher level than context allows → block
+    if (edgeRank > contextRank) {
+      violations.push({
+        ruleId: 'r_context_mismatch',
+        message: `Edge ${edge.id}: relation level ${edge.infoLevel} exceeds context ${ctx.infoLevel} — cannot claim L2 relation in L0 context`,
+        severity: 'block',
+        handler: 'reject',
+      })
+    }
+  }
+
+  return violations
+}
+
 function checkEdges(
   edges: readonly RelationEdge[],
+  ctx: CheckerContext,
 ): ConstitutionViolation[] {
   const violations: ConstitutionViolation[] = []
 
   for (const edge of edges) {
-    // Extract node types from IDs (convention: id starts with p-, r-, v-, s-, e-)
+    // 1. Node type legality (existing check)
     const sourceType = inferNodeType(edge.sourceNode)
     const targetType = inferNodeType(edge.targetNode)
 
@@ -354,7 +465,13 @@ function checkEdges(
         handler: 'reject',
       })
     }
+
+    // 2. Relation level ↔ operator coherence (new constitutional check)
+    violations.push(...checkRelationLevelCoherence(edge))
   }
+
+  // 3. Relation level ↔ context info level correspondence
+  violations.push(...checkRelationVsContext(edges, ctx))
 
   return violations
 }
