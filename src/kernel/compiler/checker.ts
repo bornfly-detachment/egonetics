@@ -183,8 +183,8 @@ export function isConstitutionSatisfiedBy(
   // 3. Check info level policy
   violations.push(...checkInfoLevel(midIR, ctx))
 
-  // 4. Check edge legality
-  violations.push(...checkEdges(midIR.edges))
+  // 4. Check edge legality + relation level coherence
+  violations.push(...checkEdges(midIR.edges, ctx))
 
   // 5. Check value gates
   const { gateViolations, gateInstructions } = checkValueGates(midIR.gates)
