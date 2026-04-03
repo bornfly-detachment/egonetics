@@ -563,11 +563,11 @@ function checkValueGates(
 
 /** Infer PRVSE node type from node ID convention */
 function inferNodeType(nodeId: string): NodeType | null {
-  if (id.startsWith('p-') || id.startsWith('tag-p')) return 'P'
-  if (id.startsWith('r-') || id.startsWith('tag-r')) return 'R'
-  if (id.startsWith('v-') || id.startsWith('tag-v')) return 'V'
-  if (id.startsWith('s-') || id.startsWith('tag-s')) return 'S'
-  if (id.startsWith('e-') || id.startsWith('tag-e')) return 'E'
+  if (nodeId.startsWith('p-') || nodeId.startsWith('tag-p')) return 'P'
+  if (nodeId.startsWith('r-') || nodeId.startsWith('tag-r')) return 'R'
+  if (nodeId.startsWith('v-') || nodeId.startsWith('tag-v')) return 'V'
+  if (nodeId.startsWith('s-') || nodeId.startsWith('tag-s')) return 'S'
+  if (nodeId.startsWith('e-') || nodeId.startsWith('tag-e')) return 'E'
   return null
 }
 
