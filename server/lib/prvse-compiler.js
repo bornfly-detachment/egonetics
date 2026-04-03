@@ -187,6 +187,25 @@ const CONSTITUTION_RULES = [
     permissionRequired: 'T2',
     appliesTo: (token) => token.certainty === 'uncertain' && token.destination === 'P3_execution',
   },
+  {
+    id: 'const-008',
+    text: 'L0 signal info must not contain subjective/narrative content',
+    permissionRequired: 'T0',
+    appliesTo: (token) => token.infoLevel === 'L0_signal' && (token.semantic === 'narrative' || token.semantic === 'evaluation'),
+    severity: 'block',
+  },
+  {
+    id: 'const-009',
+    text: 'Relation level must correspond to info level (L0↔L0, L1↔L1, L2↔L2)',
+    permissionRequired: 'T0',
+    appliesTo: (token) => {
+      if (token.semantic !== 'relation' || !token.relationLevel) return false
+      const levelMap = { L0_signal: 'L0_logic', L1_objective_law: 'L1_conditional', L2_subjective: 'L2_existential' }
+      const expectedR = levelMap[token.infoLevel]
+      return expectedR && token.relationLevel !== expectedR
+    },
+    severity: 'downgrade',
+  },
 ]
 
 const PERMISSION_RANK = { T0: 0, T1: 1, T2: 2, T3: 3 }
