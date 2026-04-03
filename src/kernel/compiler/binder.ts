@@ -144,31 +144,31 @@ interface ConstitutionRuleSpec {
 const CONSTITUTION_RULES: readonly ConstitutionRuleSpec[] = [
   {
     id: 'const-001',
-    text: 'L0 signal nodes can only be modified by T0+',
+    text: 'Fact nodes (L0): any execution node (T0+) can read/write',
     permissionRequired: 'T0',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'fact',
   },
   {
     id: 'const-002',
-    text: 'Rule-type patterns require T1+ permission to create',
+    text: 'Rule creation requires reasoning authority (T1+)',
     permissionRequired: 'T1',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'rule',
   },
   {
     id: 'const-003',
-    text: 'Goal/task patterns require T2+ permission to create',
+    text: 'Goal/task creation requires evolution authority (T2+)',
     permissionRequired: 'T2',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'goal_task',
   },
   {
     id: 'const-004',
-    text: 'Narrative patterns are L2 subjective — always require verification',
+    text: 'Narrative (L2 subjective) requires reasoning (T1+) + verification',
     permissionRequired: 'T1',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'narrative',
   },
   {
     id: 'const-005',
-    text: 'External source patterns must declare provenance',
+    text: 'External source must declare provenance (any tier)',
     permissionRequired: 'T0',
     appliesTo: (t) => t.source.origin === 'external',
   },
