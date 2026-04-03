@@ -70,6 +70,8 @@ export type {
   ResourceTier,
   PermissionTier,
   MutationType,
+  LevelTransitionDirection,
+  LevelTransition,
 
   // Constitution
   ConstitutionViolation,
