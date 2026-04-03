@@ -78,10 +78,11 @@ function detectConflict(pagesDb, type, entity_id, entity_type) {
         }
       )
     } else if (type === 'tag_tree') {
-      // tag 节点修改：检查该节点是否存在
-      pagesDb.get('SELECT * FROM tag_trees WHERE id=?', [entity_id], (err, row) => {
-        resolve(row ? { name: row.name, color: row.color } : null)
-      })
+      // tag 节点修改：检查该节点是否存在（从 JSON 文件查找）
+      const { readTree, findById } = require('./tags')
+      const tagTree = readTree()
+      const found = findById(tagTree, entity_id)
+      resolve(found ? { name: found.node.name } : null)
     } else if (type === 'task') {
       pagesDb.get('SELECT id, title, column_id, updated_at FROM tasks WHERE id=?', [entity_id], (err, row) => {
         resolve(row || null)
