@@ -27,7 +27,6 @@ import {
   // Types & helpers
   resolved, unresolved, isResolved, getNarrowingLevel, checkGate,
   type PatternToken, type POrigin, type ValueGate, type RelationEdge,
-  type PermissionTier, type InfoLevel, type MidIR,
 } from '../index'
 
 import { nodeId } from '../../types'
