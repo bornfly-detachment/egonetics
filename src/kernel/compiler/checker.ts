@@ -48,7 +48,7 @@ const PERMISSION_RANK: Record<PermissionTier, number> = {
   T0: 0,
   T1: 1,
   T2: 2,
-  T3_creator: 3,
+  T3: 3,
 }
 
 function hasPermission(actor: PermissionTier, required: PermissionTier): boolean {
@@ -297,7 +297,7 @@ function checkInfoLevel(
 
   // Check constitutional modifications
   const hasConstitutionalBindings = midIR.constitutionBindings.some(
-    b => b.permissionRequired === 'T3_creator',
+    b => b.permissionRequired === 'T3',
   )
   if (hasConstitutionalBindings && !policy.canModifyConstitution) {
     violations.push({
