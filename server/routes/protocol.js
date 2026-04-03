@@ -34,22 +34,22 @@ exports.init = (db) => {
     const { category = 'universal', layer = '', human_char = '', ui_visual = '{}', machine_lang = '', notes = '', sort_order = 0, anchor_tag_id } = req.body
     if (!anchor_tag_id) return res.status(400).json({ error: 'anchor_tag_id is required — protocol rules must be anchored to a TagTree node' })
     const id = genId()
-    // 校验 anchor 存在
-    db.get('SELECT id FROM tag_trees WHERE id = ?', [anchor_tag_id], (err, tag) => {
-      if (err) return res.status(500).json({ error: err.message })
-      if (!tag) return res.status(400).json({ error: `anchor_tag_id "${anchor_tag_id}" does not exist in tag_trees` })
-      db.run(
-        `INSERT INTO hm_protocol (id, category, layer, human_char, ui_visual, machine_lang, notes, sort_order, anchor_tag_id) VALUES (?,?,?,?,?,?,?,?,?)`,
-        [id, category, layer, human_char, typeof ui_visual === 'object' ? JSON.stringify(ui_visual) : ui_visual, machine_lang, notes, sort_order, anchor_tag_id],
-        function (e2) {
-          if (e2) return res.status(500).json({ error: e2.message })
-          db.get('SELECT * FROM hm_protocol WHERE id=?', [id], (e3, row) => {
-            if (e3) return res.status(500).json({ error: e3.message })
-            res.status(201).json(row)
-          })
-        }
-      )
-    })
+    // 校验 anchor 存在（从 JSON 文件查找）
+    const { readTree, findById } = require('./tags')
+    const tagTree = readTree()
+    const tag = findById(tagTree, anchor_tag_id)
+    if (!tag) return res.status(400).json({ error: `anchor_tag_id "${anchor_tag_id}" does not exist in tag-tree` })
+    db.run(
+      `INSERT INTO hm_protocol (id, category, layer, human_char, ui_visual, machine_lang, notes, sort_order, anchor_tag_id) VALUES (?,?,?,?,?,?,?,?,?)`,
+      [id, category, layer, human_char, typeof ui_visual === 'object' ? JSON.stringify(ui_visual) : ui_visual, machine_lang, notes, sort_order, anchor_tag_id],
+      function (e2) {
+        if (e2) return res.status(500).json({ error: e2.message })
+        db.get('SELECT * FROM hm_protocol WHERE id=?', [id], (e3, row) => {
+          if (e3) return res.status(500).json({ error: e3.message })
+          res.status(201).json(row)
+        })
+      }
+    )
   })
 
   // PATCH /api/protocol/:id
