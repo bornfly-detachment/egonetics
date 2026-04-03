@@ -180,6 +180,13 @@ const CONSTITUTION_RULES = [
   },
 ]
 
+/**
+ * Permission hierarchy (external 3-tier + internal T3):
+ *   T0 = execution/practice (all bottom-layer agents)
+ *   T1 = reasoning/control (AI-level PRVSE engine)
+ *   T2 = evolution authority (human-machine, goals/constitution/resources)
+ *   T3 = 生变论 (bornfly creator authority, internal only)
+ */
 const PERMISSION_RANK = { T0: 0, T1: 1, T2: 2, T3: 3 }
 
 function hasPermission(actor, required) {
