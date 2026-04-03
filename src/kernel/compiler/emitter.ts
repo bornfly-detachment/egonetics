@@ -47,7 +47,7 @@ function instructionToPatches(instruction: StateInstruction): readonly Patch[] {
     target: nodeId(`s-${instruction.source}`),
     path: ['state'],
     value: instruction.targetState as Frozen,
-    priority: TIER_PRIORITY[instruction.nodeTier],
+    priority: LEVEL_PRIORITY[instruction.level],
   })
 
   // Record the transition trigger
@@ -60,16 +60,16 @@ function instructionToPatches(instruction: StateInstruction): readonly Patch[] {
       to: instruction.targetState,
       timestamp: Date.now(),
     } as Frozen,
-    priority: TIER_PRIORITY[instruction.nodeTier],
+    priority: LEVEL_PRIORITY[instruction.level],
   })
 
   return patches
 }
 
-const TIER_PRIORITY: Record<string, number> = {
-  execution: 10,
-  research: 20,
-  update: 30,
+const LEVEL_PRIORITY: Record<string, number> = {
+  L0: 10,
+  L1: 20,
+  L2: 30,
 }
 
 // ── StateInstruction → Effect[] ───────────────────────────────
