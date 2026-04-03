@@ -6,10 +6,11 @@
  *
  * Unlike a traditional lexer that does character-level tokenization,
  * this scanner classifies INFORMATION — it decides:
- *   - Where did this info come from? (source)
- *   - What physical form is it? (text/number/code/image/audio)
- *   - What semantic type is it? (fact/rule/process/...)
- *   - What value attributes does it have? (certainty/completeness/truth)
+ *   - Where did this info come from? (origin — chain provenance)
+ *   - What state is it in? (external / candidate / internal)
+ *   - What physical form is it? (text/number/code/structured/image/audio/video/stream/mixed)
+ *   - What level is it? (L0 atom / L1 molecule / L2 gene)
+ *   - What communication direction? (bottom_up / top_down / lateral)
  *
  * Fields that can't be determined start as `unresolved()` —
  * the binder will attempt to narrow them, and the checker will
@@ -21,11 +22,10 @@
 
 import type {
   PatternToken,
-  PSource,
+  POrigin,
   PPhysicalType,
-  PCertainty,
-  PCompleteness,
-  PSemanticType,
+  PLevel,
+  PState,
 } from './types'
 
 import { resolved, unresolved } from './types'
@@ -35,12 +35,12 @@ import { resolved, unresolved } from './types'
 export interface ScannerInput {
   /** Raw content to classify */
   readonly content: string
-  /** Who/what produced this input */
-  readonly source: PSource
+  /** Who/what produced this input — chain provenance */
+  readonly origin: POrigin
   /** Optional hints from the caller (e.g., UI already knows it's code) */
   readonly hints?: {
     physical?: PPhysicalType
-    semantic?: PSemanticType
+    level?: PLevel
   }
 }
 
@@ -63,70 +63,67 @@ export function resetTokenCounter(): void {
 /**
  * Classify physical type from raw content.
  * T0-level: pure heuristics, no LLM.
+ * Expanded to 9 types per constitutional design.
  */
 function classifyPhysical(content: string): PPhysicalType | null {
   const trimmed = content.trim()
+  if (trimmed.length === 0) return null
 
   // Number
   if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed)) return 'number'
 
+  // Structured data (JSON-like)
+  if (/^\s*[{\[]/.test(trimmed)) {
+    try {
+      JSON.parse(trimmed)
+      return 'structured'
+    } catch {
+      // Not valid JSON, fall through
+    }
+  }
+
   // Code (multiple heuristic signals)
   const codeSignals = [
-    /[{}\[\]();]/.test(trimmed),                          // brackets
-    /\b(function|const|let|var|class|import|export)\b/.test(trimmed), // JS keywords
-    /\b(def|class|import|from|return|if|elif)\b/.test(trimmed),       // Python keywords
-    /^\s*(\/\/|#|\/\*)/.test(trimmed),                     // comment start
-    /=>|->/.test(trimmed),                                 // arrow
+    /[{}\[\]();]/.test(trimmed),                                        // brackets
+    /\b(function|const|let|var|class|import|export)\b/.test(trimmed),   // JS keywords
+    /\b(def|class|import|from|return|if|elif)\b/.test(trimmed),         // Python keywords
+    /^\s*(\/\/|#|\/\*)/.test(trimmed),                                  // comment start
+    /=>|->/.test(trimmed),                                              // arrow
   ]
   if (codeSignals.filter(Boolean).length >= 2) return 'code'
 
   // Text (default for non-empty string)
-  if (trimmed.length > 0) return 'text'
-
-  return null
+  return 'text'
 }
 
 /**
- * Classify certainty from content signals.
- * Looks for hedging language, question marks, etc.
+ * Determine state from origin.
+ * External origin → external state (needs L0 validation).
+ * Internal origin → candidate state (passed system boundary, awaiting practice).
  */
-function classifyCertainty(content: string): PCertainty | null {
-  const uncertain = [
-    /\?/.test(content),                                    // question mark
-    /\b(maybe|perhaps|probably|might|could|possibly)\b/i.test(content),
-    /\b(可能|也许|大概|或许|不确定)\b/.test(content),
-  ]
-
-  if (uncertain.filter(Boolean).length >= 1) return 'uncertain'
-
-  const certain = [
-    /\b(always|never|must|shall|definitely|certainly)\b/i.test(content),
-    /\b(必须|一定|肯定|确定|绝对)\b/.test(content),
-  ]
-
-  if (certain.filter(Boolean).length >= 1) return 'certain'
-
-  return null
+function determineState(origin: POrigin): PState {
+  return origin.domain === 'external' ? 'external' : 'candidate'
 }
 
 /**
- * Classify completeness from content.
- * Short fragments or trailing ellipsis → incomplete.
+ * Classify level from content + origin heuristics.
+ * Most content starts as L0_atom — the binder refines this.
  */
-function classifyCompleteness(content: string): PCompleteness | null {
-  const trimmed = content.trim()
+function classifyLevel(content: string, origin: POrigin, physical: PPhysicalType | null): PLevel | null {
+  // Internal execution results are L0 atoms (deterministic output)
+  if (origin.domain === 'internal' && origin.type === 'module_output') return 'L0_atom'
+  if (origin.domain === 'internal' && origin.type === 'system_event') return 'L0_atom'
 
-  // Ellipsis or trailing dots → incomplete
-  if (/\.\.\.|…$/.test(trimmed)) return 'incomplete'
+  // Computable external sources produce L0 atoms
+  if (origin.domain === 'external' && origin.type === 'computable') return 'L0_atom'
 
-  // Very short content with no period → likely incomplete
-  if (trimmed.length < 10 && !trimmed.endsWith('.') && !trimmed.endsWith('。')) {
-    return 'incomplete'
-  }
+  // Numbers and structured data from any source are L0 atoms
+  if (physical === 'number' || physical === 'structured') return 'L0_atom'
 
-  // Has sentence-ending punctuation → likely complete
-  if (/[.。!！?？]$/.test(trimmed)) return 'complete'
+  // Code is typically L0 atom (concrete, complete, executable)
+  if (physical === 'code') return 'L0_atom'
 
+  // Cannot determine at scanner level — leave for binder
   return null
 }
 
@@ -140,41 +137,35 @@ function classifyCompleteness(content: string): PCompleteness | null {
  * for the binder to narrow.
  */
 export function scan(input: ScannerInput): PatternToken {
-  const { content, source, hints } = input
+  const { content, origin, hints } = input
+
+  // State: determined by origin (deterministic)
+  const state = determineState(origin)
 
   // Physical: use hint if provided, else heuristic
-  const physical = hints?.physical
-    ? resolved(hints.physical)
-    : (() => {
-        const classified = classifyPhysical(content)
-        return classified ? resolved(classified) : unresolved<PPhysicalType>()
-      })()
+  const physicalValue = hints?.physical ?? classifyPhysical(content)
+  const physical = physicalValue
+    ? resolved(physicalValue)
+    : unresolved<PPhysicalType>()
 
-  // Semantic: use hint if provided, else leave for binder
-  const semantic = hints?.semantic
-    ? resolved(hints.semantic)
-    : unresolved<PSemanticType>()
+  // Level: use hint if provided, else heuristic
+  const levelValue = hints?.level ?? classifyLevel(content, origin, physicalValue)
+  const level = levelValue
+    ? resolved(levelValue)
+    : unresolved<PLevel>()
 
-  // Value attributes: heuristic classification
-  const certaintyResult = classifyCertainty(content)
-  const certainty = certaintyResult ? resolved(certaintyResult) : unresolved<PCertainty>()
-
-  const completenessResult = classifyCompleteness(content)
-  const completeness = completenessResult
-    ? resolved(completenessResult)
-    : unresolved<PCompleteness>()
+  // Communication: always starts unresolved — needs context from binder
+  const communication = unresolved<never>()
 
   return {
     id: generateTokenId(),
     timestamp: Date.now(),
     rawContent: content,
-    source,
-    destination: unresolved(),   // always starts unknown — binder infers
+    origin,
+    state,
     physical,
-    semantic,
-    certainty,
-    completeness,
-    truth: unresolved(),          // truth requires external verification — never guessed
+    level,
+    communication,
   }
 }
 
