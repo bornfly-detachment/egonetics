@@ -401,27 +401,104 @@ kernel-executable output.
 
 ---
 
-## 9. V — Value Gate
+## 9. V — Value (校验清单驱动的大法官)
 
-### 9.1 Three Dimensions
+V is the foundation of deterministic controllability in the cybernetic system.
+V must be independent — not infiltrated by other component AIs, neutrally responsible
+to goals/constitution/resources, directly accountable to the self-cybernetics kernel.
+E and S depend on V — V failure means they cannot function.
+V exists as AOP on all CRUD operations.
+**Strongest V = practice verification.**
 
-| Dimension | Description |
+Core paradigm: ML test set / validation set separation.
+Modules self-test with validation set; V independently tests with test set (same distribution, separate).
+
+### 9.1 Checklist Core
+
+| Component | Description |
 |-----------|-------------|
-| **V1** | Objective metrics: counter, timer, token consumption, probability, binary |
-| **V2** | External probability metrics: confidence, relevance, causal probability, prediction, narrative legitimacy/completeness/logic |
-| **V3** | Internal/constitutional: rule compliance, value alignment, cognitive evaluation, narrative consistency |
+| **Test Set** | V holds independently; modules cannot see it |
+| **Validation Set** | Modules use for self-testing; same distribution as test set |
+| **Checklist Generator** | Dynamic security — cannot use the same checklist forever; generates unpredictable test checklists |
 
-### 9.2 Phi Factors
+A checklist = a set of items, ALL must pass. Missing 1 item = fail.
 
-Independent factors composed at runtime from R edges:
-- `phi_causal` — causal relationship strength
-- `phi_temporal` — temporal dependency
-- `phi_contradiction` — contradiction level
-- `phi_dependency` — dependency weight
+### 9.2 L0 — Deterministic Verification (100% decidable, pure L0 logic)
 
-### 9.3 Gate Semantics
+Same input → same result. No human/AI needed. Foundation data source for L1/L2.
 
-All metrics in a gate must pass their thresholds. On failure:
+**Objective Metrics** (8 types):
+
+| Metric | Description |
+|--------|-------------|
+| `accuracy` | Accuracy rate |
+| `recall` | Recall rate |
+| `precision` | Precision rate |
+| `f1` | F1 Score |
+| `counter` | Counts (execution/error/call) |
+| `timer` | Timers (response/execution/timeout) |
+| `resource` | Resource consumption (Token/memory/storage/API cost) |
+| `binary` | Binary judgment (pass/fail) |
+
+**Rule Checklist** (constitutional constraints, ALL must pass):
+
+| Check | Description |
+|-------|-------------|
+| `result` | Output matches expected |
+| `function` | Functionality fully implemented |
+| `effect` | Actual effect meets standard |
+| `extreme` | Edge/exception/stress cases |
+| `format` | Data integrity/legality |
+
+### 9.3 L1 — Lifecycle Dynamic Evaluation (time/process/conditions)
+
+All time-dependent nodes have lifecycle. Resource budget pre-allocated at creation.
+
+**Lifecycle Components:**
+- **Resource Budget**: time deadline, AI resources, storage, memory — pre-allocated
+- **Perceiver** (essentially L0-level V): accumulates resource consumption along time; objective, no judgment
+- **Evaluator** (essentially L0-level V): acceptance checklist, ordered easy→hard; deterministic pass/fail
+
+**State Evaluator** (L1-level V):
+- **Positive/negative feedback**: resource consumed vs checklist completion direction
+- **Local vs global optimal detection**: local solution completes partial goals but remaining high-weight goals impossible/costly → must detect, force stop, adopt global optimal
+- **Deviation trigger**: deviation from global optimal → force stop, replan
+
+**Reward Functions** (dynamically composable):
+
+| Reward | Description |
+|--------|-------------|
+| `information` | Information quantity calculation |
+| `alignment` | Goal alignment degree |
+| `ranking` | Solution ranking (multi-solution selection) |
+| `relevance` | Information relevance/value to goal |
+| `optimality` | Optimality detection (local vs global) |
+| `constitution` | Constitutional principle verification (abstract → checklist) |
+
+### 9.4 L2 — Constitutional Verification + Practice Testing
+
+To update L2 constitution requires passing V. Subjective abstract language cannot directly serve as V.
+When AI probability is insufficient, must use checklist + AB test.
+Human commands also require rule verification — humans make mistakes when in poor state.
+
+- **Practice Verification** (strongest V): AB test (fixed resources + time comparison), extreme case verification, generalization test (test/validation set distribution consistency)
+- **Constitutional Compliance**: operation conforms to system constitution rules
+- **Identity Verification** (T3 permission): dynamic verification of bornfly identity, not hardcoded
+- **Human Command Validation**: human instructions also go through rule checklist
+
+### 9.5 V Independence (constitutional guarantee)
+
+| Guarantee | Description |
+|-----------|-------------|
+| **Neutral** | Responsible to goals/constitution/resources, not to any single component |
+| **Anti-infiltration** | Not influenced by other component AIs |
+| **Kernel-direct** | Directly accountable to self-cybernetics kernel |
+
+### 9.6 Gate Semantics
+
+Each ValueGate contains L0/L1/L2 assessments. ALL checklists must pass + ALL metrics must meet thresholds.
+
+On failure:
 - `reject` → block (severity: block)
 - `escalate` → human review (severity: warn)
 - `downgrade` → reduce permission (severity: downgrade)
