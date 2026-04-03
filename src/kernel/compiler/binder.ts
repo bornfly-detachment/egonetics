@@ -145,7 +145,7 @@ const CONSTITUTION_RULES: readonly ConstitutionRuleSpec[] = [
   {
     id: 'const-001',
     text: 'L0 signal nodes can only be modified by T0+',
-    permissionRequired: 'T0_qwen',
+    permissionRequired: 'T0',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'fact',
   },
   {
@@ -169,7 +169,7 @@ const CONSTITUTION_RULES: readonly ConstitutionRuleSpec[] = [
   {
     id: 'const-005',
     text: 'External source patterns must declare provenance',
-    permissionRequired: 'T0_qwen',
+    permissionRequired: 'T0',
     appliesTo: (t) => t.source.origin === 'external',
   },
 ]
