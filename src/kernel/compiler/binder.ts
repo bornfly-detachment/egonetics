@@ -157,7 +157,7 @@ const CONSTITUTION_RULES: readonly ConstitutionRuleSpec[] = [
   {
     id: 'const-003',
     text: 'Goal/task patterns require T2+ permission to create',
-    permissionRequired: 'T2_claude',
+    permissionRequired: 'T2',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'goal_task',
   },
   {
