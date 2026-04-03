@@ -389,7 +389,8 @@ export interface VL1StateEvaluator {
   readonly feedback: VL1FeedbackDirection
   readonly localOptimal: boolean      // 是否陷入局部最优
   readonly globalOptimalVisible: boolean  // 全局最优目标是否对执行节点可见
-  readonly deviationDetected: boolean    // 是否检测到偏离全局最优
+  readonly homeostasisDeviation: number  // 稳态偏离度 [0,1]，0=健康基线，1=完全偏离
+  readonly deviationDetected: boolean    // 是否检测到偏离全局最优（homeostasisDeviation > threshold 时触发）
 }
 
 /** Reward函数类型 — L1 V = Reward函数集合，可动态增加 */
