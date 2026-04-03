@@ -973,6 +973,15 @@ export interface EvolutionEvent {
 
   // Level transition (if this evolution triggers a level change)
   readonly levelTransition?: LevelTransition
+
+  // Evolution layer context (optional — set based on evolution level)
+  readonly systemMaintenance?: EL0SystemMaintenance  // L0: 系统完备性维护
+  readonly learningModule?: EL1LearningModule        // L1: 学习/训练
+  readonly evolutionOutput?: EL1EvolutionOutput      // L1: 进化产出
+  readonly subjectivity?: EL2SubjectivityEngine      // L2: 主体性引擎
+  readonly shengbianlun?: EL2ShengBianLunEngine      // L2: 生变论引擎
+  readonly cognitive?: EL2CognitiveEngine            // L2: 认知引擎
+  readonly coevolution?: EL2HumanAICoevolution       // L2: 人-AI协同进化
 }
 
 // ── Constitution Violation (checked exception) ────────────────
