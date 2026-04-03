@@ -38,6 +38,7 @@ export type {
   RDialectic,
   RStrength,
   RPropagation,
+  RInfoLevel,
   REdgeType,
   RDestination,
 
