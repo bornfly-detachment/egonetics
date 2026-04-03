@@ -493,17 +493,9 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
 
   it('reports failed value gates', () => {
     const tokens = scanBatch([makeInput('test')])
-    const failingGate: ValueGate = {
-      id: 'strict-gate',
-      source: 'computer_system',
-      temporal: 'static',
-      scope: 'local',
-      destination: 'V_D2_task_completion',
-      metrics: [
-        { dimension: 'v1', metricType: 'probability', currentValue: 0.1, threshold: 0.9 },
-      ],
-      onFail: 'reject',
-    }
+    const failingGate = makeGate('strict-gate', [
+      { type: 'accuracy', current: 0.1, threshold: 0.9 },
+    ], 'reject')
 
     const midIR = bind({ tokens, edges: [], gates: [failingGate] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
