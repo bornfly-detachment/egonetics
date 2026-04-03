@@ -84,7 +84,23 @@ export type {
   SCurrentState,
   StateInstruction,
 
-  // E — Evolution
+  // E — Evolution (系统的自我改造引擎)
+  EL0Trigger,
+  EL0UpdateType,
+  EL0UpdateScope,
+  EL0SystemMaintenance,
+  EL1TrainingType,
+  EL1OptimizationType,
+  EL1CapabilityType,
+  EL1LearningModule,
+  EL1OutputType,
+  EL1EvolutionOutput,
+  EL2SubjectivityEngine,
+  EL2ShengBianLunEngine,
+  EL2CognitiveEngine,
+  EL2HumanAICoevolution,
+
+  // E Infrastructure (进化基础设施)
   EvolutionEvent,
   InfoLevel,
   CommLevel,
