@@ -128,14 +128,48 @@ export function getNarrowingLevel(token: PatternToken): NarrowingLevel {
 
 // ── R — Relation Edge (Parser output) ─────────────────────────
 
+/**
+ * Relation Info Level — constitutional definition of R.
+ *
+ * Boundary criterion: can it be computed WITHOUT human cognition or AI?
+ *
+ * L0_logic: Pure logical relations. Computable deterministically.
+ *   - 0/1 logic, math, physics laws (1+1=2, gravity)
+ *   - Conditions determined → result unique
+ *   - Independent of consciousness/will
+ *   - If ambiguity in cognition/interpretation exists → belongs to L1
+ *
+ * L1_conditional: Conditional + temporal relations. Too complex to enumerate.
+ *   - Conditions, time, evolution, causality
+ *   - Causality = conditions + time composition
+ *   - A→B appears causal but B may depend on C, D... (requires experiment)
+ *   - Boundary with L0: conditions too complex for exhaustive computation
+ *   - Requires human/AI to distinguish and validate
+ *
+ * L2_existential: Existential relations. Requires narrative for legitimacy.
+ *   - Subjectivity, cognition, meaning, narrative
+ *   - Subject's practice in spacetime needs narrative for value
+ *   - Dialectics: oppose/unify, controllable/uncontrollable, finite/infinite
+ *   - Contains metaphysical + lived experience elements
+ *
+ * Maps 1:1 to InfoLevel (P's L0/L1/L2) and PermissionTier hierarchy.
+ */
+export type RInfoLevel = 'L0_logic' | 'L1_conditional' | 'L2_existential'
+
 export type RDirection = 'none' | 'one_way' | 'bidirectional'
 export type RCertainty = 'deterministic' | 'probabilistic' | 'fuzzy'
 export type RTemporal = 'simultaneous' | 'sequential' | 'cyclic'
 
+/** L0 — pure logic (computable without human/AI) */
 export type RLogic = 'deductive' | 'inductive' | 'analogical'
+
+/** L1 — conditional/temporal (needs human/AI for complex enumeration) */
 export type RCausal = 'direct' | 'indirect' | 'counterfactual'
 export type RProcess = 'conditional_transform' | 'quantitative_accumulation' | 'qualitative_emergence'
+
+/** L2 — existential (requires narrative, subjectivity, dialectics) */
 export type RDialectic = 'oppose' | 'transform' | 'unify'
+
 export type RStrength = 'positive' | 'negative'
 
 /** Propagation direction — how changes travel along this edge */
@@ -163,12 +197,18 @@ export interface RelationEdge {
   readonly sourceNode: NodeId
   readonly targetNode: NodeId
 
+  // Relation level — constitutional classification
+  readonly infoLevel: RInfoLevel
+
   // Physical attributes
   readonly direction: RDirection
   readonly certainty: RCertainty
   readonly temporal: RTemporal
 
-  // Semantic nature (at least one should be set)
+  // Semantic nature — which level's operators are used
+  // L0: logic is set
+  // L1: causal and/or process is set
+  // L2: dialectic is set
   readonly logic?: RLogic
   readonly causal?: RCausal
   readonly process?: RProcess
