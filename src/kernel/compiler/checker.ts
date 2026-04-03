@@ -563,7 +563,6 @@ function checkValueGates(
 
 /** Infer PRVSE node type from node ID convention */
 function inferNodeType(nodeId: string): NodeType | null {
-  const id = nodeId as string
   if (id.startsWith('p-') || id.startsWith('tag-p')) return 'P'
   if (id.startsWith('r-') || id.startsWith('tag-r')) return 'R'
   if (id.startsWith('v-') || id.startsWith('tag-v')) return 'V'
