@@ -462,115 +462,141 @@
   "S": {
     "id": "tag-s",
     "name": "S — State",
-    "description": "实践状态机。节点在 7 态之间迁移。",
+    "description": "PRV构成的完备组织的运行时状态。S不是孤立状态机，是P+R+V作为整体的'此刻在做什么'。每个State状态机都是控制论——L0确定性可控，L1沿时间迭代演化，L2战略目标生命周期。S由L2战略驱动产生L1任务，L1执行反馈回传L2。",
     "children": {
-      "source": {
-        "id": "tag-s-source",
-        "name": "从哪来 Source（驱动力）",
+      "driving_force": {
+        "id": "tag-s-drive",
+        "name": "战略驱动力（L2层产生，驱动L1任务）",
         "select_mode": "single",
         "children": [
-          {
-            "id": "tag-s-s1",
-            "name": "S1 任务驱动"
-          },
-          {
-            "id": "tag-s-s2",
-            "name": "S2 生存驱动"
-          },
-          {
-            "id": "tag-s-s3",
-            "name": "S3 进化驱动"
-          },
-          {
-            "id": "tag-s-s4",
-            "name": "S4 探索驱动"
-          }
+          { "id": "tag-s-s1", "name": "S1 任务驱动（具体目标分解的执行任务）" },
+          { "id": "tag-s-s2", "name": "S2 生存驱动（系统自我维护、资源不足、健康检查）" },
+          { "id": "tag-s-s3", "name": "S3 进化驱动（系统改进自身、架构升级）" },
+          { "id": "tag-s-s4", "name": "S4 探索驱动（尝试新可能性、信息获取）" }
         ]
       },
-      "nature": {
-        "id": "tag-s-nature",
-        "name": "是什么 Nature",
+      "L0_deterministic": {
+        "id": "tag-s-l0",
+        "name": "L0 确定性控制论机器",
+        "description": "系统基础设施的运行时状态。确定性可控：输入确定→输出确定→状态转移确定。包括内核基础设施（编译器/物理引擎/图IR）、感知器（资源消耗统计）、确定性AI（有ground truth的预测任务，如人脸识别/物体检测——超过人类精度+成本优势即为L0）。",
         "children": {
-          "tier": {
-            "id": "tag-s-n-tier",
-            "name": "节点分级",
+          "runtime_states": {
+            "id": "tag-s-l0-states",
+            "name": "L0运行时状态（确定性基础设施）",
             "select_mode": "single",
             "children": [
-              {
-                "id": "tag-s-n-exec",
-                "name": "执行节点"
-              },
-              {
-                "id": "tag-s-n-research",
-                "name": "认知节点"
-              },
-              {
-                "id": "tag-s-n-update",
-                "name": "更新节点"
-              }
+              { "id": "tag-s-l0-building", "name": "构建中（初始化/编译/部署）" },
+              { "id": "tag-s-l0-running", "name": "运行中（正常服务）" },
+              { "id": "tag-s-l0-updating", "name": "更新中（版本升级/热更新）" },
+              { "id": "tag-s-l0-maintaining", "name": "维护中（例行检查/优化）" },
+              { "id": "tag-s-l0-bug", "name": "故障（异常/错误/需修复）" },
+              { "id": "tag-s-l0-blocked", "name": "阻塞（等待依赖/资源不足）" }
             ]
           },
-          "state_machine": {
-            "id": "tag-s-n-sm",
-            "name": "状态机",
-            "select_mode": "single",
+          "transition_rules": {
+            "id": "tag-s-l0-transitions",
+            "name": "L0状态转移规则",
+            "description": "确定性转移：条件满足→转移确定。编译通过→running，测试失败→bug，依赖就绪→unblock。",
             "children": [
-              {
-                "id": "tag-s-n-sm-build",
-                "name": "构建中"
-              },
-              {
-                "id": "tag-s-n-sm-trial",
-                "name": "试运行"
-              },
-              {
-                "id": "tag-s-n-sm-stable",
-                "name": "稳定运行"
-              },
-              {
-                "id": "tag-s-n-sm-bug",
-                "name": "Bug挂起"
-              },
-              {
-                "id": "tag-s-n-sm-wait",
-                "name": "等待指令"
-              },
-              {
-                "id": "tag-s-n-sm-pos",
-                "name": "正反馈迭代"
-              },
-              {
-                "id": "tag-s-n-sm-neg",
-                "name": "负反馈预警"
-              },
-              {
-                "id": "tag-s-n-sm-arch",
-                "name": "归档"
-              }
+              { "id": "tag-s-l0-tr-guard", "name": "守卫条件（V的L0规则清单必须全部通过）" },
+              { "id": "tag-s-l0-tr-reversible", "name": "可逆性标记（bug→building可逆，archived不可逆）" }
             ]
           }
         }
       },
-      "destination": {
-        "id": "tag-s-dest",
-        "name": "去哪里 Destination（触发效果）",
-        "children": [
-          {
-            "id": "tag-s-d-e1",
-            "name": "触发感知"
+      "L1_task_lifecycle": {
+        "id": "tag-s-l1",
+        "name": "L1 任务生命周期（沿时间演化的迭代执行）",
+        "description": "核心特征：任务不成功就不断反馈迭代，直到成功或耗尽资源归档。保留上下文和记录可复盘。每个L1任务由L2战略目标产生。典型案例：长周期技术调研+实现迁移、Local AI训练（上千次API调用→V0→测试→负反馈→优化→V1→继续循环）。",
+        "children": {
+          "lifecycle_states": {
+            "id": "tag-s-l1-states",
+            "name": "L1任务生命周期状态",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-s-l1-research", "name": "技术调研（调研最强算法/最佳模型/对应代码库）" },
+              { "id": "tag-s-l1-proposal", "name": "方案构建（L2确认可行后制定实施方案）" },
+              { "id": "tag-s-l1-building", "name": "构建中（资源分配+生命周期启动）" },
+              { "id": "tag-s-l1-executing", "name": "实践执行中（消耗资源运行）" },
+              { "id": "tag-s-l1-testing", "name": "V测试中（测评器验收）" },
+              { "id": "tag-s-l1-feedback", "name": "反馈迭代中（测试不通过→分析→调整方案）" },
+              { "id": "tag-s-l1-delivered", "name": "版本交付（V0/V1/V2...阶段性成果）" },
+              { "id": "tag-s-l1-suspended", "name": "挂起（等待外部依赖/资源补充/L2决策）" },
+              { "id": "tag-s-l1-archived", "name": "归档（成功完成或资源耗尽，保留上下文可复盘）" }
+            ]
           },
-          {
-            "id": "tag-s-d-e2",
-            "name": "触发执行"
+          "feedback_loop": {
+            "id": "tag-s-l1-feedback-loop",
+            "name": "反馈迭代机制",
+            "description": "L1的核心：执行→V测试→不通过→L1+L2联合分析→构建新方案→继续执行。资源约束下的迭代逼近过程。",
+            "children": [
+              { "id": "tag-s-l1-fb-positive", "name": "正反馈（V测试通过/指标提升→继续推进）" },
+              { "id": "tag-s-l1-fb-negative", "name": "负反馈（V测试不通过→分析原因：实践问题？方案问题？数据量？训练方式？）" },
+              { "id": "tag-s-l1-fb-version", "name": "版本迭代记录（V0→V1→V2，每次迭代的方案变更和效果delta）" },
+              { "id": "tag-s-l1-fb-circuit-breaker", "name": "熔断机制（连续N次负反馈/资源耗尽→强制归档或上报L2）" }
+            ]
           },
-          {
-            "id": "tag-s-d-e3",
-            "name": "触发进化记录"
-          },
-          {
-            "id": "tag-s-d-e4",
-            "name": "触发通信"
+          "resource_binding": {
+            "id": "tag-s-l1-resource",
+            "name": "资源绑定",
+            "description": "L1任务启动时由V的L1生命周期管理分配资源预算，运行时由感知器监控消耗。",
+            "children": [
+              { "id": "tag-s-l1-res-budget", "name": "资源预算（关联V的VL1ResourceBudget）" },
+              { "id": "tag-s-l1-res-monitor", "name": "消耗监控（关联V的VL1Perceiver）" }
+            ]
           }
+        }
+      },
+      "L2_strategic_lifecycle": {
+        "id": "tag-s-l2",
+        "name": "L2 战略目标生命周期",
+        "description": "比L1更长周期。系统在运行就在思考进化，有资源就会使用。L1任务都在L2战略目标下产生。有主体性叙事、系统升级目标、外部信息获取目标。战略目标→短期目标→L1任务调度。",
+        "children": {
+          "strategic_states": {
+            "id": "tag-s-l2-states",
+            "name": "L2战略目标状态",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-s-l2-active", "name": "正反馈推进（天时地利人和，增加投入和资源调度）" },
+              { "id": "tag-s-l2-shelved", "name": "搁置+学习器（时机不成熟，保留信息监听，持续评估条件概率）" },
+              { "id": "tag-s-l2-resistance", "name": "阻力判断（方向阻力极大，判断当下不可行）" },
+              { "id": "tag-s-l2-decomposing", "name": "拆解下发（战略目标→短期目标→L1任务调度）" },
+              { "id": "tag-s-l2-achieved", "name": "已达成（战略目标实现）" },
+              { "id": "tag-s-l2-abandoned", "name": "放弃（长期评估后确认不可行/不再需要）" }
+            ]
+          },
+          "learner": {
+            "id": "tag-s-l2-learner",
+            "name": "搁置目标的学习器",
+            "description": "搁置目标保留被动信息采集能力。监听外部信息源，寻找对目标重启有价值的信息，评估条件概率，提升置信度，达到阈值则建议重启。",
+            "children": [
+              { "id": "tag-s-l2-learn-monitor", "name": "信息监听源（外部信息→判断对搁置目标的信息量）" },
+              { "id": "tag-s-l2-learn-prob", "name": "条件概率评估（该信息对目标重启的条件概率）" },
+              { "id": "tag-s-l2-learn-confidence", "name": "置信度累积（持续累积，超过阈值建议重启）" }
+            ]
+          },
+          "goal_decomposition": {
+            "id": "tag-s-l2-decompose",
+            "name": "目标分解与任务调度",
+            "description": "L2战略目标按关系(R)做划分，分解为短期目标，再分解为L1任务。关联关系决定优先级和依赖。",
+            "children": [
+              { "id": "tag-s-l2-dec-strategic", "name": "战略目标（长期，主体性叙事驱动）" },
+              { "id": "tag-s-l2-dec-shortterm", "name": "短期目标（战略目标的阶段分解）" },
+              { "id": "tag-s-l2-dec-task", "name": "L1任务产生（具体可执行的任务实例）" }
+            ]
+          }
+        }
+      },
+      "effects": {
+        "id": "tag-s-effects",
+        "name": "状态转移效果（跨层触发）",
+        "description": "状态转移产生的副作用，驱动系统其他部分响应。",
+        "children": [
+          { "id": "tag-s-eff-perception", "name": "触发感知（V的Perceiver更新）" },
+          { "id": "tag-s-eff-execution", "name": "触发执行（启动下游L0/L1任务）" },
+          { "id": "tag-s-eff-evolution", "name": "触发进化记录（E记录状态变更）" },
+          { "id": "tag-s-eff-communication", "name": "触发通信（通知相关节点）" },
+          { "id": "tag-s-eff-escalate", "name": "触发上报（L1→L2，需要战略决策）" }
         ]
       }
     }
