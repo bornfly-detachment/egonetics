@@ -594,39 +594,154 @@ export function checkGate(gate: ValueGate): GateResult {
   return { passed: false, gate, failures, action: gate.onFail }
 }
 
-// ── S — State Instruction (Codegen output) ────────────────────
+// ── S — State (PRV构成的完备组织的运行时状态) ─────────────────
+//
+// S 不是孤立状态机，是 P+R+V 作为整体的"此刻在做什么"。
+// 每个 State 状态机都是控制论：
+//   L0 确定性可控，L1 沿时间迭代演化，L2 战略目标生命周期。
+// S 由 L2 战略驱动产生 L1 任务，L1 执行反馈回传 L2。
 
-export type SSource =
-  | 'S1_task_driven'
-  | 'S2_survival_driven'
-  | 'S3_evolution_driven'
-  | 'S4_exploration_driven'
+/** 战略驱动力 — L2层产生，驱动L1任务 */
+export type SDrivingForce =
+  | 'S1_task_driven'        // 具体目标分解的执行任务
+  | 'S2_survival_driven'    // 系统自我维护、资源不足、健康检查
+  | 'S3_evolution_driven'   // 系统改进自身、架构升级
+  | 'S4_exploration_driven' // 尝试新可能性、信息获取
 
-export type SNodeTier = 'execution' | 'research' | 'update'
+// ── L0 确定性控制论机器 ──────────────────────────────────────
 
-export type SStateMachine =
-  | 'building'
-  | 'trial'
-  | 'stable'
-  | 'bug_suspended'
-  | 'waiting'
-  | 'positive_loop'
-  | 'negative_loop'
-  | 'archived'
+/**
+ * L0 运行时状态 — 确定性基础设施。
+ * 输入确定 → 输出确定 → 状态转移确定。
+ * 包括：内核（编译器/物理引擎/图IR）、感知器、确定性AI。
+ */
+export type SL0RuntimeState =
+  | 'building'     // 初始化/编译/部署
+  | 'running'      // 正常服务
+  | 'updating'     // 版本升级/热更新
+  | 'maintaining'  // 例行检查/优化
+  | 'bug'          // 故障/异常/需修复
+  | 'blocked'      // 等待依赖/资源不足
 
+// ── L1 任务生命周期 ─────────────────────────────────────────
+
+/**
+ * L1 任务生命周期状态 — 沿时间演化的迭代执行。
+ * 核心特征：任务不成功就不断反馈迭代，直到成功或耗尽资源归档。
+ * 每个 L1 任务由 L2 战略目标产生。
+ */
+export type SL1TaskState =
+  | 'research'     // 技术调研（最强算法/最佳模型/代码库分析）
+  | 'proposal'     // 方案构建（L2确认可行后制定实施方案）
+  | 'building'     // 构建中（资源分配+生命周期启动）
+  | 'executing'    // 实践执行中（消耗资源运行）
+  | 'testing'      // V测试中（测评器验收）
+  | 'feedback'     // 反馈迭代中（测试不通过→分析→调整方案）
+  | 'delivered'    // 版本交付（V0/V1/V2...阶段性成果）
+  | 'suspended'    // 挂起（等待外部依赖/资源补充/L2决策）
+  | 'archived'     // 归档（成功完成或资源耗尽，保留上下文可复盘）
+
+/** 反馈迭代记录 — L1核心：执行→测试→分析→调整→继续 */
+export interface SL1FeedbackRecord {
+  readonly version: string               // V0, V1, V2...
+  readonly testResult: 'passed' | 'failed'
+  readonly analysis?: string              // 失败分析：实践问题？方案问题？数据量？训练方式？
+  readonly delta?: string                 // 效果变化描述（如"提升50%但未达预期"）
+  readonly adjustedProposal?: string      // 调整后的方案
+  readonly resourceConsumed: number       // 本轮消耗资源量
+  readonly timestamp: number
+}
+
+/** 反馈循环状态 */
+export interface SL1FeedbackLoop {
+  readonly direction: 'positive' | 'negative' | 'stagnant'
+  readonly records: readonly SL1FeedbackRecord[]
+  readonly consecutiveFailures: number    // 连续失败次数（熔断判断用）
+  readonly circuitBreakerThreshold: number // 连续失败N次→强制归档或上报L2
+}
+
+// ── L2 战略目标生命周期 ──────────────────────────────────────
+
+/**
+ * L2 战略目标状态 — 比L1更长周期。
+ * 系统在运行就在思考进化，有资源就会使用。
+ * L1 任务都在 L2 战略目标下产生。
+ */
+export type SL2StrategicState =
+  | 'active'        // 正反馈推进（天时地利人和，增加投入和资源调度）
+  | 'shelved'       // 搁置+学习器（时机不成熟，保留信息监听）
+  | 'resistance'    // 阻力判断（方向阻力极大，判断当下不可行）
+  | 'decomposing'   // 拆解下发（战略→短期→L1任务调度）
+  | 'achieved'      // 已达成
+  | 'abandoned'     // 放弃（长期评估后确认不可行/不再需要）
+
+/**
+ * 搁置目标的学习器 — 被动信息采集 + 条件概率评估。
+ * 监听外部信息源，寻找对目标重启有价值的信息，
+ * 评估条件概率，累积置信度，达到阈值则建议重启。
+ */
+export interface SL2Learner {
+  readonly monitorSources: readonly string[]  // 监听的外部信息源
+  readonly confidence: number                  // 当前置信度 [0, 1]
+  readonly restartThreshold: number            // 重启阈值
+  readonly lastUpdate: number                  // 最后更新时间戳
+  readonly signals: readonly SL2LearnerSignal[] // 累积的信号
+}
+
+export interface SL2LearnerSignal {
+  readonly source: string
+  readonly content: string
+  readonly conditionalProbability: number  // 对目标重启的条件概率
+  readonly informationValue: number        // 信息量
+  readonly timestamp: number
+}
+
+/** 目标分解层级 */
+export type SL2GoalLevel = 'strategic' | 'short_term' | 'task'
+
+export interface SL2GoalDecomposition {
+  readonly level: SL2GoalLevel
+  readonly parentGoalId?: string           // 上级目标
+  readonly childTaskIds: readonly string[] // 分解出的L1任务
+}
+
+// ── State Effect (状态转移效果) ──────────────────────────────
+
+/** 状态转移产生的副作用，驱动系统其他部分响应 */
 export type SEffect =
-  | 'trigger_perception'
-  | 'trigger_execution'
-  | 'trigger_evolution'
-  | 'trigger_communication'
+  | 'trigger_perception'     // V的Perceiver更新
+  | 'trigger_execution'      // 启动下游L0/L1任务
+  | 'trigger_evolution'      // E记录状态变更
+  | 'trigger_communication'  // 通知相关节点
+  | 'trigger_escalate'       // L1→L2，需要战略决策
 
+// ── State Level (统一分层) ───────────────────────────────────
+
+/** 状态所属层级 */
+export type SLevel = 'L0' | 'L1' | 'L2'
+
+/** 统一的状态值 — 根据 level 确定具体状态类型 */
+export type SCurrentState = SL0RuntimeState | SL1TaskState | SL2StrategicState
+
+// ── StateInstruction (Codegen output) ────────────────────────
+
+/**
+ * StateInstruction — 状态转移指令。
+ * 由 checker 生成，emitter 转为 kernel Patch。
+ *
+ * 守卫条件包括：V gate + 前置状态条件 + 时间约束 + 依赖关系。
+ */
 export interface StateInstruction {
-  readonly source: SSource
-  readonly nodeTier: SNodeTier
-  readonly currentState: SStateMachine
-  readonly targetState: SStateMachine
-  readonly guards: readonly ValueGate[]  // all must pass
-  readonly effects: readonly SEffect[]   // triggered on success
+  readonly source: SDrivingForce
+  readonly level: SLevel
+  readonly currentState: SCurrentState
+  readonly targetState: SCurrentState
+  readonly guards: readonly ValueGate[]           // V gates — all must pass
+  readonly preconditions: readonly string[]        // 前置条件（其他节点需到达的状态）
+  readonly effects: readonly SEffect[]             // 转移成功后触发
+  readonly reversible: boolean                     // 是否可逆转移
+  readonly feedbackLoop?: SL1FeedbackLoop          // L1任务的反馈循环状态
+  readonly learner?: SL2Learner                    // L2搁置目标的学习器
 }
 
 // ── E — Evolution Event (Runtime output) ──────────────────────
