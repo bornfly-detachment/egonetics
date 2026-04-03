@@ -151,7 +151,7 @@ const CONSTITUTION_RULES: readonly ConstitutionRuleSpec[] = [
   {
     id: 'const-002',
     text: 'Rule-type patterns require T1+ permission to create',
-    permissionRequired: 'T1_minimax',
+    permissionRequired: 'T1',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'rule',
   },
   {
@@ -163,7 +163,7 @@ const CONSTITUTION_RULES: readonly ConstitutionRuleSpec[] = [
   {
     id: 'const-004',
     text: 'Narrative patterns are L2 subjective — always require verification',
-    permissionRequired: 'T1_minimax',
+    permissionRequired: 'T1',
     appliesTo: (t) => isResolved(t.semantic) && t.semantic.value === 'narrative',
   },
   {
