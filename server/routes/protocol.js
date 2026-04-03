@@ -73,13 +73,13 @@ exports.init = (db) => {
       })
     }
 
-    // 如果更新 anchor_tag_id，校验引用存在
+    // 如果更新 anchor_tag_id，校验引用存在（从 JSON 文件查找）
     if (req.body.anchor_tag_id) {
-      db.get('SELECT id FROM tag_trees WHERE id = ?', [req.body.anchor_tag_id], (err, tag) => {
-        if (err) return res.status(500).json({ error: err.message })
-        if (!tag) return res.status(400).json({ error: `anchor_tag_id "${req.body.anchor_tag_id}" does not exist in tag_trees` })
-        doUpdate()
-      })
+      const { readTree, findById } = require('./tags')
+      const tagTree = readTree()
+      const tag = findById(tagTree, req.body.anchor_tag_id)
+      if (!tag) return res.status(400).json({ error: `anchor_tag_id "${req.body.anchor_tag_id}" does not exist in tag-tree` })
+      doUpdate()
     } else {
       doUpdate()
     }
