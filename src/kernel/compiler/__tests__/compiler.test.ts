@@ -590,17 +590,9 @@ describe('compile — full pipeline', () => {
   it('compiles with value gates', () => {
     const result = compile({
       inputs: [makeInput('execute task')],
-      gates: [{
-        id: 'quality-gate',
-        source: 'computer_system',
-        temporal: 'static',
-        scope: 'local',
-        destination: 'V_D2_task_completion',
-        metrics: [
-          { dimension: 'v1', metricType: 'probability', currentValue: 0.95, threshold: 0.8 },
-        ],
-        onFail: 'reject',
-      }],
+      gates: [makeGate('quality-gate', [
+        { type: 'binary', current: 0.95, threshold: 0.8 },
+      ])],
       actor: 'T1',
       infoLevel: 'L1_objective_law',
     })
@@ -611,17 +603,9 @@ describe('compile — full pipeline', () => {
   it('rejects when value gate fails', () => {
     const result = compile({
       inputs: [makeInput('execute task')],
-      gates: [{
-        id: 'strict-gate',
-        source: 'computer_system',
-        temporal: 'static',
-        scope: 'local',
-        destination: 'V_D2_task_completion',
-        metrics: [
-          { dimension: 'v1', metricType: 'probability', currentValue: 0.1, threshold: 0.9 },
-        ],
-        onFail: 'reject',
-      }],
+      gates: [makeGate('strict-gate', [
+        { type: 'accuracy', current: 0.1, threshold: 0.9 },
+      ], 'reject')],
       actor: 'T1',
       infoLevel: 'L1_objective_law',
     })
