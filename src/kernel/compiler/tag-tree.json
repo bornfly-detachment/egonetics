@@ -321,7 +321,9 @@
               { "id": "tag-v-l0-counter", "name": "计数器（执行/错误/调用次数）" },
               { "id": "tag-v-l0-timer", "name": "计时器（响应/执行/超时）" },
               { "id": "tag-v-l0-resource", "name": "资源消耗（Token/内存/存储/API成本）" },
-              { "id": "tag-v-l0-binary", "name": "二值判断（通过/不通过）" }
+              { "id": "tag-v-l0-binary", "name": "二值判断（通过/不通过）" },
+              { "id": "tag-v-l0-roi", "name": "投入产出比（ROI = output_value / input_cost）" },
+              { "id": "tag-v-l0-marginal", "name": "边际收益（每多投入一单位资源的产出增量，趋近0则该停）" }
             ]
           },
           "rule_checklist": {
