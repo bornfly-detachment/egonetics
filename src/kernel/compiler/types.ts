@@ -336,7 +336,12 @@ export type CommLevel = 'L0_descriptive' | 'L1_request' | 'L2_control'
 export type ResourceTier = 'T0' | 'T1' | 'T2'
 
 /** Permission tier — who is allowed */
-export type PermissionTier = 'T0_qwen' | 'T1_minimax' | 'T2_claude' | 'T3_creator'
+/**
+ * Permission tier — abstract capability levels, NOT bound to specific models.
+ * T0 = perception/signal, T1 = execution, T2 = reasoning, T3 = constitutional authority.
+ * Which model/agent fills each tier is a runtime binding, not a compiler concern.
+ */
+export type PermissionTier = 'T0' | 'T1' | 'T2' | 'T3'
 
 export type MutationType = 'create' | 'update' | 'delete' | 'transition'
 
