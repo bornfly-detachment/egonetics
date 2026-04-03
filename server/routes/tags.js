@@ -1,258 +1,305 @@
 /**
  * routes/tags.js
- * 标签语义树 CRUD — 存储在 pages.db 的 tag_trees 表
+ * 标签语义树 CRUD — 基于 JSON 文件 (src/kernel/compiler/tag-tree.json)
  *
- * GET    /api/tag-trees                    获取完整标签树（嵌套 JSON）
- * POST   /api/tag-trees                    新建根节点 { name, color }
- * POST   /api/tag-trees/:id/children       在指定节点下新建子节点 { name, color }
- * PATCH  /api/tag-trees/:id                更新节点 { name?, color? }
- * DELETE /api/tag-trees/:id                删除节点及其所有子孙（CASCADE）
- * POST   /api/tag-trees/:id/move           移动节点 { newParentId: string|null, position: number }
+ * GET    /api/tag-trees                    获取完整标签树
+ * POST   /api/tag-trees/:id/children       在指定节点下新建子节点 { name, ... }
+ * PATCH  /api/tag-trees/:id                更新节点字段
+ * DELETE /api/tag-trees/:id                删除节点及其所有子孙
+ * POST   /api/tag-trees/:id/move           移动节点 { newParentId, position }
+ *
+ * prvse-classifications CRUD 保持不变（独立 DB 表）
  */
 
-const express   = require('express')
-const router    = express.Router()
+const express = require('express')
+const router  = express.Router()
+const fs      = require('fs')
+const path    = require('path')
 const { pagesDb } = require('../db')
 
-// ── 工具 ──────────────────────────────────────────────────────
+// ── JSON 文件路径 ─────────────────────────────────────────────
+const TAG_TREE_PATH = path.resolve(__dirname, '../../src/kernel/compiler/tag-tree.json')
+
+// ── 读写 JSON ─────────────────────────────────────────────────
+
+function readTree() {
+  const raw = fs.readFileSync(TAG_TREE_PATH, 'utf-8')
+  return JSON.parse(raw)
+}
+
+function writeTree(tree) {
+  fs.writeFileSync(TAG_TREE_PATH, JSON.stringify(tree, null, 2) + '\n', 'utf-8')
+}
+
+// ── 递归查找/遍历 ─────────────────────────────────────────────
+
+/**
+ * 在嵌套 JSON 中按 id 查找节点。
+ * 返回 { node, parent, key } 或 null。
+ * parent 是包含该节点的对象/数组，key 是在 parent 中的键/索引。
+ */
+function findById(obj, targetId, parent = null, key = null) {
+  if (obj == null || typeof obj !== 'object') return null
+
+  // 当前对象本身有 id 匹配
+  if (obj.id === targetId) return { node: obj, parent, key }
+
+  // 遍历 children（数组或对象）
+  if (Array.isArray(obj.children)) {
+    for (let i = 0; i < obj.children.length; i++) {
+      const found = findById(obj.children[i], targetId, obj.children, i)
+      if (found) return found
+    }
+  } else if (obj.children && typeof obj.children === 'object') {
+    for (const k of Object.keys(obj.children)) {
+      const found = findById(obj.children[k], targetId, obj.children, k)
+      if (found) return found
+    }
+  }
+
+  // 遍历顶层 PRVSE 键
+  for (const k of Object.keys(obj)) {
+    if (k.startsWith('$') || k === 'id' || k === 'name' || k === 'description' ||
+        k === 'children' || k === 'select_mode' || k === 'color') continue
+    const val = obj[k]
+    if (val && typeof val === 'object') {
+      const found = findById(val, targetId, obj, k)
+      if (found) return found
+    }
+  }
+
+  return null
+}
+
+/**
+ * 收集节点及所有子孙的 ID 列表。
+ */
+function collectDescendantIds(node) {
+  const ids = []
+  if (node.id) ids.push(node.id)
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) ids.push(...collectDescendantIds(child))
+  } else if (node.children && typeof node.children === 'object') {
+    for (const child of Object.values(node.children)) {
+      if (child && typeof child === 'object') ids.push(...collectDescendantIds(child))
+    }
+  }
+  return ids
+}
+
+/**
+ * 将嵌套 JSON 展开为扁平数组（供 API 返回和 prompt 使用）。
+ */
+function flattenTree(obj, depth = 0, result = []) {
+  if (obj == null || typeof obj !== 'object') return result
+  if (obj.id) {
+    result.push({
+      id: obj.id,
+      name: obj.name || '',
+      description: obj.description || '',
+      select_mode: obj.select_mode || 'multi',
+      depth,
+    })
+  }
+  if (Array.isArray(obj.children)) {
+    for (const child of obj.children) flattenTree(child, depth + 1, result)
+  } else if (obj.children && typeof obj.children === 'object') {
+    for (const child of Object.values(obj.children)) {
+      if (child && typeof child === 'object') flattenTree(child, depth + 1, result)
+    }
+  }
+  return result
+}
 
 function genId() {
   return `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
-/** 从 DB 行数组重建嵌套树 */
-function buildTree(rows) {
-  const map = {}
-  for (const r of rows) {
-    map[r.id] = { id: r.id, name: r.name, color: r.color, select_mode: r.select_mode ?? 'multi', _parent: r.parent_id }
-  }
-  const roots = []
-  for (const r of rows) {
-    const node = map[r.id]
-    if (r.parent_id && map[r.parent_id]) {
-      const parent = map[r.parent_id]
-      if (!parent.children) parent.children = []
-      parent.children.push(node)
-    } else {
-      roots.push(node)
-    }
-  }
-  // 清理内部字段
-  function clean(node) {
-    delete node._parent
-    if (node.children) node.children.forEach(clean)
-  }
-  roots.forEach(clean)
-  return roots
-}
-
-/** 获取同父节点下已排序的兄弟列表，用于计算插入位置 */
-function getSiblings(parentId, cb) {
-  const sql = parentId
-    ? 'SELECT id, sort_order FROM tag_trees WHERE parent_id = ? ORDER BY sort_order'
-    : 'SELECT id, sort_order FROM tag_trees WHERE parent_id IS NULL ORDER BY sort_order'
-  const params = parentId ? [parentId] : []
-  pagesDb.all(sql, params, cb)
-}
-
-/** 在 position 处计算新 sort_order（兄弟列表已排序） */
-function calcSortOrder(siblings, position) {
-  const n = siblings.length
-  if (n === 0) return 0
-  const pos = position != null ? Math.min(position, n) : n
-  if (pos === 0) return siblings[0].sort_order - 1
-  if (pos >= n)  return siblings[n - 1].sort_order + 1
-  return (siblings[pos - 1].sort_order + siblings[pos].sort_order) / 2
-}
-
 // ── 路由 ──────────────────────────────────────────────────────
 
-// GET /api/tag-trees
-router.get('/tag-trees', (req, res) => {
-  pagesDb.all('SELECT id, parent_id, name, color, select_mode FROM tag_trees ORDER BY sort_order', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message })
-    res.json(buildTree(rows))
-  })
+// GET /api/tag-trees — 返回完整 JSON 树
+router.get('/tag-trees', (_req, res) => {
+  try {
+    const tree = readTree()
+    res.json(tree)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
-// POST /api/tag-trees  — 新建根节点
-router.post('/tag-trees', (req, res) => {
-  const { name, color = '#6b7280', position, select_mode = 'multi' } = req.body
-  if (!name) return res.status(400).json({ error: 'name is required' })
-  const id = genId()
-  getSiblings(null, (err, siblings) => {
-    if (err) return res.status(500).json({ error: err.message })
-    const sortOrder = calcSortOrder(siblings, position)
-    pagesDb.run(
-      'INSERT INTO tag_trees (id, parent_id, name, color, sort_order, select_mode) VALUES (?,NULL,?,?,?,?)',
-      [id, name, color, sortOrder, select_mode],
-      function(e) {
-        if (e) return res.status(500).json({ error: e.message })
-        res.status(201).json({ id, name, color, select_mode })
-      }
-    )
-  })
+// GET /api/tag-trees/flat — 返回扁平数组（供 prompt / 搜索使用）
+router.get('/tag-trees/flat', (_req, res) => {
+  try {
+    const tree = readTree()
+    const flat = []
+    for (const key of ['P', 'R', 'V', 'S', 'E']) {
+      if (tree[key]) flattenTree(tree[key], 0, flat)
+    }
+    res.json(flat)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
-// POST /api/tag-trees/:id/children  — 新建子节点
+// POST /api/tag-trees/:id/children — 在指定节点下新建子节点
 router.post('/tag-trees/:id/children', (req, res) => {
   const parentId = req.params.id
-  const { name, color = '#6b7280', position, select_mode = 'multi' } = req.body
+  const { name, id: customId, description, select_mode } = req.body
   if (!name) return res.status(400).json({ error: 'name is required' })
 
-  pagesDb.get('SELECT id FROM tag_trees WHERE id = ?', [parentId], (err, row) => {
-    if (err)  return res.status(500).json({ error: err.message })
-    if (!row) return res.status(404).json({ error: 'parent not found' })
+  try {
+    const tree = readTree()
+    const found = findById(tree, parentId)
+    if (!found) return res.status(404).json({ error: 'parent not found' })
 
-    const id = genId()
-    getSiblings(parentId, (e2, siblings) => {
-      if (e2) return res.status(500).json({ error: e2.message })
-      const sortOrder = calcSortOrder(siblings, position)
-      pagesDb.run(
-        'INSERT INTO tag_trees (id, parent_id, name, color, sort_order, select_mode) VALUES (?,?,?,?,?,?)',
-        [id, parentId, name, color, sortOrder, select_mode],
-        function(e3) {
-          if (e3) return res.status(500).json({ error: e3.message })
-          res.status(201).json({ id, name, color, select_mode })
-        }
-      )
-    })
-  })
+    const newNode = { id: customId || genId(), name }
+    if (description) newNode.description = description
+    if (select_mode) newNode.select_mode = select_mode
+
+    const parent = found.node
+    if (Array.isArray(parent.children)) {
+      parent.children.push(newNode)
+    } else if (parent.children && typeof parent.children === 'object') {
+      // object children — use id as key
+      parent.children[newNode.id] = newNode
+    } else {
+      // no children yet — create array
+      parent.children = [newNode]
+    }
+
+    writeTree(tree)
+    res.status(201).json(newNode)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
-// PATCH /api/tag-trees/:id  — 更新名称、颜色或选择模式
+// PATCH /api/tag-trees/:id — 更新节点字段
 router.patch('/tag-trees/:id', (req, res) => {
-  const { name, color, select_mode } = req.body
-  const sets   = []
-  const params = []
-  if (name        !== undefined) { sets.push('name = ?');        params.push(name) }
-  if (color       !== undefined) { sets.push('color = ?');       params.push(color) }
-  if (select_mode !== undefined) { sets.push('select_mode = ?'); params.push(select_mode) }
-  if (!sets.length) return res.status(400).json({ error: 'nothing to update' })
-  params.push(req.params.id)
-  pagesDb.run(`UPDATE tag_trees SET ${sets.join(', ')} WHERE id = ?`, params, function(err) {
-    if (err)            return res.status(500).json({ error: err.message })
-    if (!this.changes)  return res.status(404).json({ error: 'tag not found' })
+  const { name, description, select_mode } = req.body
+  if (name === undefined && description === undefined && select_mode === undefined) {
+    return res.status(400).json({ error: 'nothing to update' })
+  }
+
+  try {
+    const tree = readTree()
+    const found = findById(tree, req.params.id)
+    if (!found) return res.status(404).json({ error: 'tag not found' })
+
+    const node = found.node
+    if (name !== undefined) node.name = name
+    if (description !== undefined) node.description = description
+    if (select_mode !== undefined) node.select_mode = select_mode
+
+    writeTree(tree)
     res.json({ ok: true })
-  })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
-// DELETE /api/tag-trees/:id  — 删除节点及子孙（CASCADE 自动处理）
-// 防护：如果节点被 hm_protocol.anchor_tag_id 引用，阻止删除
+// DELETE /api/tag-trees/:id — 删除节点及其所有子孙
 router.delete('/tag-trees/:id', (req, res) => {
   const tagId = req.params.id
 
-  // 收集该节点及所有子孙 ID（CASCADE 会删除的范围）
-  function collectDescendants(rootId, cb) {
-    const ids = [rootId]
-    function walk(parentId) {
-      pagesDb.all('SELECT id FROM tag_trees WHERE parent_id = ?', [parentId], (err, rows) => {
-        if (err) return cb(err)
-        if (!rows.length) return cb(null, ids)
-        let pending = rows.length
-        for (const r of rows) {
-          ids.push(r.id)
-          walk(r.id)
-          if (--pending === 0) cb(null, ids)
-        }
-      })
-    }
-    walk(rootId)
+  // 禁止删除 PRVSE 五大根节点
+  if (['tag-p', 'tag-r', 'tag-v', 'tag-s', 'tag-e'].includes(tagId)) {
+    return res.status(400).json({ error: 'cannot delete PRVSE root nodes' })
   }
 
-  collectDescendants(tagId, (err, allIds) => {
-    if (err) return res.status(500).json({ error: err.message })
+  try {
+    const tree = readTree()
+    const found = findById(tree, tagId)
+    if (!found) return res.status(404).json({ error: 'tag not found' })
 
-    // 检查是否有 protocol 规则引用这些节点
+    // 收集将被删除的所有 ID，检查 protocol 引用
+    const allIds = collectDescendantIds(found.node)
     const placeholders = allIds.map(() => '?').join(',')
+
     pagesDb.all(
       `SELECT id, category, substr(human_char, 1, 60) as hc, anchor_tag_id
        FROM hm_protocol WHERE anchor_tag_id IN (${placeholders})`,
       allIds,
-      (e2, refs) => {
-        if (e2) return res.status(500).json({ error: e2.message })
-        if (refs.length > 0) {
+      (err, refs) => {
+        if (err) return res.status(500).json({ error: err.message })
+        if (refs && refs.length > 0) {
           return res.status(409).json({
             error: `该节点被 ${refs.length} 条协议规则引用，请先解除锚定`,
             referenced_by: refs.map(r => ({ id: r.id, category: r.category, human_char: r.hc }))
           })
         }
 
-        pagesDb.run('DELETE FROM tag_trees WHERE id = ?', [tagId], function(e3) {
-          if (e3)           return res.status(500).json({ error: e3.message })
-          if (!this.changes) return res.status(404).json({ error: 'tag not found' })
-          res.json({ ok: true })
-        })
+        // 从父容器中移除
+        const { parent, key } = found
+        if (Array.isArray(parent)) {
+          parent.splice(key, 1)
+        } else if (parent && typeof parent === 'object') {
+          delete parent[key]
+        }
+
+        writeTree(tree)
+        res.json({ ok: true })
       }
     )
-  })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
-// POST /api/tag-trees/:id/move  — 移动到新父节点
+// POST /api/tag-trees/:id/move — 移动到新父节点
 router.post('/tag-trees/:id/move', (req, res) => {
-  const { newParentId = null, position } = req.body
+  const { newParentId, position } = req.body
   const tagId = req.params.id
 
-  // 防止移动到自身或子孙（简单：检查目标父节点不在当前节点的子树中）
-  function isDescendant(ancestorId, targetId, cb) {
-    if (!targetId) return cb(null, false)
-    if (targetId === ancestorId) return cb(null, true)
-    pagesDb.get('SELECT parent_id FROM tag_trees WHERE id = ?', [targetId], (err, row) => {
-      if (err || !row) return cb(err, false)
-      isDescendant(ancestorId, row.parent_id, cb)
-    })
+  if (!newParentId) return res.status(400).json({ error: 'newParentId is required' })
+
+  try {
+    const tree = readTree()
+
+    // 找到源节点
+    const source = findById(tree, tagId)
+    if (!source) return res.status(404).json({ error: 'tag not found' })
+
+    // 找到目标父节点
+    const target = findById(tree, newParentId)
+    if (!target) return res.status(404).json({ error: 'target parent not found' })
+
+    // 防止移动到自身子树
+    const descendantIds = collectDescendantIds(source.node)
+    if (descendantIds.includes(newParentId)) {
+      return res.status(400).json({ error: 'cannot move node into its own subtree' })
+    }
+
+    // 从源父容器移除
+    const { parent: srcParent, key: srcKey } = source
+    const detached = source.node
+    if (Array.isArray(srcParent)) {
+      srcParent.splice(srcKey, 1)
+    } else if (srcParent && typeof srcParent === 'object') {
+      delete srcParent[srcKey]
+    }
+
+    // 插入目标父节点
+    const targetNode = target.node
+    if (Array.isArray(targetNode.children)) {
+      const pos = position != null ? Math.min(position, targetNode.children.length) : targetNode.children.length
+      targetNode.children.splice(pos, 0, detached)
+    } else if (targetNode.children && typeof targetNode.children === 'object') {
+      targetNode.children[detached.id] = detached
+    } else {
+      targetNode.children = [detached]
+    }
+
+    writeTree(tree)
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-
-  isDescendant(tagId, newParentId, (err, cycle) => {
-    if (err)   return res.status(500).json({ error: err.message })
-    if (cycle) return res.status(400).json({ error: 'cannot move node into its own subtree' })
-
-    // 如果 newParentId 非空，确认目标存在
-    const checkParent = newParentId
-      ? (cb) => pagesDb.get('SELECT id FROM tag_trees WHERE id = ?', [newParentId], (e, r) => {
-          if (e)  return cb(e)
-          if (!r) return cb(new Error('target parent not found'))
-          cb(null)
-        })
-      : (cb) => cb(null)
-
-    checkParent(e2 => {
-      if (e2) return res.status(404).json({ error: e2.message })
-
-      getSiblings(newParentId, (e3, siblings) => {
-        if (e3) return res.status(500).json({ error: e3.message })
-        // 移除自身（如果已在同父）
-        const filtered = siblings.filter(s => s.id !== tagId)
-        const sortOrder = calcSortOrder(filtered, position)
-
-        const parentSql = newParentId ? 'parent_id = ?' : 'parent_id = NULL'
-        const params    = newParentId ? [newParentId, sortOrder, tagId] : [sortOrder, tagId]
-        pagesDb.run(
-          `UPDATE tag_trees SET ${parentSql}, sort_order = ? WHERE id = ?`,
-          params,
-          function(e4) {
-            if (e4)           return res.status(500).json({ error: e4.message })
-            if (!this.changes) return res.status(404).json({ error: 'tag not found' })
-            res.json({ ok: true })
-          }
-        )
-      })
-    })
-  })
 })
 
 // ══════════════════════════════════════════════════════════════
-// AOP — PRVSE 三问打标 & TagTree 迁移 pipeline
+// prvse-classifications — 保持不变（独立 DB 表）
 // ══════════════════════════════════════════════════════════════
-
-function genMigId() {
-  return `mig-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-}
-function genDiffId() {
-  return `diff-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-}
-
-// ── prvse-classifications ───────────────────────────────────
 
 // GET /api/prvse-classifications?entity_id=X&entity_type=Y
 router.get('/prvse-classifications', (req, res) => {
@@ -278,7 +325,7 @@ router.get('/prvse-classifications', (req, res) => {
   )
 })
 
-// PUT /api/prvse-classifications  — upsert
+// PUT /api/prvse-classifications — upsert
 router.put('/prvse-classifications', (req, res) => {
   const { entity_id, entity_type, layer = '', from_tags = [], what_tags = [], where_tags = [], description = '',
           from_text = '', what_text = '', where_text = '' } = req.body
@@ -304,243 +351,12 @@ router.put('/prvse-classifications', (req, res) => {
   )
 })
 
-// ── tag-migrations ──────────────────────────────────────────
-
-// GET /api/tag-migrations
-router.get('/tag-migrations', (req, res) => {
-  pagesDb.all('SELECT * FROM tag_tree_migrations ORDER BY created_at DESC', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message })
-    res.json(rows)
-  })
-})
-
-// POST /api/tag-migrations
-router.post('/tag-migrations', (req, res) => {
-  const { title, description = '' } = req.body
-  if (!title) return res.status(400).json({ error: 'title is required' })
-  const id = genMigId()
-  pagesDb.run(
-    `INSERT INTO tag_tree_migrations (id, title, description) VALUES (?,?,?)`,
-    [id, title, description],
-    function(err) {
-      if (err) return res.status(500).json({ error: err.message })
-      res.status(201).json({ id, title, description, status: 'draft', affected_count: 0, applied_count: 0 })
-    }
-  )
-})
-
-// PATCH /api/tag-migrations/:id
-router.patch('/tag-migrations/:id', (req, res) => {
-  const { title, description } = req.body
-  const sets = []; const params = []
-  if (title       !== undefined) { sets.push('title = ?');       params.push(title) }
-  if (description !== undefined) { sets.push('description = ?'); params.push(description) }
-  if (!sets.length) return res.status(400).json({ error: 'nothing to update' })
-  params.push(req.params.id)
-  pagesDb.run(`UPDATE tag_tree_migrations SET ${sets.join(', ')} WHERE id = ?`, params, function(err) {
-    if (err)           return res.status(500).json({ error: err.message })
-    if (!this.changes) return res.status(404).json({ error: 'migration not found' })
-    res.json({ ok: true })
-  })
-})
-
-// DELETE /api/tag-migrations/:id
-router.delete('/tag-migrations/:id', (req, res) => {
-  pagesDb.run('DELETE FROM tag_tree_migrations WHERE id = ?', [req.params.id], function(err) {
-    if (err)           return res.status(500).json({ error: err.message })
-    if (!this.changes) return res.status(404).json({ error: 'migration not found' })
-    res.json({ ok: true })
-  })
-})
-
-// POST /api/tag-migrations/:id/run  — AI重打标（生成 Diff，待审核）
-router.post('/tag-migrations/:id/run', async (req, res) => {
-  const migId = req.params.id
-  pagesDb.get('SELECT * FROM tag_tree_migrations WHERE id = ?', [migId], async (err, mig) => {
-    if (err)  return res.status(500).json({ error: err.message })
-    if (!mig) return res.status(404).json({ error: 'migration not found' })
-
-    // 更新状态为 running
-    pagesDb.run(`UPDATE tag_tree_migrations SET status='running', started_at=datetime('now') WHERE id=?`, [migId])
-
-    // 获取所有打标记录
-    pagesDb.all('SELECT * FROM prvse_classifications', [], async (e2, entities) => {
-      if (e2) return res.status(500).json({ error: e2.message })
-
-      // 获取标签树（作为 context）
-      pagesDb.all('SELECT id, parent_id, name FROM tag_trees ORDER BY sort_order', [], async (e3, tagRows) => {
-        if (e3) return res.status(500).json({ error: e3.message })
-
-        const tagTree = buildTree(tagRows)
-        const tagTreeStr = JSON.stringify(tagTree, null, 2)
-
-        // 调用 SEAI LLM（通过内部 /api/llm/chat，需要系统级别调用）
-        const systemPrompt = `你是一个标签迁移助手。用户提供了旧标签体系和迁移规则，你需要将每个实体的旧标签按照规则重新打标。
-当前标签语义树结构：
-${tagTreeStr}
-
-迁移规则（用户描述）：
-${mig.description}
-
-对每个实体，输出 JSON 格式：
-{
-  "entity_id": "...",
-  "new_layer": "P|V|S|R",
-  "new_from_tags": ["tag_id", ...],
-  "new_what_tags": ["tag_id", ...],
-  "new_where_tags": ["tag_id", ...],
-  "confidence": 0.0-1.0
-}`
-
-        const messages = entities.map(e => ({
-          role: 'user',
-          content: `实体 ${e.entity_id} (${e.entity_type}):\n旧: layer=${e.layer}, from=${e.from_tags}, what=${e.what_tags}, where=${e.where_tags}\n描述: ${e.description}`
-        }))
-
-        // 批量调用 LLM
-        let results = []
-        try {
-          const llmRes = await fetch('http://localhost:3002/api/llm/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: [
-                { role: 'user', content: systemPrompt + '\n\n待重打标实体列表:\n' + entities.map(e =>
-                  `entity_id: ${e.entity_id}, entity_type: ${e.entity_type}, layer: ${e.layer}, ` +
-                  `from_tags: ${e.from_tags}, what_tags: ${e.what_tags}, where_tags: ${e.where_tags}, description: ${e.description}`
-                ).join('\n') }
-              ]
-            })
-          })
-          const llmData = await llmRes.json()
-          const text = llmData.content || llmData.message || ''
-          // 尝试解析 JSON 数组
-          const match = text.match(/\[[\s\S]*\]/)
-          if (match) results = JSON.parse(match[0])
-        } catch (llmErr) {
-          // AI 离线：仍然创建 Diff，但标为低置信度
-          results = entities.map(e => ({
-            entity_id: e.entity_id,
-            new_layer: e.layer,
-            new_from_tags: JSON.parse(e.from_tags || '[]'),
-            new_what_tags: JSON.parse(e.what_tags || '[]'),
-            new_where_tags: JSON.parse(e.where_tags || '[]'),
-            confidence: 0
-          }))
-        }
-
-        // 写入 Diff 记录
-        const stmt = pagesDb.prepare(
-          `INSERT OR IGNORE INTO prvse_reclassify_diffs
-           (id, migration_id, entity_id, entity_type, entity_desc,
-            old_layer, old_from_tags, old_what_tags, old_where_tags,
-            new_layer, new_from_tags, new_what_tags, new_where_tags,
-            confidence)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-        )
-
-        const entityMap = {}
-        for (const e of entities) entityMap[e.entity_id] = e
-
-        for (const r of results) {
-          const orig = entityMap[r.entity_id]
-          if (!orig) continue
-          stmt.run([
-            genDiffId(), migId, r.entity_id, orig.entity_type, orig.description,
-            orig.layer, orig.from_tags, orig.what_tags, orig.where_tags,
-            r.new_layer,
-            JSON.stringify(r.new_from_tags || []),
-            JSON.stringify(r.new_what_tags || []),
-            JSON.stringify(r.new_where_tags || []),
-            r.confidence ?? 0
-          ])
-        }
-        stmt.finalize()
-
-        pagesDb.run(
-          `UPDATE tag_tree_migrations SET status='done', affected_count=? WHERE id=?`,
-          [results.length, migId]
-        )
-
-        res.json({ ok: true, affected: results.length })
-      })
-    })
-  })
-})
-
-// GET /api/tag-migrations/:id/diffs
-router.get('/tag-migrations/:id/diffs', (req, res) => {
-  pagesDb.all(
-    'SELECT * FROM prvse_reclassify_diffs WHERE migration_id = ? ORDER BY created_at',
-    [req.params.id],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message })
-      res.json(rows.map(r => ({
-        ...r,
-        old_from_tags:  JSON.parse(r.old_from_tags  || '[]'),
-        old_what_tags:  JSON.parse(r.old_what_tags  || '[]'),
-        old_where_tags: JSON.parse(r.old_where_tags || '[]'),
-        new_from_tags:  JSON.parse(r.new_from_tags  || '[]'),
-        new_what_tags:  JSON.parse(r.new_what_tags  || '[]'),
-        new_where_tags: JSON.parse(r.new_where_tags || '[]'),
-      })))
-    }
-  )
-})
-
-// POST /api/tag-migrations/:id/diffs/:diffId/review  — approve | reject
-router.post('/tag-migrations/:id/diffs/:diffId/review', (req, res) => {
-  const { action } = req.body  // 'approve' | 'reject'
-  if (!['approve', 'reject'].includes(action))
-    return res.status(400).json({ error: 'action must be approve or reject' })
-  pagesDb.run(
-    `UPDATE prvse_reclassify_diffs SET review_status=? WHERE id=? AND migration_id=?`,
-    [action === 'approve' ? 'approved' : 'rejected', req.params.diffId, req.params.id],
-    function(err) {
-      if (err)           return res.status(500).json({ error: err.message })
-      if (!this.changes) return res.status(404).json({ error: 'diff not found' })
-      res.json({ ok: true })
-    }
-  )
-})
-
-// POST /api/tag-migrations/:id/apply  — 将 approved diffs 写回 prvse_classifications
-router.post('/tag-migrations/:id/apply', (req, res) => {
-  const migId = req.params.id
-  pagesDb.all(
-    `SELECT * FROM prvse_reclassify_diffs WHERE migration_id=? AND review_status='approved'`,
-    [migId],
-    (err, diffs) => {
-      if (err) return res.status(500).json({ error: err.message })
-
-      let applied = 0
-      const finish = () => {
-        pagesDb.run(
-          `UPDATE tag_tree_migrations SET applied_count=?, applied_at=datetime('now') WHERE id=?`,
-          [applied, migId]
-        )
-        res.json({ ok: true, applied })
-      }
-
-      if (!diffs.length) return finish()
-
-      let done = 0
-      for (const d of diffs) {
-        pagesDb.run(
-          `INSERT INTO prvse_classifications (entity_id, entity_type, layer, from_tags, what_tags, where_tags, updated_at)
-           VALUES (?,?,?,?,?,?, datetime('now'))
-           ON CONFLICT(entity_id, entity_type) DO UPDATE SET
-             layer=excluded.layer, from_tags=excluded.from_tags, what_tags=excluded.what_tags,
-             where_tags=excluded.where_tags, updated_at=excluded.updated_at`,
-          [d.entity_id, d.entity_type, d.new_layer, d.new_from_tags, d.new_what_tags, d.new_where_tags],
-          function(e) {
-            if (!e) applied++
-            if (++done === diffs.length) finish()
-          }
-        )
-      }
-    }
-  )
-})
-
-module.exports = { init: () => router }
+module.exports = {
+  init: () => router,
+  // 供其他模块使用的导出
+  readTree,
+  findById,
+  flattenTree,
+  collectDescendantIds,
+  TAG_TREE_PATH,
+}
