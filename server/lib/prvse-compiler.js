@@ -97,6 +97,7 @@ async function llmLex(content, opts = {}) {
 
   const raw = msg.content.find(c => c.type === 'text')?.text || '{}'
   const elapsed = Date.now() - startTime
+  console.log(`[compiler/lexer] raw length=${raw.length}, first100=${JSON.stringify(raw.slice(0, 100))}`)
 
   // Parse LLM response — extract JSON from possible markdown wrapping
   let parsed
@@ -112,10 +113,14 @@ async function llmLex(content, opts = {}) {
     const braceMatch = jsonStr.match(/\{[\s\S]*\}/)
     if (braceMatch) jsonStr = braceMatch[0]
 
+    // Strategy 3: if jsonStr contains | (from prompt echo), clean it
+    jsonStr = jsonStr.replace(/"\s*\|\s*"/g, '" | "')
+
     parsed = JSON.parse(jsonStr)
     console.log(`[compiler/lexer] OK: semantic=${parsed.semantic}, infoLevel=${parsed.infoLevel}`)
   } catch (parseErr) {
-    console.error(`[compiler/lexer] JSON parse failed. Raw LLM output:\n${raw.slice(0, 500)}`)
+    console.error(`[compiler/lexer] JSON parse failed: ${parseErr.message}`)
+    console.error(`[compiler/lexer] raw: ${JSON.stringify(raw.slice(0, 300))}`)
     // LLM returned unparseable output — fallback to minimal classification
     parsed = {
       physical: 'text',
