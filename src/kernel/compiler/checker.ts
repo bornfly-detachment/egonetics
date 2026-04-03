@@ -27,6 +27,7 @@ import type {
   PermissionTier,
   InfoLevel,
   REdgeType,
+  RInfoLevel,
   NarrowingLevel,
   GateResult,
   ViolationSeverity,
