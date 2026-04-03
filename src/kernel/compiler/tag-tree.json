@@ -303,20 +303,28 @@
         "id": "tag-r-l2",
         "name": "L2 存在关系（需叙事赋予价值和合法性）",
         "description": "涉及主观、认知、意义、叙事。主体在时空维度上的实践过程。辩证法：矛盾律在L0禁止A∧¬A，但在L2中可控-失控可同时为真。",
-        "children": [
-          {
-            "id": "tag-r-l2-oppose",
-            "name": "对立（根本矛盾，如可控-失控、有限-无限）"
+        "children": {
+          "narrative": {
+            "id": "tag-r-l2-narrative",
+            "name": "主体性叙事（主体沿时空演化的关系）",
+            "description": "主体在时空中的实践轨迹、自我认知演化、意义建构。叙事赋予经验以合法性和连贯性。",
+            "children": [
+              { "id": "tag-r-l2-nar-trajectory", "name": "实践轨迹（主体行动的时空序列）" },
+              { "id": "tag-r-l2-nar-identity", "name": "自我认知（主体对自身状态的理解演化）" },
+              { "id": "tag-r-l2-nar-meaning", "name": "意义建构（经验转化为叙事的过程）" }
+            ]
           },
-          {
-            "id": "tag-r-l2-transform",
-            "name": "转化（矛盾双方在条件下相互转化）"
-          },
-          {
-            "id": "tag-r-l2-unify",
-            "name": "统一（矛盾在更高层面的整合）"
+          "dialectic": {
+            "id": "tag-r-l2-dialectic",
+            "name": "矛盾关系（辩证唯物论的对立统一）",
+            "description": "矛盾是事物发展的根本动力。对立、转化、统一是矛盾关系的三个组成要素。",
+            "children": [
+              { "id": "tag-r-l2-oppose", "name": "对立（根本矛盾，如可控-失控、有限-无限）" },
+              { "id": "tag-r-l2-transform", "name": "转化（矛盾双方在条件下相互转化）" },
+              { "id": "tag-r-l2-unify", "name": "统一（矛盾在更高层面的整合）" }
+            ]
           }
-        ]
+        }
       },
       "shared_attrs": {
         "id": "tag-r-shared",
