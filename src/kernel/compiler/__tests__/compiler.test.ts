@@ -2,6 +2,7 @@
  * PRVSE Compiler — Tests
  *
  * Tests the full pipeline: Scanner → Binder → Checker → Emitter
+ * New P shape: origin, state, physical, level, communication
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -25,7 +26,7 @@ import {
 
   // Types & helpers
   resolved, unresolved, isResolved, getNarrowingLevel, checkGate,
-  type PatternToken, type PSource, type ValueGate, type RelationEdge,
+  type PatternToken, type POrigin, type ValueGate, type RelationEdge,
   type PermissionTier, type InfoLevel, type MidIR,
 } from '../index'
 
@@ -33,11 +34,13 @@ import { nodeId } from '../../types'
 
 // ── Helpers ───────────────────────────────────────────────────
 
-const userSource: PSource = { origin: 'external', type: 'user_input' }
-const internalSource: PSource = { origin: 'internal', type: 'execution_result' }
+const externalOrigin: POrigin = { domain: 'external', type: 'narrative' }
+const computeOrigin: POrigin = { domain: 'external', type: 'computable' }
+const internalOrigin: POrigin = { domain: 'internal', type: 'module_output' }
+const userOrigin: POrigin = { domain: 'internal', type: 'user_input' }
 
-function makeInput(content: string, source: PSource = userSource): ScannerInput {
-  return { content, source }
+function makeInput(content: string, origin: POrigin = externalOrigin): ScannerInput {
+  return { content, origin }
 }
 
 // ── Narrowable<T> ─────────────────────────────────────────────
@@ -60,12 +63,18 @@ describe('Narrowable', () => {
 describe('Scanner', () => {
   beforeEach(() => resetTokenCounter())
 
-  it('scans plain text input', () => {
+  it('scans plain text input with external origin', () => {
     const token = scan(makeInput('Hello world'))
     expect(token.rawContent).toBe('Hello world')
-    expect(token.source).toEqual(userSource)
+    expect(token.origin).toEqual(externalOrigin)
+    expect(token.state).toBe('external')
     expect(isResolved(token.physical)).toBe(true)
     if (isResolved(token.physical)) expect(token.physical.value).toBe('text')
+  })
+
+  it('scans with internal origin → candidate state', () => {
+    const token = scan(makeInput('test result', internalOrigin))
+    expect(token.state).toBe('candidate')
   })
 
   it('scans numeric input', () => {
@@ -78,40 +87,39 @@ describe('Scanner', () => {
     if (isResolved(token.physical)) expect(token.physical.value).toBe('code')
   })
 
-  it('detects uncertain language', () => {
-    const token = scan(makeInput('maybe this could work?'))
-    expect(isResolved(token.certainty)).toBe(true)
-    if (isResolved(token.certainty)) expect(token.certainty.value).toBe('uncertain')
+  it('scans structured data (JSON)', () => {
+    const token = scan(makeInput('{"key": "value", "num": 42}'))
+    if (isResolved(token.physical)) expect(token.physical.value).toBe('structured')
   })
 
-  it('detects certain language', () => {
-    const token = scan(makeInput('This must always be true'))
-    if (isResolved(token.certainty)) expect(token.certainty.value).toBe('certain')
+  it('classifies level for computable external source → L0_atom', () => {
+    const token = scan(makeInput('42', computeOrigin))
+    if (isResolved(token.level)) expect(token.level.value).toBe('L0_atom')
   })
 
-  it('detects incomplete content', () => {
-    const token = scan(makeInput('something...'))
-    if (isResolved(token.completeness)) expect(token.completeness.value).toBe('incomplete')
+  it('classifies level for internal module_output → L0_atom', () => {
+    const token = scan(makeInput('test passed', internalOrigin))
+    if (isResolved(token.level)) expect(token.level.value).toBe('L0_atom')
   })
 
-  it('detects complete content', () => {
-    const token = scan(makeInput('This is a complete sentence.'))
-    if (isResolved(token.completeness)) expect(token.completeness.value).toBe('complete')
+  it('classifies level for code → L0_atom', () => {
+    const token = scan(makeInput('const x = function() { return 1; }'))
+    if (isResolved(token.level)) expect(token.level.value).toBe('L0_atom')
   })
 
-  it('respects hints', () => {
-    const token = scan({ content: 'raw', source: userSource, hints: { physical: 'audio' } })
+  it('respects physical hints', () => {
+    const token = scan({ content: 'raw', origin: externalOrigin, hints: { physical: 'audio' } })
     if (isResolved(token.physical)) expect(token.physical.value).toBe('audio')
   })
 
-  it('destination always starts unresolved', () => {
-    const token = scan(makeInput('anything'))
-    expect(isResolved(token.destination)).toBe(false)
+  it('respects level hints', () => {
+    const token = scan({ content: 'abstract', origin: externalOrigin, hints: { level: 'L2_gene' } })
+    if (isResolved(token.level)) expect(token.level.value).toBe('L2_gene')
   })
 
-  it('truth always starts unresolved', () => {
+  it('communication always starts unresolved', () => {
     const token = scan(makeInput('anything'))
-    expect(isResolved(token.truth)).toBe(false)
+    expect(isResolved(token.communication)).toBe(false)
   })
 
   it('scanBatch preserves order', () => {
@@ -127,32 +135,46 @@ describe('Scanner', () => {
 describe('Binder — narrowToken', () => {
   beforeEach(() => resetTokenCounter())
 
-  it('infers semantic type from code physical', () => {
+  it('infers level L0_atom from code physical', () => {
     const token = scan(makeInput('const x = function() { return 1; }'))
     const narrowed = narrowToken(token)
-    if (isResolved(narrowed.semantic)) expect(narrowed.semantic.value).toBe('rule')
+    if (isResolved(narrowed.level)) expect(narrowed.level.value).toBe('L0_atom')
   })
 
-  it('infers semantic type for internal execution_result', () => {
-    const token = scan({ content: 'test passed', source: internalSource })
+  it('infers level L0_atom for internal module_output', () => {
+    const token = scan({ content: 'test passed', origin: internalOrigin })
     const narrowed = narrowToken(token)
-    if (isResolved(narrowed.semantic)) expect(narrowed.semantic.value).toBe('evaluation')
+    if (isResolved(narrowed.level)) expect(narrowed.level.value).toBe('L0_atom')
   })
 
-  it('infers destination from semantic', () => {
-    const token: PatternToken = {
-      ...scan(makeInput('build the login feature.')),
-      semantic: resolved('goal_task'),
-    }
+  it('infers communication bottom_up for external origin', () => {
+    const token = scan(makeInput('hello'))
     const narrowed = narrowToken(token)
-    if (isResolved(narrowed.destination)) expect(narrowed.destination.value).toBe('P1_instruction')
+    if (isResolved(narrowed.communication)) expect(narrowed.communication.value).toBe('bottom_up')
   })
 
-  it('numeric input narrows to fact → P2_retrieval', () => {
-    const token = scan(makeInput('42'))
-    const narrowed = narrowToken(narrowToken(token)) // two passes
-    if (isResolved(narrowed.semantic)) expect(narrowed.semantic.value).toBe('fact')
-    if (isResolved(narrowed.destination)) expect(narrowed.destination.value).toBe('P2_retrieval')
+  it('infers communication lateral for internal module_output', () => {
+    const token = scan({ content: 'result data', origin: internalOrigin })
+    const narrowed = narrowToken(token)
+    if (isResolved(narrowed.communication)) expect(narrowed.communication.value).toBe('lateral')
+  })
+
+  it('infers communication bottom_up for user_input', () => {
+    const token = scan({ content: 'user says hi', origin: userOrigin })
+    const narrowed = narrowToken(token)
+    if (isResolved(narrowed.communication)) expect(narrowed.communication.value).toBe('bottom_up')
+  })
+
+  it('infers level L2_gene for content referencing constitution/goals', () => {
+    const token = scan(makeInput('update constitution and evolution goals'))
+    const narrowed = narrowToken(token)
+    if (isResolved(narrowed.level)) expect(narrowed.level.value).toBe('L2_gene')
+  })
+
+  it('infers level L1_molecule for content referencing modules/integration', () => {
+    const token = scan(makeInput('integrate the pipeline module component'))
+    const narrowed = narrowToken(token)
+    if (isResolved(narrowed.level)) expect(narrowed.level.value).toBe('L1_molecule')
   })
 })
 
@@ -166,18 +188,34 @@ describe('Binder — bind', () => {
     const midIR = bind({ tokens, edges: [], gates: [] })
 
     expect(midIR.tokens).toHaveLength(1)
-    // Code → rule → const-002 should bind
+    // Code → L0_atom → const-001 should bind
     expect(midIR.constitutionBindings.length).toBeGreaterThan(0)
-    const ruleBinding = midIR.constitutionBindings.find(b => b.ruleId === 'const-002')
-    expect(ruleBinding).toBeDefined()
+    const atomBinding = midIR.constitutionBindings.find(b => b.ruleId === 'const-001')
+    expect(atomBinding).toBeDefined()
   })
 
-  it('binds external source rule', () => {
+  it('binds external origin rule', () => {
     const tokens = scanBatch([makeInput('hello')])
     const midIR = bind({ tokens, edges: [], gates: [] })
 
-    const externalBinding = midIR.constitutionBindings.find(b => b.ruleId === 'const-005')
+    const externalBinding = midIR.constitutionBindings.find(b => b.ruleId === 'const-004')
     expect(externalBinding).toBeDefined()
+  })
+
+  it('binds external state rule', () => {
+    const tokens = scanBatch([makeInput('hello')])
+    const midIR = bind({ tokens, edges: [], gates: [] })
+
+    const stateBinding = midIR.constitutionBindings.find(b => b.ruleId === 'const-005')
+    expect(stateBinding).toBeDefined()
+  })
+
+  it('binds L2 gene rule for constitution-referencing content', () => {
+    const tokens = scanBatch([makeInput('update constitution goals')])
+    const midIR = bind({ tokens, edges: [], gates: [] })
+
+    const geneBinding = midIR.constitutionBindings.find(b => b.ruleId === 'const-003')
+    expect(geneBinding).toBeDefined()
   })
 })
 
@@ -206,31 +244,44 @@ describe('Binder — inferEdgeProperties', () => {
 describe('getNarrowingLevel', () => {
   beforeEach(() => resetTokenCounter())
 
-  it('minimal for mostly unresolved token', () => {
-    const token = scan(makeInput(''))
-    // empty content → nothing resolved
+  it('minimal for completely unresolved token', () => {
+    const token: PatternToken = {
+      id: 'test',
+      timestamp: Date.now(),
+      rawContent: '',
+      origin: externalOrigin,
+      state: 'external',
+      physical: unresolved(),
+      level: unresolved(),
+      communication: unresolved(),
+    }
     expect(getNarrowingLevel(token)).toBe('minimal')
   })
 
   it('partial when some fields resolved', () => {
     const token: PatternToken = {
-      ...scan(makeInput('hello world')),
-      semantic: resolved('fact'),
-      destination: resolved('P2_retrieval'),
+      id: 'test',
+      timestamp: Date.now(),
+      rawContent: 'hello',
+      origin: externalOrigin,
+      state: 'external',
+      physical: resolved('text'),
+      level: unresolved(),
+      communication: unresolved(),
     }
-    const level = getNarrowingLevel(token)
-    expect(['partial', 'full']).toContain(level)
+    expect(getNarrowingLevel(token)).toBe('partial')
   })
 
-  it('full when all 6 fields resolved', () => {
+  it('full when all 3 narrowable fields resolved', () => {
     const token: PatternToken = {
-      ...scan(makeInput('hello world.')),
+      id: 'test',
+      timestamp: Date.now(),
+      rawContent: 'hello world.',
+      origin: externalOrigin,
+      state: 'external',
       physical: resolved('text'),
-      semantic: resolved('fact'),
-      destination: resolved('P2_retrieval'),
-      certainty: resolved('certain'),
-      completeness: resolved('complete'),
-      truth: resolved('true'),
+      level: resolved('L0_atom'),
+      communication: resolved('bottom_up'),
     }
     expect(getNarrowingLevel(token)).toBe('full')
   })
@@ -313,10 +364,26 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
     expect(hasBlocks).toBe(false)
   })
 
-  it('blocks T0 actor from creating rule-type patterns', () => {
+  it('blocks T0 actor from creating L2 gene patterns', () => {
     const token: PatternToken = {
-      ...scan(makeInput('const x = function() { return 1; }')),
-      semantic: resolved('rule'),
+      ...scan(makeInput('update constitution goals')),
+      level: resolved('L2_gene'),
+    }
+    const midIR = bind({ tokens: [token], edges: [], gates: [] })
+    const lowIR = isConstitutionSatisfiedBy(midIR, {
+      actor: 'T0',
+      infoLevel: 'L1_objective_law',
+    })
+
+    const blocks = lowIR.violations.filter(v => v.severity === 'block')
+    expect(blocks.length).toBeGreaterThan(0)
+    expect(blocks.some(v => v.ruleId === 'const-003')).toBe(true)
+  })
+
+  it('blocks T0 actor from creating L1 molecule patterns', () => {
+    const token: PatternToken = {
+      ...scan(makeInput('integrate module pipeline')),
+      level: resolved('L1_molecule'),
     }
     const midIR = bind({ tokens: [token], edges: [], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
@@ -335,6 +402,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
       id: 'bad-edge',
       sourceNode: nodeId('v-reward'),
       targetNode: nodeId('p-input'),
+      infoLevel: 'L0_logic',
       direction: 'one_way',
       certainty: 'deterministic',
       temporal: 'sequential',
@@ -361,6 +429,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
       id: 'good-edge',
       sourceNode: nodeId('p-input'),
       targetNode: nodeId('r-causes'),
+      infoLevel: 'L0_logic',
       direction: 'one_way',
       certainty: 'deterministic',
       temporal: 'sequential',
@@ -386,13 +455,11 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
       id: 'test-minimal',
       timestamp: Date.now(),
       rawContent: '',
-      source: userSource,
-      destination: unresolved(),
+      origin: userOrigin,
+      state: 'candidate',
       physical: unresolved(),
-      semantic: unresolved(),
-      certainty: unresolved(),
-      completeness: unresolved(),
-      truth: unresolved(),
+      level: unresolved(),
+      communication: unresolved(),
     }
 
     const midIR = bind({ tokens: [token], edges: [], gates: [] })
@@ -403,6 +470,29 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
 
     // T2 actor should be downgraded due to minimal narrowing
     expect(lowIR.permissionLevel).not.toBe('T2')
+  })
+
+  it('blocks external origin with internal state (no shortcut)', () => {
+    const token: PatternToken = {
+      id: 'test-shortcut',
+      timestamp: Date.now(),
+      rawContent: 'sneaky content',
+      origin: externalOrigin,
+      state: 'internal', // illegal! external cannot directly become internal
+      physical: resolved('text'),
+      level: resolved('L0_atom'),
+      communication: resolved('bottom_up'),
+    }
+
+    const midIR = bind({ tokens: [token], edges: [], gates: [] })
+    const lowIR = isConstitutionSatisfiedBy(midIR, {
+      actor: 'T2',
+      infoLevel: 'L1_objective_law',
+    })
+
+    const stateViolations = lowIR.violations.filter(v => v.ruleId === 'state_no_shortcut')
+    expect(stateViolations.length).toBeGreaterThan(0)
+    expect(stateViolations[0].severity).toBe('block')
   })
 
   it('reports failed value gates', () => {
@@ -470,7 +560,6 @@ describe('Emitter', () => {
     const output = emit({ lowIR, midIR, infoLevel: 'L1_objective_law' })
     expect(output.events.length).toBeGreaterThan(0)
     expect(output.events[0].mutationType).toBe('create')
-    // executor determined by permission level (may be downgraded by narrowing)
     expect(['T0', 'T1', 'T2']).toContain(output.events[0].executor)
   })
 })
@@ -494,18 +583,18 @@ describe('compile — full pipeline', () => {
     expect(result.events.length).toBeGreaterThan(0)
   })
 
-  it('blocks unauthorized operation', () => {
+  it('blocks unauthorized L2 gene creation by T0', () => {
     const result = compile({
       inputs: [{
-        content: 'build everything',
-        source: userSource,
-        hints: { semantic: 'goal_task' },
+        content: 'update constitution goals and evolution',
+        origin: externalOrigin,
+        hints: { level: 'L2_gene' },
       }],
       actor: 'T0',
       infoLevel: 'L1_objective_law',
     })
 
-    // T0 cannot create goal_task (requires T2)
+    // T0 cannot create L2_gene (requires T2)
     expect(result.success).toBe(false)
     expect(result.violations.some(v => v.severity === 'block')).toBe(true)
   })
@@ -556,17 +645,18 @@ describe('compile — full pipeline', () => {
     const result = compile({
       inputs: [{
         content: 'const validate = function(input) { if (!input) { return false; } return true; }',
-        source: { origin: 'internal', type: 'component_output' },
+        origin: { domain: 'internal', type: 'module_output' },
       }],
       actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
     expect(result.success).toBe(true)
-    // Should detect as code → rule → needs T1+
     expect(result.midIR?.tokens[0]).toBeDefined()
     const token = result.midIR!.tokens[0]
     if (isResolved(token.physical)) expect(token.physical.value).toBe('code')
+    if (isResolved(token.level)) expect(token.level.value).toBe('L0_atom')
+    expect(token.state).toBe('candidate') // internal → candidate
   })
 
   it('Chinese input compiles correctly', () => {
@@ -580,18 +670,30 @@ describe('compile — full pipeline', () => {
     expect(result.highIR.rawContent).toBe('用户登录失败超过5次就锁定。')
   })
 
-  it('uncertain Chinese input detected', () => {
+  it('external origin produces external state', () => {
     const result = compile({
-      inputs: [makeInput('可能需要重新设计这个模块')],
+      inputs: [makeInput('外部信息', { domain: 'external', type: 'sensor' })],
       actor: 'T2',
-      infoLevel: 'L2_subjective',
+      infoLevel: 'L1_objective_law',
     })
 
-    // Should detect 可能 as uncertain
-    const token = result.midIR?.tokens[0]
-    if (token && isResolved(token.certainty)) {
-      expect(token.certainty.value).toBe('uncertain')
-    }
+    expect(result.success).toBe(true)
+    expect(result.highIR.state).toBe('external')
+    expect(result.highIR.origin.domain).toBe('external')
+  })
+
+  it('internal origin produces candidate state', () => {
+    const result = compile({
+      inputs: [{
+        content: '内部模块输出',
+        origin: { domain: 'internal', type: 'model_call' },
+      }],
+      actor: 'T2',
+      infoLevel: 'L1_objective_law',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.highIR.state).toBe('candidate')
   })
 })
 
@@ -610,5 +712,20 @@ describe('quickCheck', () => {
     const token = scan(makeInput('hello world.'))
     const result = quickCheck(token, 'T2')
     expect(result.maxPermission).toBeDefined()
+  })
+
+  it('rejects external origin with internal state', () => {
+    const token: PatternToken = {
+      id: 'test',
+      timestamp: Date.now(),
+      rawContent: 'hack',
+      origin: externalOrigin,
+      state: 'internal',
+      physical: resolved('text'),
+      level: resolved('L0_atom'),
+      communication: resolved('bottom_up'),
+    }
+    const result = quickCheck(token, 'T2')
+    expect(result.allowed).toBe(false)
   })
 })
