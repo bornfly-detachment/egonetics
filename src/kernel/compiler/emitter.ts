@@ -11,13 +11,11 @@
  */
 
 import type {
-  NodeId,
   Patch,
   PatchSet,
   Effect,
   LogEffect,
   TriggerEffect,
-  PortId,
   Frozen,
 } from '../types'
 
@@ -27,9 +25,7 @@ import type {
   LowIR,
   StateInstruction,
   EvolutionEvent,
-  PatternToken,
   MidIR,
-  CompileResult,
   PermissionTier,
   InfoLevel,
   CommLevel,
