@@ -395,12 +395,13 @@ export interface VL1StateEvaluator {
 
 /** Reward函数类型 — L1 V = Reward函数集合，可动态增加 */
 export type VL1RewardType =
-  | 'information'    // 信息量计算
-  | 'alignment'      // 目标对齐度
-  | 'ranking'        // 方案排序（多方案择优）
-  | 'relevance'      // 信息相关性/价值
-  | 'optimality'     // 最优性检测（局部vs全局）
-  | 'constitution'   // 宪法原则校验（主观抽象→转为校验清单）
+  | 'information'       // 信息量计算（Shannon熵）
+  | 'alignment'         // 目标对齐度
+  | 'ranking'           // 方案排序（多方案择优）
+  | 'relevance'         // 信息相关性/价值
+  | 'optimality'        // 最优性检测（局部vs全局）
+  | 'constitution'      // 宪法原则校验（主观抽象→转为校验清单）
+  | 'opportunity_cost'  // 机会成本 — 选A路径放弃B路径的价值量化，防止沉没成本谬误
 
 export interface VL1RewardFunction {
   readonly type: VL1RewardType
