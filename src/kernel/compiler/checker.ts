@@ -43,6 +43,10 @@ import {
 
 /**
  * Permission hierarchy: T3 > T2 > T1 > T0
+ *
+ * External 3-tier: T0 (execution) < T1 (reasoning) < T2 (evolution)
+ * Internal hidden: T3 (生变论, bornfly creator authority)
+ *
  * Lower cannot modify higher.
  */
 const PERMISSION_RANK: Record<PermissionTier, number> = {
