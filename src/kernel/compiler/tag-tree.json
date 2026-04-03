@@ -280,129 +280,173 @@
   "V": {
     "id": "tag-v",
     "name": "V — Value",
-    "description": "价值评估的门控机制。指标不达标→拒绝/升级/降级。",
+    "description": "校验清单驱动的大法官。V是控制论系统确定性可控的奠基。V必须独立——不被其他组件AI渗透，中立地对目标、宪法、资源负责，直接对自我控制论内核负责。E和S依赖V——V失效等于它们无法工作。V作为AOP存在于所有CRUD操作上。最强的Value判断=实践检验。",
     "children": {
-      "source": {
-        "id": "tag-v-source",
-        "name": "从哪来 Source",
-        "select_mode": "single",
+      "checklist_core": {
+        "id": "tag-v-core",
+        "name": "校验清单核心机制",
+        "description": "校验清单是V的本体——一切Reward的集合或复合。核心范式：机器学习的测试集/验证集分离。模块开发用验证集自测，V用测试集独立测试（同分布但分开），可判断泛化性和通用性。",
         "children": [
           {
-            "id": "tag-v-src-computer",
-            "name": "计算机系统（确定性指标）"
+            "id": "tag-v-core-testset",
+            "name": "测试集（V独立持有，模块不可见）",
+            "description": "V用来独立判定的数据集。与验证集同分布但分开。模块无法看到测试集内容。"
           },
           {
-            "id": "tag-v-src-ai",
-            "name": "AI模型（概率性评估）"
+            "id": "tag-v-core-valset",
+            "name": "验证集（模块自测用）",
+            "description": "模块开发过程中用于自测的数据集。与测试集同分布。"
           },
           {
-            "id": "tag-v-src-human-self",
-            "name": "主体叙事（自我评价）"
-          },
-          {
-            "id": "tag-v-src-human-ext",
-            "name": "外部叙事（他人评价）"
+            "id": "tag-v-core-generator",
+            "name": "校验清单生成器（动态安全）",
+            "description": "不能一直用同一套清单——容易被恶意攻破。生成器动态产生不可暴力破解的测试清单。内部持续更新，保证校验的不可预测性。"
           }
         ]
       },
-      "nature": {
-        "id": "tag-v-nature",
-        "name": "是什么 Nature",
+      "L0_deterministic": {
+        "id": "tag-v-l0",
+        "name": "L0 确定性校验（100%可判定，纯L0逻辑关系）",
+        "description": "不涉及L1的条件/时间关系。结果确定——同一输入同一结果，不需要人/AI介入。是L1和L2评估的基础数据来源。",
         "children": {
-          "temporal": {
-            "id": "tag-v-n-temporal",
-            "name": "时间性",
-            "select_mode": "single",
+          "objective_metrics": {
+            "id": "tag-v-l0-metrics",
+            "name": "客观度量指标",
+            "description": "100%可计算的客观数值",
             "children": [
-              {
-                "id": "tag-v-n-static",
-                "name": "静态"
-              },
-              {
-                "id": "tag-v-n-dynamic",
-                "name": "动态"
-              }
+              { "id": "tag-v-l0-accuracy", "name": "准确率（Accuracy）" },
+              { "id": "tag-v-l0-recall", "name": "召回率（Recall）" },
+              { "id": "tag-v-l0-precision", "name": "精确率（Precision）" },
+              { "id": "tag-v-l0-f1", "name": "F1 Score" },
+              { "id": "tag-v-l0-counter", "name": "计数器（执行/错误/调用次数）" },
+              { "id": "tag-v-l0-timer", "name": "计时器（响应/执行/超时）" },
+              { "id": "tag-v-l0-resource", "name": "资源消耗（Token/内存/存储/API成本）" },
+              { "id": "tag-v-l0-binary", "name": "二值判断（通过/不通过）" }
             ]
           },
-          "scope": {
-            "id": "tag-v-n-scope",
-            "name": "优化范围",
-            "select_mode": "single",
+          "rule_checklist": {
+            "id": "tag-v-l0-checklist",
+            "name": "规则校验清单（宪法约束）",
+            "description": "清单N条必须全部满足，少1条就不通过。只涉及L0逻辑关系。",
             "children": [
-              {
-                "id": "tag-v-n-local",
-                "name": "局部"
-              },
-              {
-                "id": "tag-v-n-global",
-                "name": "全局"
-              }
-            ]
-          },
-          "certainty": {
-            "id": "tag-v-n-certainty",
-            "name": "确定性",
-            "select_mode": "single",
-            "children": [
-              {
-                "id": "tag-v-n-det",
-                "name": "确定性"
-              },
-              {
-                "id": "tag-v-n-uncer",
-                "name": "不确定性"
-              }
-            ]
-          },
-          "control": {
-            "id": "tag-v-n-control",
-            "name": "可控性",
-            "select_mode": "single",
-            "children": [
-              {
-                "id": "tag-v-n-ctrl",
-                "name": "可控"
-              },
-              {
-                "id": "tag-v-n-unctl",
-                "name": "失控"
-              }
-            ]
-          },
-          "baseline": {
-            "id": "tag-v-n-baseline",
-            "name": "基线关系",
-            "select_mode": "single",
-            "children": [
-              {
-                "id": "tag-v-n-maintain",
-                "name": "维持 baseline"
-              },
-              {
-                "id": "tag-v-n-challenge",
-                "name": "挑战 baseline"
-              }
+              { "id": "tag-v-l0-chk-result", "name": "结果测试（输出是否符合预期）" },
+              { "id": "tag-v-l0-chk-function", "name": "功能测试（功能是否完整实现）" },
+              { "id": "tag-v-l0-chk-effect", "name": "效果测试（实际效果是否达标）" },
+              { "id": "tag-v-l0-chk-extreme", "name": "极端case测试（边界/异常/压力）" },
+              { "id": "tag-v-l0-chk-format", "name": "格式校验（数据完整性/合法性）" }
             ]
           }
         }
       },
-      "destination": {
-        "id": "tag-v-dest",
-        "name": "去哪里 Destination",
-        "select_mode": "single",
+      "L1_lifecycle": {
+        "id": "tag-v-l1",
+        "name": "L1 生命周期内动态评估（涉及时间/过程/条件）",
+        "description": "所有涉及时间和过程的都有生命周期概念。建立时预分配资源（时间deadline+AI/存储/内存资源）。L1的V处理沿时间工作的节点。",
+        "children": {
+          "lifecycle_components": {
+            "id": "tag-v-l1-lifecycle",
+            "name": "生命周期管理组件",
+            "children": {
+              "resource_budget": {
+                "id": "tag-v-l1-budget",
+                "name": "资源预分配",
+                "description": "生命周期建立时的资源预算：时间deadline、AI资源、存储资源、内存资源",
+                "children": [
+                  { "id": "tag-v-l1-budget-time", "name": "时间预算（deadline）" },
+                  { "id": "tag-v-l1-budget-ai", "name": "AI资源预算（模型调用/Token）" },
+                  { "id": "tag-v-l1-budget-storage", "name": "存储资源预算" },
+                  { "id": "tag-v-l1-budget-memory", "name": "内存资源预算" }
+                ]
+              },
+              "perceiver": {
+                "id": "tag-v-l1-perceiver",
+                "name": "感知器（本质L0级V）",
+                "description": "沿时间动态累积资源消耗。客观度量，无判断。实时监控资源使用与预算的偏差。"
+              },
+              "evaluator": {
+                "id": "tag-v-l1-evaluator",
+                "name": "测评器（本质L0级V）",
+                "description": "测试验收清单，必须由易到难建立。确定性校验——通过或不通过。"
+              }
+            }
+          },
+          "state_evaluator": {
+            "id": "tag-v-l1-state-eval",
+            "name": "状态评估器（L1级V）",
+            "description": "对工作节点的进展做动态判断。消耗了资源但没完成清单上的简单任务→触发判断。",
+            "children": [
+              {
+                "id": "tag-v-l1-feedback",
+                "name": "正/负反馈判断",
+                "description": "根据资源消耗vs清单完成度判断进展方向"
+              },
+              {
+                "id": "tag-v-l1-local-global",
+                "name": "局部最优 vs 全局最优检测",
+                "description": "局部方案能完成部分目标但剩余高权重目标无法完成或成本远超→必须发觉，强行停止，采用全局最优方案。全局最优目标对执行节点可见。"
+              },
+              {
+                "id": "tag-v-l1-deviation",
+                "name": "偏离触发器",
+                "description": "发现偏离全局最优约束→强行停止当前工作，重新规划方向"
+              }
+            ]
+          },
+          "reward_functions": {
+            "id": "tag-v-l1-rewards",
+            "name": "Reward函数集合（可动态增加）",
+            "description": "L1 V = Reward函数集合。各种指标动态组合。",
+            "children": [
+              { "id": "tag-v-l1-rw-info", "name": "信息量计算" },
+              { "id": "tag-v-l1-rw-align", "name": "目标对齐度（对目标的理解程度）" },
+              { "id": "tag-v-l1-rw-rank", "name": "方案排序（多方案择优）" },
+              { "id": "tag-v-l1-rw-relevance", "name": "信息相关性/价值（对目标的信息量）" },
+              { "id": "tag-v-l1-rw-optimality", "name": "最优性检测（局部vs全局）" },
+              { "id": "tag-v-l1-rw-constitution", "name": "宪法原则校验（主观抽象→转为校验清单）" }
+            ]
+          }
+        }
+      },
+      "L2_constitutional": {
+        "id": "tag-v-l2",
+        "name": "L2 宪法级校验 + 实践检验",
+        "description": "V作为AOP存在于所有CRUD操作——要update L2宪法就要过V。主观抽象语言不能直接作为V，AI概率不够时必须用校验清单+AB Test。最强V=实践检验。人的指令也要过规则校验——人状态差时会犯错。",
         "children": [
           {
-            "id": "tag-v-d1",
-            "name": "D1 对齐人的价值偏好"
+            "id": "tag-v-l2-practice",
+            "name": "实践检验（最强V）",
+            "description": "设计实践检验清单，给固定资源跑AB测试一段时间才能证明。有快有慢，终归通过设计实践检验清单做判断。",
+            "children": [
+              { "id": "tag-v-l2-ab-test", "name": "AB测试（固定资源+时间运行对比）" },
+              { "id": "tag-v-l2-extreme-val", "name": "极端case验证（列举所有极端case）" },
+              { "id": "tag-v-l2-generalize", "name": "泛化性测试（测试集/验证集分布一致性）" }
+            ]
           },
           {
-            "id": "tag-v-d2",
-            "name": "D2 对完成任务负责"
+            "id": "tag-v-l2-compliance",
+            "name": "宪法合规检查",
+            "description": "操作是否符合系统宪法规则。对系统设计有重大影响的操作必须判断。"
           },
           {
-            "id": "tag-v-d3",
-            "name": "D3 对系统进化负责"
+            "id": "tag-v-l2-identity",
+            "name": "身份动态验证（T3权限）",
+            "description": "验证操作者是否是bornfly才能执行T3权限。动态验证，不可固化。"
+          },
+          {
+            "id": "tag-v-l2-human-val",
+            "name": "人类指令校验",
+            "description": "人在状态很差时容易犯错，人的指令也要做规则校验清单，不是随便执行的。"
           }
+        ]
+      },
+      "independence": {
+        "id": "tag-v-indep",
+        "name": "V的独立性保障（宪法级）",
+        "description": "V的独立性是整个控制论系统可控性的前提。V失效=E和S无法工作。",
+        "children": [
+          { "id": "tag-v-indep-neutral", "name": "中立性（对目标/宪法/资源负责，不对任何单一组件负责）" },
+          { "id": "tag-v-indep-anti", "name": "防渗透（不被其他组件的AI影响判断）" },
+          { "id": "tag-v-indep-kernel", "name": "内核直接负责（直接对自我控制论内核负责）" }
         ]
       }
     }
