@@ -174,7 +174,7 @@ function resolveCommLevel(lowIR: LowIR): CommLevel {
   if (hasBlocks) return 'L2_control' // blocked operations are critical
 
   const hasStructuralChange = lowIR.instructions.some(
-    i => i.nodeTier === 'update',
+    i => i.level === 'L2',
   )
   if (hasStructuralChange) return 'L1_request'
 
