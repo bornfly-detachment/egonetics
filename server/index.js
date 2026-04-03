@@ -169,6 +169,7 @@ app.use('/api', controllerModule.init(kernelRuntime));
 app.use('/api', codeAgentRouter);
 app.use('/api/acp', acpGatewayRouter);
 app.use('/api/signals', signalsRouter.init(signalsDb));
+app.use('/api', compilerModule.init());
 
 const httpServer = http.createServer(app);
 proposalsModule.attachWebSocket(httpServer, pagesDb);
