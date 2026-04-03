@@ -63,9 +63,9 @@ function hasPermission(actor: PermissionTier, required: PermissionTier): boolean
 /** Map narrowing level to maximum allowed permission */
 function narrowingToPermission(level: NarrowingLevel): PermissionTier {
   switch (level) {
-    case 'full': return 'T2'    // fully typed → full AI access
-    case 'partial': return 'T1' // partially typed → execution only
-    case 'minimal': return 'T0'    // mostly unknown → perception only
+    case 'full': return 'T2'    // fully typed → evolution authority (can modify system)
+    case 'partial': return 'T1' // partially typed → reasoning/control only
+    case 'minimal': return 'T0' // mostly unknown → execution/practice only
   }
 }
 
