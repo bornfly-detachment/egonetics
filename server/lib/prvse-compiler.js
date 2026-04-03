@@ -372,6 +372,8 @@ function generatePNode(token, checkResult, rawContent) {
       certainty: token.certainty,
       completeness: token.completeness,
       truth: token.truth,
+      infoLevel: token.infoLevel,
+      relationLevel: token.relationLevel,
     },
 
     // Human-readable summary
