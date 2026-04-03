@@ -439,6 +439,8 @@ Same input → same result. No human/AI needed. Foundation data source for L1/L2
 | `timer` | Timers (response/execution/timeout) |
 | `resource` | Resource consumption (Token/memory/storage/API cost) |
 | `binary` | Binary judgment (pass/fail) |
+| `roi` | Return on investment = output_value / input_cost |
+| `marginal_return` | Marginal return — output increment per additional resource unit; near 0 = stop |
 
 **Rule Checklist** (constitutional constraints, ALL must pass):
 
