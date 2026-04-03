@@ -477,6 +477,7 @@ All time-dependent nodes have lifecycle. Resource budget pre-allocated at creati
 | `relevance` | Information relevance/value to goal |
 | `optimality` | Optimality detection (local vs global) |
 | `constitution` | Constitutional principle verification (abstract → checklist) |
+| `opportunity_cost` | Opportunity cost — value of forgone path B when choosing path A; prevents sunk cost fallacy |
 
 ### 9.4 L2 — Constitutional Verification + Practice Testing
 
