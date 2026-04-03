@@ -464,7 +464,8 @@ All time-dependent nodes have lifecycle. Resource budget pre-allocated at creati
 **State Evaluator** (L1-level V):
 - **Positive/negative feedback**: resource consumed vs checklist completion direction
 - **Local vs global optimal detection**: local solution completes partial goals but remaining high-weight goals impossible/costly → must detect, force stop, adopt global optimal
-- **Deviation trigger**: deviation from global optimal → force stop, replan
+- **Homeostasis deviation** [0,1]: distance from healthy baseline (biology: homeostasis). Quantified, not boolean. Exceeding threshold triggers deviation detection
+- **Deviation trigger**: homeostasis deviation exceeds threshold → force stop, replan
 
 **Reward Functions** (dynamically composable):
 
