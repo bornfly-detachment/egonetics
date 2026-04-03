@@ -399,6 +399,28 @@ export type PermissionTier = 'T0' | 'T1' | 'T2' | 'T3'
 
 export type MutationType = 'create' | 'update' | 'delete' | 'transition'
 
+/**
+ * Level Transition — E (Evolution) monitors confidence and triggers upgrades.
+ *
+ * Levels are engineering state snapshots. As engineering matures:
+ *   L2 → L1: validated through practice (e.g., dialectical prediction confirmed)
+ *   L1 → L0: engineering certainty reaches threshold (e.g., 99.XX% accuracy)
+ *
+ * E watches confidence metrics on nodes and triggers transitions.
+ */
+export type LevelTransitionDirection = 'upgrade' | 'downgrade'
+
+export interface LevelTransition {
+  readonly nodeId: NodeId
+  readonly fromLevel: InfoLevel
+  readonly toLevel: InfoLevel
+  readonly direction: LevelTransitionDirection
+  readonly confidence: number        // [0, 1] — the metric that triggered transition
+  readonly threshold: number         // the threshold that was crossed
+  readonly evidence: string          // what validated this transition
+  readonly timestamp: number
+}
+
 export interface EvolutionEvent {
   readonly id: string
   readonly timestamp: number
@@ -421,6 +443,9 @@ export interface EvolutionEvent {
     readonly before: unknown
     readonly after: unknown
   }
+
+  // Level transition (if this evolution triggers a level change)
+  readonly levelTransition?: LevelTransition
 }
 
 // ── Constitution Violation (checked exception) ────────────────
