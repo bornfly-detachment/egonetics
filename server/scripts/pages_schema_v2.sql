@@ -235,28 +235,8 @@ CREATE INDEX IF NOT EXISTS idx_relations_tgt     ON relations(target_id);
 CREATE INDEX IF NOT EXISTS idx_canvas_nodes_cvs  ON canvas_nodes(canvas_id);
 CREATE INDEX IF NOT EXISTS idx_canvas_nodes_eid  ON canvas_nodes(entity_id);
 
--- ── 标签语义树（tag_trees） ──────────────────────────────────
--- 递归树：纯分类/标签实体，不含富文本内容
-CREATE TABLE IF NOT EXISTS tag_trees (
-  id          TEXT PRIMARY KEY,
-  parent_id   TEXT REFERENCES tag_trees(id) ON DELETE CASCADE,
-  name        TEXT NOT NULL,
-  color       TEXT NOT NULL DEFAULT '#6b7280',
-  sort_order  REAL NOT NULL DEFAULT 0,
-  select_mode TEXT NOT NULL DEFAULT 'multi',
-  -- 'multi'  = 子节点并列/正交，可同时选多个
-  -- 'single' = 子节点互斥，只能选一个
-  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_tag_trees_parent ON tag_trees(parent_id);
-CREATE INDEX IF NOT EXISTS idx_tag_trees_sort   ON tag_trees(sort_order);
-
-CREATE TRIGGER IF NOT EXISTS trg_tag_trees_updated
-AFTER UPDATE ON tag_trees BEGIN
-  UPDATE tag_trees SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;
+-- ── 标签语义树已迁移至 JSON 文件: src/kernel/compiler/tag-tree.json ──
+-- tag_trees / tag_tree_migrations / prvse_reclassify_diffs 表已移除
 
 -- ── 控制论节点树（cybernetics_nodes） ───────────────────────
 -- 递归树：每个节点可有任意子节点，支持 L0→LN 渐进展开
