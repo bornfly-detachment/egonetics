@@ -1,0 +1,427 @@
+{
+  "$schema": "PRVSE Tag Tree — Constitutional Semantic Classification",
+  "$version": "2.0.0",
+  "$note": "Levels are engineering state snapshots, not permanent labels. Platform-independent: no model names, no concrete implementations.",
+
+  "P": {
+    "id": "tag-p",
+    "name": "P — Pattern",
+    "description": "信息输入的分类。从哪来、是什么、去哪里。",
+    "children": {
+      "source": {
+        "id": "tag-p-source",
+        "name": "从哪来 Source",
+        "children": {
+          "external": {
+            "id": "tag-p-src-external",
+            "name": "外部来源（需声明信息源）",
+            "children": [
+              { "id": "tag-p-s1", "name": "用户输入" },
+              { "id": "tag-p-s2", "name": "环境感知" },
+              { "id": "tag-p-s3", "name": "外部检索" },
+              { "id": "tag-p-s4", "name": "外部推送" },
+              { "id": "tag-p-s5-api", "name": "外部API" },
+              { "id": "tag-p-s6-llm", "name": "大模型API调用" }
+            ]
+          },
+          "internal": {
+            "id": "tag-p-src-internal",
+            "name": "内部来源（需声明组件连接）",
+            "children": [
+              { "id": "tag-p-s-exec", "name": "执行结果" },
+              { "id": "tag-p-s-comp", "name": "组件输出" },
+              { "id": "tag-p-s-mem", "name": "过程记忆" }
+            ]
+          }
+        }
+      },
+      "nature": {
+        "id": "tag-p-nature",
+        "name": "是什么 Nature",
+        "children": {
+          "physical": {
+            "id": "tag-p-physical",
+            "name": "A 物理结构（数据载体形式）",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-p-a-text", "name": "文本" },
+              { "id": "tag-p-a-number", "name": "数值" },
+              { "id": "tag-p-a-image", "name": "图像" },
+              { "id": "tag-p-a-audio", "name": "音频" },
+              { "id": "tag-p-a-code", "name": "代码" }
+            ]
+          },
+          "semantic": {
+            "id": "tag-p-semantic",
+            "name": "B 语义结构（功能性预分类）",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-p-b-fact", "name": "事实" },
+              { "id": "tag-p-b-rule", "name": "规则" },
+              { "id": "tag-p-b-process", "name": "过程" },
+              { "id": "tag-p-b-relation", "name": "关系" },
+              { "id": "tag-p-b-evaluation", "name": "评估" },
+              { "id": "tag-p-b-narrative", "name": "叙事" },
+              { "id": "tag-p-b-goal", "name": "目标任务" }
+            ]
+          },
+          "value_attrs": {
+            "id": "tag-p-value",
+            "name": "C 价值属性（V层预标记）",
+            "children": {
+              "certainty": {
+                "id": "tag-p-c-certainty",
+                "name": "确定性",
+                "select_mode": "single",
+                "children": [
+                  { "id": "tag-p-c-certain", "name": "确定" },
+                  { "id": "tag-p-c-uncertain", "name": "不确定" }
+                ]
+              },
+              "completeness": {
+                "id": "tag-p-c-completeness",
+                "name": "完备性",
+                "select_mode": "single",
+                "children": [
+                  { "id": "tag-p-c-complete", "name": "完整" },
+                  { "id": "tag-p-c-incomplete", "name": "残缺" }
+                ]
+              },
+              "truth": {
+                "id": "tag-p-c-truth",
+                "name": "真值",
+                "select_mode": "single",
+                "children": [
+                  { "id": "tag-p-c-true", "name": "真" },
+                  { "id": "tag-p-c-false", "name": "假" }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "destination": {
+        "id": "tag-p-dest",
+        "name": "去哪里 Destination",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-p-d-p1", "name": "P1 指令" },
+          { "id": "tag-p-d-p2", "name": "P2 检索" },
+          { "id": "tag-p-d-p3", "name": "P3 执行" },
+          { "id": "tag-p-d-p4", "name": "P4 交互" },
+          { "id": "tag-p-d-p5", "name": "P5 内省" },
+          { "id": "tag-p-d-p6", "name": "P6 推理" },
+          { "id": "tag-p-d-p7", "name": "P7 记忆" }
+        ]
+      },
+      "info_level": {
+        "id": "tag-p-info",
+        "name": "信息分级",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-p-info-l0", "name": "L0 信号层（客观确定性，不经人脑/AI即可计算）" },
+          { "id": "tag-p-info-l1", "name": "L1 客观规律层（可验证可复现，需实验论证）" },
+          { "id": "tag-p-info-l2", "name": "L2 主观认知层（需人类判断/AI推理，叙事赋予合法性）" }
+        ]
+      }
+    }
+  },
+
+  "R": {
+    "id": "tag-r",
+    "name": "R — Relation",
+    "description": "关系的分类。按 L0/L1/L2 分级，边界标准：能否不经人脑/AI完备计算。分级是工程状态快照，可随工程成熟度迁移。",
+    "children": {
+      "L0_logic": {
+        "id": "tag-r-l0",
+        "name": "L0 逻辑关系（纯计算，条件确定结果唯一）",
+        "description": "不经人脑和AI就能表示、计算、处理。若存在认知歧义则归为L1。工程确定性>=99%。",
+        "children": [
+          { "id": "tag-r-l0-deductive", "name": "演绎（前提→结论，必然）" },
+          { "id": "tag-r-l0-inductive", "name": "归纳（样本→规律，统计确定）" },
+          { "id": "tag-r-l0-analogical", "name": "类比（结构映射，形式确定）" }
+        ]
+      },
+      "L1_conditional": {
+        "id": "tag-r-l1",
+        "name": "L1 条件/时间关系（需人脑/AI辅助，无法穷举）",
+        "description": "条件过于复杂无法完备计算。基本元素只有两个：条件关系和时间关系，其余皆为组合演化。",
+        "children": {
+          "primitives": {
+            "id": "tag-r-l1-prim",
+            "name": "基本元素",
+            "children": [
+              { "id": "tag-r-l1-condition", "name": "条件关系（A存在则B存在的概率）" },
+              { "id": "tag-r-l1-temporal", "name": "时间关系（序列/循环/同时）" }
+            ]
+          },
+          "compositions": {
+            "id": "tag-r-l1-comp",
+            "name": "组合演化（条件+时间的组合）",
+            "children": [
+              { "id": "tag-r-l1-causal", "name": "因果 = 条件+时间先后（直接/间接/反事实）" },
+              { "id": "tag-r-l1-process", "name": "过程 = 时间中的演化（量变积累/质变涌现/条件转化）" },
+              { "id": "tag-r-l1-evolution", "name": "发展 = 条件+时间+环境变化" }
+            ]
+          }
+        }
+      },
+      "L2_existential": {
+        "id": "tag-r-l2",
+        "name": "L2 存在关系（需叙事赋予价值和合法性）",
+        "description": "涉及主观、认知、意义、叙事。主体在时空维度上的实践过程。辩证法：矛盾律在L0禁止A∧¬A，但在L2中可控-失控可同时为真。",
+        "children": [
+          { "id": "tag-r-l2-oppose", "name": "对立（根本矛盾，如可控-失控、有限-无限）" },
+          { "id": "tag-r-l2-transform", "name": "转化（矛盾双方在条件下相互转化）" },
+          { "id": "tag-r-l2-unify", "name": "统一（矛盾在更高层面的整合）" }
+        ]
+      },
+      "shared_attrs": {
+        "id": "tag-r-shared",
+        "name": "跨级通用属性",
+        "children": {
+          "direction": {
+            "id": "tag-r-dir",
+            "name": "方向性",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-r-dir-none", "name": "无向" },
+              { "id": "tag-r-dir-one", "name": "单向" },
+              { "id": "tag-r-dir-bi", "name": "双向" }
+            ]
+          },
+          "strength": {
+            "id": "tag-r-str",
+            "name": "强度",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-r-str-pos", "name": "正向" },
+              { "id": "tag-r-str-neg", "name": "负向" }
+            ]
+          },
+          "certainty": {
+            "id": "tag-r-cert",
+            "name": "确定性",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-r-cert-det", "name": "确定性（L0典型）" },
+              { "id": "tag-r-cert-prob", "name": "概率性（L1典型）" },
+              { "id": "tag-r-cert-fuzzy", "name": "模糊（L2典型）" }
+            ]
+          }
+        }
+      },
+      "destination": {
+        "id": "tag-r-dest",
+        "name": "去哪里 Destination",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-r-d1", "name": "D1 驱动推理" },
+          { "id": "tag-r-d2", "name": "D2 支撑价值计算" },
+          { "id": "tag-r-d3", "name": "D3 记录演化依据" },
+          { "id": "tag-r-d4", "name": "D4 执行约束检查" },
+          { "id": "tag-r-d5", "name": "D5 激活关联节点" }
+        ]
+      }
+    }
+  },
+
+  "V": {
+    "id": "tag-v",
+    "name": "V — Value",
+    "description": "价值评估的门控机制。指标不达标→拒绝/升级/降级。",
+    "children": {
+      "source": {
+        "id": "tag-v-source",
+        "name": "从哪来 Source",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-v-src-computer", "name": "计算机系统（确定性指标）" },
+          { "id": "tag-v-src-ai", "name": "AI模型（概率性评估）" },
+          { "id": "tag-v-src-human-self", "name": "主体叙事（自我评价）" },
+          { "id": "tag-v-src-human-ext", "name": "外部叙事（他人评价）" }
+        ]
+      },
+      "nature": {
+        "id": "tag-v-nature",
+        "name": "是什么 Nature",
+        "children": {
+          "temporal": {
+            "id": "tag-v-n-temporal",
+            "name": "时间性",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-v-n-static", "name": "静态" },
+              { "id": "tag-v-n-dynamic", "name": "动态" }
+            ]
+          },
+          "scope": {
+            "id": "tag-v-n-scope",
+            "name": "优化范围",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-v-n-local", "name": "局部" },
+              { "id": "tag-v-n-global", "name": "全局" }
+            ]
+          },
+          "certainty": {
+            "id": "tag-v-n-certainty",
+            "name": "确定性",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-v-n-det", "name": "确定性" },
+              { "id": "tag-v-n-uncer", "name": "不确定性" }
+            ]
+          },
+          "control": {
+            "id": "tag-v-n-control",
+            "name": "可控性",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-v-n-ctrl", "name": "可控" },
+              { "id": "tag-v-n-unctl", "name": "失控" }
+            ]
+          },
+          "baseline": {
+            "id": "tag-v-n-baseline",
+            "name": "基线关系",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-v-n-maintain", "name": "维持 baseline" },
+              { "id": "tag-v-n-challenge", "name": "挑战 baseline" }
+            ]
+          }
+        }
+      },
+      "destination": {
+        "id": "tag-v-dest",
+        "name": "去哪里 Destination",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-v-d1", "name": "D1 对齐人的价值偏好" },
+          { "id": "tag-v-d2", "name": "D2 对完成任务负责" },
+          { "id": "tag-v-d3", "name": "D3 对系统进化负责" }
+        ]
+      }
+    }
+  },
+
+  "S": {
+    "id": "tag-s",
+    "name": "S — State",
+    "description": "实践状态机。节点在 7 态之间迁移。",
+    "children": {
+      "source": {
+        "id": "tag-s-source",
+        "name": "从哪来 Source（驱动力）",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-s-s1", "name": "S1 任务驱动" },
+          { "id": "tag-s-s2", "name": "S2 生存驱动" },
+          { "id": "tag-s-s3", "name": "S3 进化驱动" },
+          { "id": "tag-s-s4", "name": "S4 探索驱动" }
+        ]
+      },
+      "nature": {
+        "id": "tag-s-nature",
+        "name": "是什么 Nature",
+        "children": {
+          "tier": {
+            "id": "tag-s-n-tier",
+            "name": "节点分级",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-s-n-exec", "name": "执行节点" },
+              { "id": "tag-s-n-research", "name": "认知节点" },
+              { "id": "tag-s-n-update", "name": "更新节点" }
+            ]
+          },
+          "state_machine": {
+            "id": "tag-s-n-sm",
+            "name": "状态机",
+            "select_mode": "single",
+            "children": [
+              { "id": "tag-s-n-sm-build", "name": "构建中" },
+              { "id": "tag-s-n-sm-trial", "name": "试运行" },
+              { "id": "tag-s-n-sm-stable", "name": "稳定运行" },
+              { "id": "tag-s-n-sm-bug", "name": "Bug挂起" },
+              { "id": "tag-s-n-sm-wait", "name": "等待指令" },
+              { "id": "tag-s-n-sm-pos", "name": "正反馈迭代" },
+              { "id": "tag-s-n-sm-neg", "name": "负反馈预警" },
+              { "id": "tag-s-n-sm-arch", "name": "归档" }
+            ]
+          }
+        }
+      },
+      "destination": {
+        "id": "tag-s-dest",
+        "name": "去哪里 Destination（触发效果）",
+        "children": [
+          { "id": "tag-s-d-e1", "name": "触发感知" },
+          { "id": "tag-s-d-e2", "name": "触发执行" },
+          { "id": "tag-s-d-e3", "name": "触发进化记录" },
+          { "id": "tag-s-d-e4", "name": "触发通信" }
+        ]
+      }
+    }
+  },
+
+  "E": {
+    "id": "tag-e",
+    "name": "E — Evolution",
+    "description": "进化层。监控级别迁移、记录演化轨迹、驱动系统改造。信息分级和权限分级是宪法定义，通信机制是运行时协议。",
+    "children": {
+      "info_level": {
+        "id": "tag-e-info",
+        "name": "信息分级（宪法定义）",
+        "description": "分级是工程状态快照。L1可升级为L0（工程成熟），L2可降级为L1（实践验证）。E负责监控置信度触发迁移。",
+        "children": [
+          {
+            "id": "tag-e-info-l0",
+            "name": "L0 信号层",
+            "description": "客观确定性，不以意志为转移。直接走规则路由，无需思考。工程确定性>=99%。"
+          },
+          {
+            "id": "tag-e-info-l1",
+            "name": "L1 客观规律层",
+            "description": "理论遵循客观规律，实践可复现可验证。有限性：存在环境条件制约。目标：转化为L0可计算模式。"
+          },
+          {
+            "id": "tag-e-info-l2",
+            "name": "L2 主观认知层",
+            "description": "人类大脑产物，存在不确定性。警惕AI幻觉和爽文化信息。唯一价值：转化为更好的自我叙事。必须经验证才具备可信度。"
+          }
+        ]
+      },
+      "permission": {
+        "id": "tag-e-perm",
+        "name": "权限分级（对外三级）",
+        "children": [
+          { "id": "tag-e-perm-t0", "name": "T0 执行/实践（所有底层agent）" },
+          { "id": "tag-e-perm-t1", "name": "T1 推理/控制（AI级PRVSE引擎）" },
+          { "id": "tag-e-perm-t2", "name": "T2 进化权威（人机协同，目标/宪法/资源）" }
+        ]
+      },
+      "communication": {
+        "id": "tag-e-comm",
+        "name": "通信机制",
+        "children": [
+          { "id": "tag-e-comm-l0", "name": "L0 信号通信（感知器传递、规则路由触发）" },
+          { "id": "tag-e-comm-l1", "name": "L1 请求型通信（自底向上，diff处理）" },
+          { "id": "tag-e-comm-l2", "name": "L2 控制型通信（自顶向下，任务执行/系统改造）" }
+        ]
+      },
+      "mutation_type": {
+        "id": "tag-e-mut",
+        "name": "变更类型",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-e-mut-create", "name": "创建" },
+          { "id": "tag-e-mut-update", "name": "更新" },
+          { "id": "tag-e-mut-delete", "name": "删除" },
+          { "id": "tag-e-mut-transition", "name": "状态迁移" }
+        ]
+      }
+    }
+  }
+}
