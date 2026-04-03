@@ -164,7 +164,7 @@ function resolveResourceTier(
   // Map permission to resource
   switch (permission) {
     case 'T0': return 'T0'
-    case 'T1_minimax': return 'T1'
+    case 'T1': return 'T1'
     case 'T2_claude':
     case 'T3_creator': return 'T2'
   }
