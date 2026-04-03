@@ -101,9 +101,21 @@ async function llmLex(content, opts = {}) {
   // Parse LLM response — extract JSON from possible markdown wrapping
   let parsed
   try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw)
-  } catch {
+    // Try multiple extraction strategies
+    let jsonStr = raw.trim()
+
+    // Strategy 1: strip markdown code fence
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (fenceMatch) jsonStr = fenceMatch[1].trim()
+
+    // Strategy 2: extract outermost { ... }
+    const braceMatch = jsonStr.match(/\{[\s\S]*\}/)
+    if (braceMatch) jsonStr = braceMatch[0]
+
+    parsed = JSON.parse(jsonStr)
+    console.log(`[compiler/lexer] OK: semantic=${parsed.semantic}, infoLevel=${parsed.infoLevel}`)
+  } catch (parseErr) {
+    console.error(`[compiler/lexer] JSON parse failed. Raw LLM output:\n${raw.slice(0, 500)}`)
     // LLM returned unparseable output — fallback to minimal classification
     parsed = {
       physical: 'text',
