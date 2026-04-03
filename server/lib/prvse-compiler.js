@@ -123,6 +123,8 @@ async function llmLex(content, opts = {}) {
     certainty: parsed.certainty || 'uncertain',
     completeness: parsed.completeness || 'incomplete',
     truth: parsed.truth ?? null,
+    infoLevel: parsed.infoLevel || 'L2_subjective',
+    relationLevel: parsed.relationLevel || null,
     summary: parsed.summary || '',
     _meta: {
       tier,
