@@ -12,31 +12,20 @@
  */
 
 const { getClientForTier } = require('./llm')
+const { readTree, flattenTree, findById } = require('../routes/tags')
 
-// ── 从 DB 加载完整 tag 树（扁平 + 树形两份）─────────────────────────
+// ── 从 JSON 文件加载完整 tag 树（扁平 + 树形两份）────────────────────
 
-function loadTagTree(pagesDb) {
-  return new Promise((resolve, reject) => {
-    pagesDb.all(
-      'SELECT id, parent_id, name, color, select_mode FROM tag_trees ORDER BY sort_order',
-      [],
-      (err, rows) => {
-        if (err) return reject(err)
-        // 构建树结构
-        const map = {}
-        rows.forEach(r => { map[r.id] = { ...r, children: [] } })
-        const roots = []
-        rows.forEach(r => {
-          if (r.parent_id && map[r.parent_id]) {
-            map[r.parent_id].children.push(map[r.id])
-          } else if (!r.parent_id) {
-            roots.push(map[r.id])
-          }
-        })
-        resolve({ flat: rows, tree: roots, map })
-      }
-    )
-  })
+function loadTagTree() {
+  const tree = readTree()
+  const flat = []
+  for (const key of ['P', 'R', 'V', 'S', 'E']) {
+    if (tree[key]) flattenTree(tree[key], 0, flat)
+  }
+  // 构建 id→node map
+  const map = {}
+  for (const item of flat) map[item.id] = item
+  return Promise.resolve({ flat, tree: [tree.P, tree.R, tree.V, tree.S, tree.E], map })
 }
 
 // ── 扁平化 tag 树为 prompt 可读格式 ──────────────────────────────────
