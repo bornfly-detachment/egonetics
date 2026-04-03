@@ -4,7 +4,7 @@
  * Full pipeline: Scanner → Binder → Checker → Emitter
  *
  * Usage:
- *   const result = compile({ content: '用户登录失败超过5次就锁定', source: ... })
+ *   const result = compile({ content: '用户登录失败超过5次就锁定', origin: ... })
  *   if (!result.success) { handle violations }
  *   else { feed result.patches to kernel tick }
  */
@@ -17,15 +17,13 @@ export type {
 
   // P — Pattern
   PatternToken,
-  PSource,
-  PExternalSource,
-  PInternalSource,
+  POrigin,
+  PInternalOriginType,
+  PExternalOriginType,
   PPhysicalType,
-  PSemanticType,
-  PCertainty,
-  PCompleteness,
-  PTruth,
-  PDestination,
+  PState,
+  PLevel,
+  PCommunication,
 
   // R — Relation
   RelationEdge,
