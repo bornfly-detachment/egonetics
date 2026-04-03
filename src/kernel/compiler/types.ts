@@ -264,94 +264,322 @@ export interface RelationEdge {
   readonly destination: RDestination
 }
 
-// ── V — Value Gate (Semantic Analysis) ────────────────────────
+// ── V — Value Gate (校验清单驱动的大法官) ─────────────────────
+//
+// V是控制论系统确定性可控的奠基。
+// V必须独立——不被其他组件AI渗透，中立地对目标/宪法/资源负责。
+// E和S依赖V——V失效等于它们无法工作。
+// V作为AOP存在于所有CRUD操作上。
+// 最强的Value判断 = 实践检验。
+//
+// 核心范式：ML测试集/验证集分离。
+//   模块用验证集自测，V用测试集独立测试（同分布但分开）。
 
-export type VSource = 'computer_system' | 'ai_model' | 'human_narrative' | 'external_narrative'
-export type VTemporal = 'static' | 'dynamic'
-export type VScope = 'local' | 'global'
-export type VCertainty = 'deterministic' | 'uncertain'
-export type VControl = 'controllable' | 'uncontrollable'
-export type VBaseline = 'maintain' | 'challenge'
+// ── V Checklist Core ─────────────────────────────────────────
 
-export type VDestination =
-  | 'V_D1_align_human_preference'
-  | 'V_D2_task_completion'
-  | 'V_D3_system_evolution'
+/**
+ * 校验清单项 — V的原子单位。
+ * 每条清单项是一个明确的 pass/fail 判定。
+ * 清单N条必须全部满足，少1条就不通过。
+ */
+export interface VChecklistItem {
+  readonly id: string
+  readonly description: string
+  readonly passed: boolean
+  readonly evidence?: string   // 判定依据
+}
 
-/** V1 — objective metrics (deterministic) */
-export type V1MetricType = 'counter' | 'timer' | 'token_consumption' | 'probability' | 'binary'
+/**
+ * 校验清单 — 一组ChecklistItem的集合。
+ * 全部通过才算通过。这是V的本体。
+ */
+export interface VChecklist {
+  readonly id: string
+  readonly name: string
+  readonly items: readonly VChecklistItem[]
+  readonly generatedAt: number     // 生成时间戳
+  readonly generatorVersion: string // 生成器版本（动态安全）
+}
 
-export interface V1Metric {
-  readonly dimension: 'v1'
-  readonly metricType: V1MetricType
+/** 校验清单全部通过？ */
+export function isChecklistPassed(checklist: VChecklist): boolean {
+  return checklist.items.length > 0 && checklist.items.every(item => item.passed)
+}
+
+// ── L0 确定性校验 ────────────────────────────────────────────
+// 100%可判定，纯L0逻辑关系。同一输入同一结果。
+// 是L1和L2评估的基础数据来源。
+
+/** L0 客观度量指标类型 — 100%可计算 */
+export type VL0MetricType =
+  | 'accuracy'    // 准确率
+  | 'recall'      // 召回率
+  | 'precision'   // 精确率
+  | 'f1'          // F1 Score
+  | 'counter'     // 计数器（执行/错误/调用次数）
+  | 'timer'       // 计时器（响应/执行/超时）
+  | 'resource'    // 资源消耗（Token/内存/存储/API成本）
+  | 'binary'      // 二值判断（通过/不通过）
+
+export interface VL0Metric {
+  readonly type: VL0MetricType
   readonly currentValue: number
   readonly threshold: number
 }
 
-/** V2 — external probability metrics */
-export type V2MetricType =
-  | 'confidence'
-  | 'relevance_prob'
-  | 'causal_prob'
-  | 'prediction_prob'
-  | 'narrative_legitimacy'
-  | 'narrative_completeness'
-  | 'narrative_logic'
+/** L0 规则校验清单类型 — 宪法约束，全部必须满足 */
+export type VL0RuleCheckType =
+  | 'result'      // 结果测试（输出是否符合预期）
+  | 'function'    // 功能测试（功能是否完整实现）
+  | 'effect'      // 效果测试（实际效果是否达标）
+  | 'extreme'     // 极端case测试（边界/异常/压力）
+  | 'format'      // 格式校验（数据完整性/合法性）
 
-export interface V2Metric {
-  readonly dimension: 'v2'
-  readonly metricType: V2MetricType
-  readonly currentValue: number  // [0, 1]
-  readonly threshold: number     // [0, 1]
+export interface VL0RuleCheck {
+  readonly type: VL0RuleCheckType
+  readonly checklist: VChecklist
 }
 
-/** V3 — internal/constitutional evaluation */
-export type V3MetricType =
-  | 'constitutional_rule'
-  | 'value_alignment'
-  | 'cognitive_eval'
-  | 'narrative_consistency'
-  | 'prediction_prob_internal'
-
-export interface V3Metric {
-  readonly dimension: 'v3'
-  readonly metricType: V3MetricType
-  readonly currentValue: number  // [0, 1]
-  readonly threshold: number     // [0, 1]
-  readonly ruleId?: string       // for constitutional_rule: which rule
+/** L0 校验集合 — 客观度量 + 规则清单 */
+export interface VL0Assessment {
+  readonly metrics: readonly VL0Metric[]
+  readonly ruleChecks: readonly VL0RuleCheck[]
 }
 
-export type VMetric = V1Metric | V2Metric | V3Metric
+// ── L1 生命周期动态评估 ──────────────────────────────────────
+// 涉及时间/过程/条件。沿时间工作的节点都有生命周期。
 
-/** Phi factor — independent, composed at runtime */
-export interface PhiFactor {
-  readonly id: 'phi_causal' | 'phi_temporal' | 'phi_contradiction' | 'phi_dependency'
-  readonly rEdgeTypes: readonly REdgeType[]
-  readonly computedValue: number  // [0, 1]
+/** 资源预算类型 — 生命周期建立时预分配 */
+export type VL1BudgetType = 'time' | 'ai' | 'storage' | 'memory'
+
+export interface VL1ResourceBudget {
+  readonly type: VL1BudgetType
+  readonly allocated: number
+  readonly consumed: number
+  readonly deadline?: number  // 时间预算的截止时间戳
 }
 
-/** Value Gate — the core constraint mechanism */
+/**
+ * 感知器 — 本质是L0级V。
+ * 沿时间动态累积资源消耗。客观度量，无判断。
+ * 实时监控资源使用与预算的偏差。
+ */
+export interface VL1Perceiver {
+  readonly budgets: readonly VL1ResourceBudget[]
+  readonly deviationRatio: number  // 偏差比 = consumed/allocated, >1 = 超预算
+}
+
+/**
+ * 测评器 — 本质是L0级V。
+ * 测试验收清单，必须由易到难建立。确定性校验。
+ */
+export interface VL1Evaluator {
+  readonly checklist: VChecklist  // 由易到难排列
+}
+
+/**
+ * 状态评估器 — L1级V。
+ * 对工作节点进展做动态判断。
+ */
+export type VL1FeedbackDirection = 'positive' | 'negative' | 'stagnant'
+
+export interface VL1StateEvaluator {
+  readonly feedback: VL1FeedbackDirection
+  readonly localOptimal: boolean      // 是否陷入局部最优
+  readonly globalOptimalVisible: boolean  // 全局最优目标是否对执行节点可见
+  readonly deviationDetected: boolean    // 是否检测到偏离全局最优
+}
+
+/** Reward函数类型 — L1 V = Reward函数集合，可动态增加 */
+export type VL1RewardType =
+  | 'information'    // 信息量计算
+  | 'alignment'      // 目标对齐度
+  | 'ranking'        // 方案排序（多方案择优）
+  | 'relevance'      // 信息相关性/价值
+  | 'optimality'     // 最优性检测（局部vs全局）
+  | 'constitution'   // 宪法原则校验（主观抽象→转为校验清单）
+
+export interface VL1RewardFunction {
+  readonly type: VL1RewardType
+  readonly score: number          // [0, 1]
+  readonly weight: number         // 在组合中的权重
+  readonly checklist?: VChecklist // constitution类型转化为的校验清单
+}
+
+/** L1 评估集合 */
+export interface VL1Assessment {
+  readonly perceiver: VL1Perceiver
+  readonly evaluator: VL1Evaluator
+  readonly stateEvaluator: VL1StateEvaluator
+  readonly rewards: readonly VL1RewardFunction[]
+}
+
+// ── L2 宪法级校验 + 实践检验 ─────────────────────────────────
+// V作为AOP存在于所有CRUD操作——要update L2宪法就要过V。
+// 最强V = 实践检验。人的指令也要过规则校验。
+
+/** 实践检验类型 — 最强V */
+export type VL2PracticeType =
+  | 'ab_test'        // AB测试（固定资源+时间运行对比）
+  | 'extreme_val'    // 极端case验证（列举所有极端case）
+  | 'generalize'     // 泛化性测试（测试集/验证集分布一致性）
+
+export interface VL2PracticeVerification {
+  readonly type: VL2PracticeType
+  readonly checklist: VChecklist
+  readonly resourceBudget?: VL1ResourceBudget  // AB测试需要资源预算
+  readonly duration?: number                    // AB测试运行时长(ms)
+}
+
+export interface VL2ConstitutionalCompliance {
+  readonly ruleId: string
+  readonly checklist: VChecklist
+}
+
+export interface VL2IdentityVerification {
+  readonly actorId: string
+  readonly permissionTier: PermissionTier
+  readonly verified: boolean
+  readonly method: string  // 动态验证方法
+}
+
+export interface VL2HumanCommandValidation {
+  readonly commandId: string
+  readonly checklist: VChecklist  // 人的指令也要做规则校验清单
+}
+
+/** L2 评估集合 */
+export interface VL2Assessment {
+  readonly practice: readonly VL2PracticeVerification[]
+  readonly compliance: readonly VL2ConstitutionalCompliance[]
+  readonly identity?: VL2IdentityVerification
+  readonly humanValidation?: VL2HumanCommandValidation
+}
+
+// ── V Independence (宪法级保障) ──────────────────────────────
+
+/**
+ * V的独立性声明。
+ * V失效 = E和S无法工作。必须确保：
+ *   neutral — 对目标/宪法/资源负责，不对任何单一组件负责
+ *   anti_infiltration — 不被其他组件的AI影响判断
+ *   kernel_direct — 直接对自我控制论内核负责
+ */
+export interface VIndependence {
+  readonly neutral: boolean
+  readonly antiInfiltration: boolean
+  readonly kernelDirect: boolean
+}
+
+// ── ValueGate — the core constraint mechanism ────────────────
+
+/**
+ * ValueGate — 校验清单驱动的约束门。
+ *
+ * 替代旧的 metric threshold 模式。
+ * 每个Gate包含对应层级的Assessment。
+ * 全部checklist通过 + 全部metric达标 = 通过。
+ */
 export interface ValueGate {
   readonly id: string
-  readonly source: VSource
-  readonly temporal: VTemporal
-  readonly scope: VScope
-  readonly destination: VDestination
 
-  readonly metrics: readonly VMetric[]
-  readonly phi?: readonly PhiFactor[]
+  // 分层评估 — 至少有一层
+  readonly l0?: VL0Assessment
+  readonly l1?: VL1Assessment
+  readonly l2?: VL2Assessment
+
+  // 独立性保障
+  readonly independence: VIndependence
 
   /** What happens when gate fails */
   readonly onFail: 'reject' | 'escalate' | 'downgrade'
 }
 
-/** Check if a value gate passes */
-export function checkGate(gate: ValueGate): GateResult {
-  const failures: VMetric[] = []
+/** Gate检查结果 */
+export type GateResult =
+  | { passed: true; gate: ValueGate }
+  | { passed: false; gate: ValueGate; failures: readonly GateFailure[]; action: 'reject' | 'escalate' | 'downgrade' }
 
-  for (const metric of gate.metrics) {
-    if (metric.currentValue < metric.threshold) {
-      failures.push(metric)
+export interface GateFailure {
+  readonly level: 'L0' | 'L1' | 'L2'
+  readonly reason: string
+  readonly checklistId?: string
+}
+
+/** Check if a value gate passes — checklist-driven */
+export function checkGate(gate: ValueGate): GateResult {
+  const failures: GateFailure[] = []
+
+  // L0: all metrics must meet threshold + all rule checklists must pass
+  if (gate.l0) {
+    for (const metric of gate.l0.metrics) {
+      if (metric.currentValue < metric.threshold) {
+        failures.push({
+          level: 'L0',
+          reason: `${metric.type}: ${metric.currentValue} < ${metric.threshold}`,
+        })
+      }
+    }
+    for (const rule of gate.l0.ruleChecks) {
+      if (!isChecklistPassed(rule.checklist)) {
+        failures.push({
+          level: 'L0',
+          reason: `rule_check:${rule.type} failed`,
+          checklistId: rule.checklist.id,
+        })
+      }
+    }
+  }
+
+  // L1: perceiver deviation + evaluator checklist + state evaluator + rewards
+  if (gate.l1) {
+    if (gate.l1.perceiver.deviationRatio > 1) {
+      failures.push({
+        level: 'L1',
+        reason: `resource_overbudget: deviation=${gate.l1.perceiver.deviationRatio}`,
+      })
+    }
+    if (!isChecklistPassed(gate.l1.evaluator.checklist)) {
+      failures.push({
+        level: 'L1',
+        reason: 'evaluator checklist failed',
+        checklistId: gate.l1.evaluator.checklist.id,
+      })
+    }
+    if (gate.l1.stateEvaluator.deviationDetected) {
+      failures.push({
+        level: 'L1',
+        reason: 'deviation from global optimal detected',
+      })
+    }
+  }
+
+  // L2: all practice checklists + compliance checklists must pass
+  if (gate.l2) {
+    for (const p of gate.l2.practice) {
+      if (!isChecklistPassed(p.checklist)) {
+        failures.push({
+          level: 'L2',
+          reason: `practice:${p.type} failed`,
+          checklistId: p.checklist.id,
+        })
+      }
+    }
+    for (const c of gate.l2.compliance) {
+      if (!isChecklistPassed(c.checklist)) {
+        failures.push({
+          level: 'L2',
+          reason: `compliance:${c.ruleId} failed`,
+          checklistId: c.checklist.id,
+        })
+      }
+    }
+    if (gate.l2.humanValidation && !isChecklistPassed(gate.l2.humanValidation.checklist)) {
+      failures.push({
+        level: 'L2',
+        reason: 'human command validation failed',
+        checklistId: gate.l2.humanValidation.checklist.id,
+      })
     }
   }
 
@@ -359,17 +587,8 @@ export function checkGate(gate: ValueGate): GateResult {
     return { passed: true, gate }
   }
 
-  return {
-    passed: false,
-    gate,
-    failures,
-    action: gate.onFail,
-  }
+  return { passed: false, gate, failures, action: gate.onFail }
 }
-
-export type GateResult =
-  | { passed: true; gate: ValueGate }
-  | { passed: false; gate: ValueGate; failures: readonly VMetric[]; action: 'reject' | 'escalate' | 'downgrade' }
 
 // ── S — State Instruction (Codegen output) ────────────────────
 
