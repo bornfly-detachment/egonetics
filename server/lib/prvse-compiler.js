@@ -258,7 +258,16 @@ function check(token, ctx) {
   for (const rule of CONSTITUTION_RULES) {
     if (rule.appliesTo(token)) {
       appliedRules.push(rule.id)
-      if (!hasPermission(ctx.actor, rule.permissionRequired)) {
+
+      // Rules with custom severity (e.g. const-008, const-009) fire regardless of permission
+      if (rule.severity) {
+        violations.push({
+          ruleId: rule.id,
+          message: `Constitutional violation: "${rule.text}"`,
+          severity: rule.severity,
+          handler: rule.severity === 'block' ? 'reject' : 'downgrade_permission',
+        })
+      } else if (!hasPermission(ctx.actor, rule.permissionRequired)) {
         violations.push({
           ruleId: rule.id,
           message: `Permission denied: ${ctx.actor} cannot satisfy "${rule.text}" (requires ${rule.permissionRequired})`,
