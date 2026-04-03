@@ -112,6 +112,8 @@ async function llmLex(content, opts = {}) {
       certainty: 'uncertain',
       completeness: 'incomplete',
       truth: null,
+      infoLevel: 'L2_subjective',
+      relationLevel: null,
       summary: 'LLM classification failed — fallback to narrative/uncertain',
     }
   }
