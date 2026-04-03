@@ -102,6 +102,7 @@ export {
   unresolved,
   isResolved,
   getNarrowingLevel,
+  isChecklistPassed,
   checkGate,
 } from './types'
 
