@@ -288,35 +288,40 @@ describe('getNarrowingLevel', () => {
 
 // ── Value Gate ────────────────────────────────────────────────
 
+/** Helper: build a ValueGate with L0 metrics for testing */
+function makeGate(
+  id: string,
+  metrics: { type: string; current: number; threshold: number }[],
+  onFail: 'reject' | 'escalate' | 'downgrade' = 'reject',
+): ValueGate {
+  return {
+    id,
+    l0: {
+      metrics: metrics.map(m => ({
+        type: m.type as import('../types').VL0MetricType,
+        currentValue: m.current,
+        threshold: m.threshold,
+      })),
+      ruleChecks: [],
+    },
+    independence: { neutral: true, antiInfiltration: true, kernelDirect: true },
+    onFail,
+  }
+}
+
 describe('checkGate', () => {
   it('passes when all metrics above threshold', () => {
-    const gate: ValueGate = {
-      id: 'test-gate',
-      source: 'computer_system',
-      temporal: 'static',
-      scope: 'local',
-      destination: 'V_D2_task_completion',
-      metrics: [
-        { dimension: 'v1', metricType: 'probability', currentValue: 0.95, threshold: 0.8 },
-      ],
-      onFail: 'reject',
-    }
+    const gate = makeGate('test-gate', [
+      { type: 'binary', current: 0.95, threshold: 0.8 },
+    ])
     const result = checkGate(gate)
     expect(result.passed).toBe(true)
   })
 
   it('fails when metric below threshold', () => {
-    const gate: ValueGate = {
-      id: 'test-gate',
-      source: 'ai_model',
-      temporal: 'dynamic',
-      scope: 'global',
-      destination: 'V_D1_align_human_preference',
-      metrics: [
-        { dimension: 'v2', metricType: 'confidence', currentValue: 0.3, threshold: 0.7 },
-      ],
-      onFail: 'escalate',
-    }
+    const gate = makeGate('test-gate', [
+      { type: 'accuracy', current: 0.3, threshold: 0.7 },
+    ], 'escalate')
     const result = checkGate(gate)
     expect(result.passed).toBe(false)
     if (!result.passed) {
@@ -326,18 +331,10 @@ describe('checkGate', () => {
   })
 
   it('multiple metrics — one failure fails the gate', () => {
-    const gate: ValueGate = {
-      id: 'multi-gate',
-      source: 'computer_system',
-      temporal: 'static',
-      scope: 'local',
-      destination: 'V_D2_task_completion',
-      metrics: [
-        { dimension: 'v1', metricType: 'counter', currentValue: 10, threshold: 5 },
-        { dimension: 'v1', metricType: 'probability', currentValue: 0.2, threshold: 0.8 },
-      ],
-      onFail: 'downgrade',
-    }
+    const gate = makeGate('multi-gate', [
+      { type: 'counter', current: 10, threshold: 5 },
+      { type: 'accuracy', current: 0.2, threshold: 0.8 },
+    ], 'downgrade')
     const result = checkGate(gate)
     expect(result.passed).toBe(false)
     if (!result.passed) {
