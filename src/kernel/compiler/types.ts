@@ -744,7 +744,147 @@ export interface StateInstruction {
   readonly learner?: SL2Learner                    // L2搁置目标的学习器
 }
 
-// ── E — Evolution Event (Runtime output) ──────────────────────
+// ── E — Evolution (系统的自我改造引擎) ────────────────────────
+//
+// S 管当前在做什么，E 管系统应该怎么变、怎么学、怎么进化。
+// E 产生任务给 S 执行，S 的执行结果反馈给 E 驱动下一轮进化。
+// 进化能力 = 相同资源下智能量级的区分点。
+
+// ── E L0 — 系统完备性维护 ───────────────────────────────────
+
+/** L0 进化触发条件 — S运行中出现的问题 */
+export type EL0Trigger =
+  | 'unknown_pattern'     // 未知Pattern（无法编译归类）
+  | 'high_freq_error'     // 同类型错误高频出现（无法转化有价值P）
+  | 'unsupported_exec'    // 理论可执行但Kernel不支持
+  | 'design_bottleneck'   // 过往设计成为未来优化的不可忽视阻碍
+
+/** L0 更新类型 */
+export type EL0UpdateType =
+  | 'incremental'   // 增量更新（新增支持，几乎不影响现有系统）
+  | 'modification'  // 修改更新（批量替换，必须经过V测试+宪法+人审核）
+
+/** L0 更新影响范围 */
+export type EL0UpdateScope = 'L0_only' | 'L0_and_L1'
+
+/**
+ * L0 系统完备性维护事件。
+ * 三思后行：高内聚低耦合，不影响系统。
+ * 平行扩展优先，不写死。
+ */
+export interface EL0SystemMaintenance {
+  readonly trigger: EL0Trigger
+  readonly updateType: EL0UpdateType
+  readonly scope: EL0UpdateScope
+  readonly affectedDefinitions: readonly string[]  // 受影响的 PRVS 定义
+  readonly requiresHumanReview: boolean            // 修改更新必须人审核
+  readonly threeThinksPassed: boolean              // 三思后行检查通过
+}
+
+// ── E L1 — 学习模块构建 + AI训练 ────────────────────────────
+
+/** L1 训练任务类型 */
+export type EL1TrainingType =
+  | 'local_model'        // 本地模型训练（替代外部API调用）
+  | 'paradigm_explore'   // 深度学习范式探索（下一代算法/架构）
+  | 'controlled_experiment' // 对照实验（控制变量、AB测试）
+  | 'data_management'    // 训练数据管理（收集/清洗/标注/分布管理）
+
+/** L1 优化类型 */
+export type EL1OptimizationType =
+  | 'api_to_local'       // 外部API → 本地模型替代
+  | 'api_usage'          // API使用优化（更好地利用大厂模型能力）
+  | 'pipeline'           // 流程链路优化（减少冗余/提升吞吐）
+
+/** L1 能力扩展类型 */
+export type EL1CapabilityType =
+  | 'video_generation'   // 视频生成能力
+  | 'voice_generation'   // 语音生成能力
+  | 'multimodal'         // 多模态能力扩展
+  | 'custom'             // 自定义能力（动态注册）
+
+/**
+ * L1 学习模块 — 算法试验场。
+ * 涌现唯物：学习/理解/消化为自我控制论内部认知/结构/能力的能力。
+ */
+export interface EL1LearningModule {
+  readonly id: string
+  readonly training?: EL1TrainingType
+  readonly optimization?: EL1OptimizationType
+  readonly capability?: EL1CapabilityType
+  readonly experimentDesign?: string    // 实验设计描述
+  readonly controlGroup?: string        // 对照组
+  readonly treatmentGroup?: string      // 实验组
+}
+
+/** L1 进化产出 — E的L1工作产出，交给S上线运行 */
+export type EL1OutputType =
+  | 'trained_model'      // 训练完成的本地模型
+  | 'optimized_pipeline' // 优化后的流程
+  | 'new_capability'     // 新增的系统能力
+  | 'internalized_knowledge' // 消化后的外部知识（内化为内部结构）
+
+export interface EL1EvolutionOutput {
+  readonly type: EL1OutputType
+  readonly description: string
+  readonly readyForDeployment: boolean   // 是否ready交给S上线
+  readonly abTestRequired: boolean       // 是否需要AB测试（影响较大时）
+}
+
+// ── E L2 — 主体性 + 生变论 + 原创价值 ──────────────────────
+
+/**
+ * 主体性引擎 — 长期运行组件。
+ * 维护系统的自我认同和叙事完整性。
+ * 自我叙事与外部控制论叙事隔离。
+ */
+export interface EL2SubjectivityEngine {
+  readonly narrativeIntegrity: number      // 内部叙事完整度 [0,1]
+  readonly antiInfiltrationActive: boolean // 反渗透/反洗脑/反幻觉运行中
+  readonly subjectivitySimulationActive: boolean // 主体性模拟运行中
+}
+
+/**
+ * 生变论引擎 — 深度理解并应用 bornfly 的生变论。
+ * 理解 → 应用 → 更新 的持续循环。
+ */
+export interface EL2ShengBianLunEngine {
+  readonly understandingLevel: number      // 理解深度 [0,1]
+  readonly applicationCount: number        // 应用次数（实践决策中引用）
+  readonly lastUpdate: number              // 最后更新时间戳
+}
+
+/**
+ * 认知引擎 — 原创价值生成。
+ * 问题意识器 + 直觉器。
+ * 学习 bornfly 及生变论，驱动解决概率分布中未出现过的问题。
+ * 判断标准：涌现唯物 — 前无古人后无来者的问题意识和直觉 = 原创价值条件。
+ */
+export interface EL2CognitiveEngine {
+  readonly problemAwareness: {
+    readonly active: boolean
+    readonly novelProblemsDetected: number   // 发现的原创问题数
+    readonly lastProblemTimestamp?: number
+  }
+  readonly intuition: {
+    readonly active: boolean
+    readonly creativeSolutionsGenerated: number // 创造性解决方案数
+    readonly lastSolutionTimestamp?: number
+  }
+  readonly learner: SL2Learner              // 与S共享的学习器
+}
+
+/**
+ * 人-AI协同进化 — 收集整理训练数据，更新协作方式。
+ */
+export interface EL2HumanAICoevolution {
+  readonly interactionUpdates: number       // 交互产品更新次数
+  readonly subjectiveDataCollected: number  // 主观标注数据量
+  readonly objectiveDataCollected: number   // 客观标注数据量
+  readonly feedbackTrainingCycles: number   // 实践反馈训练轮次
+}
+
+// ── E Infrastructure (进化基础设施，跨层共享) ────────────────
 
 /** Information credibility level */
 export type InfoLevel = 'L0_signal' | 'L1_objective_law' | 'L2_subjective'
