@@ -5,233 +5,96 @@
   "P": {
     "id": "tag-p",
     "name": "P — Pattern",
-    "description": "信息输入的分类。从哪来、是什么、去哪里。",
+    "description": "PRVSE信息基元。双重身份：外部信息进入系统的基本单元 + 控制论系统的细胞（最小完备信息单元）。信息论可计算——每个Pattern都有可计算的信息量数值。",
     "children": {
-      "source": {
-        "id": "tag-p-source",
-        "name": "从哪来 Source",
+      "state": {
+        "id": "tag-p-state",
+        "name": "Pattern 状态（三态）",
+        "description": "外部→内部的唯一路径是实践检验。系统内部产生的思想实验/规则也必须经测试验证。",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-p-st-external", "name": "外部态（未经L0校验的原始信息）" },
+          { "id": "tag-p-st-candidate", "name": "候选态（通过L0校验，未经实践检验）" },
+          { "id": "tag-p-st-internal", "name": "内部态（经实践检验，具备确定性和工程可控性）" }
+        ]
+      },
+      "origin": {
+        "id": "tag-p-origin",
+        "name": "从哪来（链式溯源）",
+        "description": "溯源是链式结构，必须追溯到源头原点。信息必然是控制论系统获取才有的。",
         "children": {
-          "external": {
-            "id": "tag-p-src-external",
-            "name": "外部来源（需声明信息源）",
+          "internal_source": {
+            "id": "tag-p-ori-internal",
+            "name": "内部来源（天然合法，可溯源、有主体、通信有方向）",
             "children": [
-              {
-                "id": "tag-p-s1",
-                "name": "用户输入"
-              },
-              {
-                "id": "tag-p-s2",
-                "name": "环境感知"
-              },
-              {
-                "id": "tag-p-s3",
-                "name": "外部检索"
-              },
-              {
-                "id": "tag-p-s4",
-                "name": "外部推送"
-              },
-              {
-                "id": "tag-p-s5-api",
-                "name": "外部API"
-              },
-              {
-                "id": "tag-p-s6-llm",
-                "name": "大模型API调用"
-              }
+              { "id": "tag-p-ori-user", "name": "用户输入（人类主体操作）" },
+              { "id": "tag-p-ori-model", "name": "内部模型调用（AI推理/生成）" },
+              { "id": "tag-p-ori-module", "name": "内部模块产生（组件输出/执行结果）" },
+              { "id": "tag-p-ori-event", "name": "系统事件（状态变化/调度触发）" },
+              { "id": "tag-p-ori-memory", "name": "过程记忆（chronicle/生命记忆）" }
             ]
           },
-          "internal": {
-            "id": "tag-p-src-internal",
-            "name": "内部来源（需声明组件连接）",
+          "external_source": {
+            "id": "tag-p-ori-external",
+            "name": "外部来源（需控制论过滤改造，按信任基础分类）",
             "children": [
-              {
-                "id": "tag-p-s-exec",
-                "name": "执行结果"
-              },
-              {
-                "id": "tag-p-s-comp",
-                "name": "组件输出"
-              },
-              {
-                "id": "tag-p-s-mem",
-                "name": "过程记忆"
-              }
+              { "id": "tag-p-ori-computable", "name": "可计算溯源（代码仓库/数据库/API返回/数学计算——确定性高、来源链完整）" },
+              { "id": "tag-p-ori-verifiable", "name": "可验证溯源（论文/实验数据/权威文档——可查证但需人/AI判断）" },
+              { "id": "tag-p-ori-narrative", "name": "叙事溯源（社交媒体/个人表达/AI生成内容——来源是主体主观表达）" },
+              { "id": "tag-p-ori-sensor", "name": "环境感知（传感器/监控/自动采集——来源是物理世界信号）" }
             ]
           }
         }
       },
-      "nature": {
-        "id": "tag-p-nature",
-        "name": "是什么 Nature",
-        "children": {
-          "physical": {
-            "id": "tag-p-physical",
-            "name": "A 物理结构（数据载体形式）",
-            "select_mode": "single",
-            "children": [
-              {
-                "id": "tag-p-a-text",
-                "name": "文本"
-              },
-              {
-                "id": "tag-p-a-number",
-                "name": "数值"
-              },
-              {
-                "id": "tag-p-a-image",
-                "name": "图像"
-              },
-              {
-                "id": "tag-p-a-audio",
-                "name": "音频"
-              },
-              {
-                "id": "tag-p-a-code",
-                "name": "代码"
-              }
-            ]
-          },
-          "semantic": {
-            "id": "tag-p-semantic",
-            "name": "B 语义结构（功能性预分类）",
-            "select_mode": "single",
-            "children": [
-              {
-                "id": "tag-p-b-fact",
-                "name": "事实"
-              },
-              {
-                "id": "tag-p-b-rule",
-                "name": "规则"
-              },
-              {
-                "id": "tag-p-b-process",
-                "name": "过程"
-              },
-              {
-                "id": "tag-p-b-relation",
-                "name": "关系"
-              },
-              {
-                "id": "tag-p-b-evaluation",
-                "name": "评估"
-              },
-              {
-                "id": "tag-p-b-narrative",
-                "name": "叙事"
-              },
-              {
-                "id": "tag-p-b-goal",
-                "name": "目标任务"
-              }
-            ]
-          },
-          "value_attrs": {
-            "id": "tag-p-value",
-            "name": "C 价值属性（V层预标记）",
-            "children": {
-              "certainty": {
-                "id": "tag-p-c-certainty",
-                "name": "确定性",
-                "select_mode": "single",
-                "children": [
-                  {
-                    "id": "tag-p-c-certain",
-                    "name": "确定"
-                  },
-                  {
-                    "id": "tag-p-c-uncertain",
-                    "name": "不确定"
-                  }
-                ]
-              },
-              "completeness": {
-                "id": "tag-p-c-completeness",
-                "name": "完备性",
-                "select_mode": "single",
-                "children": [
-                  {
-                    "id": "tag-p-c-complete",
-                    "name": "完整"
-                  },
-                  {
-                    "id": "tag-p-c-incomplete",
-                    "name": "残缺"
-                  }
-                ]
-              },
-              "truth": {
-                "id": "tag-p-c-truth",
-                "name": "真值",
-                "select_mode": "single",
-                "children": [
-                  {
-                    "id": "tag-p-c-true",
-                    "name": "真"
-                  },
-                  {
-                    "id": "tag-p-c-false",
-                    "name": "假"
-                  }
-                ]
-              }
-            }
-          }
-        }
+      "physical": {
+        "id": "tag-p-physical",
+        "name": "是什么（物理载体形式）",
+        "description": "L0层回答的基础分类。纯规则判断，不需要语义理解。",
+        "select_mode": "single",
+        "children": [
+          { "id": "tag-p-phy-text", "name": "文本（自然语言）" },
+          { "id": "tag-p-phy-number", "name": "数值（数字/度量）" },
+          { "id": "tag-p-phy-code", "name": "代码（程序/脚本/配置）" },
+          { "id": "tag-p-phy-structured", "name": "结构化数据（JSON/表格/数据库记录）" },
+          { "id": "tag-p-phy-image", "name": "图像" },
+          { "id": "tag-p-phy-audio", "name": "音频" },
+          { "id": "tag-p-phy-video", "name": "视频" },
+          { "id": "tag-p-phy-stream", "name": "流式数据（实时事件流/传感器流）" },
+          { "id": "tag-p-phy-mixed", "name": "混合体（代码+注释/图文混排/多模态）" }
+        ]
       },
-      "destination": {
-        "id": "tag-p-dest",
-        "name": "去哪里 Destination",
+      "level": {
+        "id": "tag-p-level",
+        "name": "Pattern 级别（三级形态）",
+        "description": "L0原子→L1分子→L2基因。信息量和价值越高层越大，不在于内容多寡，在于能发挥的作用范围。层级≠权力：L1可自发涌现为L2候选，能力至上。",
         "select_mode": "single",
         "children": [
           {
-            "id": "tag-p-d-p1",
-            "name": "P1 指令"
+            "id": "tag-p-lv-l0",
+            "name": "L0 原子（最小完备信息单元）",
+            "description": "具体、完备、含有价值信息量。L0负责完备性+合法性：格式转换、链式溯源、基础分类。程序化筛查+T0/T1模型一致性判断。过滤垃圾/广告/黑名单。"
           },
           {
-            "id": "tag-p-d-p2",
-            "name": "P2 检索"
+            "id": "tag-p-lv-l1",
+            "name": "L1 分子（P+R+V组合结构）",
+            "description": "高内聚低耦合的工程模块。L1负责信息分配：逐级走V+R判断，对触发它的链式源头负责。不触发状态变化=丢弃。现实约束下实现目标的实践层。"
           },
           {
-            "id": "tag-p-d-p3",
-            "name": "P3 执行"
-          },
-          {
-            "id": "tag-p-d-p4",
-            "name": "P4 交互"
-          },
-          {
-            "id": "tag-p-d-p5",
-            "name": "P5 内省"
-          },
-          {
-            "id": "tag-p-d-p6",
-            "name": "P6 推理"
-          },
-          {
-            "id": "tag-p-d-p7",
-            "name": "P7 记忆"
+            "id": "tag-p-lv-l2",
+            "name": "L2 基因（L1实践的抽象）",
+            "description": "最少内容，最大覆盖。L2负责全局最优化价值分析。通过L1宪法规则的Pattern进入全局分析。可从被L1搁置的Pattern中发现进化价值。只有统计学价值的高概率模式涌现时才触发E更新系统。"
           }
         ]
       },
-      "info_level": {
-        "id": "tag-p-info",
-        "name": "信息分级",
+      "communication": {
+        "id": "tag-p-comm",
+        "name": "通信方向",
+        "description": "Pattern支持双向通信。高层级不代表有更大权力，不代表控制下层。",
         "select_mode": "single",
         "children": [
-          {
-            "id": "tag-p-info-l0",
-            "name": "L0 信号层（客观确定性，不经人脑/AI即可计算）"
-          },
-          {
-            "id": "tag-p-info-l1",
-            "name": "L1 客观规律层（可验证可复现，需实验论证）"
-          },
-          {
-            "id": "tag-p-info-l2",
-            "name": "L2 主观认知层（需人类判断/AI推理，叙事赋予合法性）"
-          }
+          { "id": "tag-p-comm-up", "name": "自底向上（L1涌现→L2候选，需规则校验+人二次确认）" },
+          { "id": "tag-p-comm-down", "name": "自顶向下（高层抽象指导实践）" },
+          { "id": "tag-p-comm-lateral", "name": "同层通信（由R+宪法决定共享，A→B/广播）" }
         ]
       }
     }
