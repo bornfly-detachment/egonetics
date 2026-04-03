@@ -3,7 +3,7 @@
  * PRVSE AOP Pipeline — Pattern 三问自动分类引擎
  *
  * 流程：
- *   1. 从 tag_trees 拉取活的标签树（不写死枚举）
+ *   1. 从 tag-tree.json 加载标签树（不写死枚举）
  *   2. T0 本地模型 → 三问链式标签候选
  *   3. T1 模型二次校验 → 验证 or 标记冲突
  *   4. 冲突 → needs_human_review = true，等人工打标
