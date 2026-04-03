@@ -8,6 +8,7 @@
  *   3. Edge legality (which connections are allowed)
  *   4. Info level policy (L0/L1/L2 trust boundaries)
  *   5. Narrowing completeness (unknown fields → downgrade)
+ *   6. State transition legality (external → candidate → internal)
  *
  * Core function: isConstitutionSatisfiedBy()
  *
@@ -184,13 +185,16 @@ export function isConstitutionSatisfiedBy(
   const { tokenViolations, effectivePermission } = checkNarrowing(midIR.tokens, ctx)
   violations.push(...tokenViolations)
 
-  // 3. Check info level policy
+  // 3. Check state transition legality
+  violations.push(...checkStateTransitions(midIR.tokens))
+
+  // 4. Check info level policy
   violations.push(...checkInfoLevel(midIR, ctx))
 
-  // 4. Check edge legality + relation level coherence
+  // 5. Check edge legality + relation level coherence
   violations.push(...checkEdges(midIR.edges, ctx))
 
-  // 5. Check value gates
+  // 6. Check value gates
   const { gateViolations, gateInstructions } = checkValueGates(midIR.gates)
   violations.push(...gateViolations)
   instructions.push(...gateInstructions)
@@ -254,12 +258,9 @@ function checkNarrowing(
 
     // Report un-narrowed fields
     const unresolvedFields: string[] = []
-    if (!isResolved(token.destination)) unresolvedFields.push('destination')
     if (!isResolved(token.physical)) unresolvedFields.push('physical')
-    if (!isResolved(token.semantic)) unresolvedFields.push('semantic')
-    if (!isResolved(token.certainty)) unresolvedFields.push('certainty')
-    if (!isResolved(token.completeness)) unresolvedFields.push('completeness')
-    if (!isResolved(token.truth)) unresolvedFields.push('truth')
+    if (!isResolved(token.level)) unresolvedFields.push('level')
+    if (!isResolved(token.communication)) unresolvedFields.push('communication')
 
     if (unresolvedFields.length > 0) {
       const severity: ViolationSeverity = level === 'minimal' ? 'downgrade' : 'warn'
@@ -281,6 +282,52 @@ function checkNarrowing(
     .find(([_, r]) => r === effectiveRank)?.[0] as PermissionTier ?? 'T0'
 
   return { tokenViolations: violations, effectivePermission }
+}
+
+/**
+ * Check state transition legality.
+ *
+ * Constitutional rule: external → internal has NO shortcut.
+ * Must go through: external → candidate → internal.
+ * Even internally generated hypotheses must pass practice verification.
+ */
+function checkStateTransitions(
+  tokens: readonly PatternToken[],
+): ConstitutionViolation[] {
+  const violations: ConstitutionViolation[] = []
+
+  for (const token of tokens) {
+    // External state tokens need L0 validation before becoming candidate
+    if (token.state === 'external') {
+      // This is expected — scanner produces external state for external origin
+      // The checker just notes it needs validation
+    }
+
+    // Candidate state tokens from external origin: verify they went through L0
+    // (In practice, the scanner correctly sets state from origin)
+
+    // Detect impossible state: internal origin but external state
+    if (token.origin.domain === 'internal' && token.state === 'external') {
+      violations.push({
+        ruleId: 'state_coherence',
+        message: `Token ${token.id}: internal origin cannot have external state`,
+        severity: 'block',
+        handler: 'reject',
+      })
+    }
+
+    // Detect impossible state: external origin but internal state (no shortcut!)
+    if (token.origin.domain === 'external' && token.state === 'internal') {
+      violations.push({
+        ruleId: 'state_no_shortcut',
+        message: `Token ${token.id}: external origin cannot directly reach internal state — must go through practice verification`,
+        severity: 'block',
+        handler: 'reject',
+      })
+    }
+  }
+
+  return violations
 }
 
 function checkInfoLevel(
@@ -313,13 +360,13 @@ function checkInfoLevel(
     })
   }
 
-  // L2 subjective: require verification flag
+  // L2 subjective: require verification for external state tokens
   if (policy.requiresVerification) {
     for (const token of midIR.tokens) {
-      if (isResolved(token.certainty) && token.certainty.value === 'uncertain') {
+      if (token.state === 'external') {
         violations.push({
           ruleId: 'l2_verification',
-          message: `Token ${token.id} is L2 subjective + uncertain → requires verification before acting`,
+          message: `Token ${token.id} is L2 subjective context + external state → requires verification before acting`,
           severity: 'warn',
           handler: 'escalate_to_human',
         })
@@ -540,6 +587,11 @@ export function quickCheck(
 
   if (!hasPermission(actor, 'T0')) {
     return { allowed: false, maxPermission, reason: 'Actor has no permission at all' }
+  }
+
+  // State coherence quick check
+  if (token.origin.domain === 'external' && token.state === 'internal') {
+    return { allowed: false, maxPermission, reason: 'External origin cannot have internal state (no shortcut)' }
   }
 
   return { allowed: true, maxPermission }
