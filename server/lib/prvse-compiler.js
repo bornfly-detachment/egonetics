@@ -44,7 +44,7 @@ async function llmLex(content, opts = {}) {
 
   const msg = await client.messages.create({
     model,
-    max_tokens: 512,
+    max_tokens: 1024,
     messages: [
       { role: 'user', content: `[System]\n${LEXER_SYSTEM_PROMPT}\n\n[Input to classify]\n${content}` },
     ],
