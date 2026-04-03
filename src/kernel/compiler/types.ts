@@ -131,26 +131,40 @@ export function getNarrowingLevel(token: PatternToken): NarrowingLevel {
 /**
  * Relation Info Level — constitutional definition of R.
  *
- * Boundary criterion: can it be computed WITHOUT human cognition or AI?
+ * CORE PRINCIPLE: Levels are engineering state snapshots, NOT permanent labels.
+ * The same phenomenon can transition between levels as engineering matures.
+ *   - Face recognition: L1 (2010) → L0 (2024, 99.XX% accuracy)
+ *   - Quantum computing: L1 (today) → L0 (after engineering breakthrough)
+ *   - Dialectical problems: L2 → L1 (when validated through practice)
  *
- * L0_logic: Pure logical relations. Computable deterministically.
- *   - 0/1 logic, math, physics laws (1+1=2, gravity)
- *   - Conditions determined → result unique
- *   - Independent of consciousness/will
- *   - If ambiguity in cognition/interpretation exists → belongs to L1
+ * Boundary criterion: practical engineering certainty at current state.
  *
- * L1_conditional: Conditional + temporal relations. Too complex to enumerate.
- *   - Conditions, time, evolution, causality
- *   - Causality = conditions + time composition
- *   - A→B appears causal but B may depend on C, D... (requires experiment)
- *   - Boundary with L0: conditions too complex for exhaustive computation
- *   - Requires human/AI to distinguish and validate
+ * L0_logic: Practically deterministic at engineering scale.
+ *   - Math, classical physics, boolean logic (1+1=2, F=ma at macro scale)
+ *   - Conditions determined → result unique (in classical physics regime)
+ *   - Engineering certainty ≥ 99% → qualifies as L0
+ *   - NOTE: Quantum measurement is L1 (ontologically probabilistic),
+ *     but Schrödinger's equation itself is L0 (deterministic evolution).
+ *     At human practice scale, quantum effects are negligible.
+ *   - If ANY cognitive ambiguity or interpretation exists → belongs to L1
  *
- * L2_existential: Existential relations. Requires narrative for legitimacy.
+ * L1_conditional: Theoretically computable but practically uncertain.
+ *   - Conditions too complex to enumerate (chaos, multi-factor causality)
+ *   - Causality = conditions + time; A→B appears causal but B depends on C,D...
+ *   - Chaos systems: L0 rules at bottom, but sensitivity to initial conditions
+ *     makes computation degrade to L1 (matches "cannot exhaustively compute")
+ *   - Requires human/AI to distinguish, experiment to validate
+ *   - Can transition to L0 when engineering achieves high certainty
+ *
+ * L2_existential: Requires subjectivity algorithm (e.g. life's three laws).
  *   - Subjectivity, cognition, meaning, narrative
- *   - Subject's practice in spacetime needs narrative for value
- *   - Dialectics: oppose/unify, controllable/uncontrollable, finite/infinite
- *   - Contains metaphysical + lived experience elements
+ *   - Dialectics: oppose/unify — A and ¬A can coexist (forbidden in L0 logic)
+ *   - Subject's practice in spacetime needs narrative for value and legitimacy
+ *   - Can transition to L1 when validated through practice
+ *
+ * Level transitions are monitored by E (Evolution):
+ *   E watches confidence metrics on L1 nodes → triggers L1→L0 upgrade at threshold
+ *   E validates L2 predictions through practice → triggers L2→L1 transition
  *
  * Maps 1:1 to InfoLevel (P's L0/L1/L2) and PermissionTier hierarchy.
  */
