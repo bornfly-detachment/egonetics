@@ -45,7 +45,7 @@ import {
  * Lower cannot modify higher.
  */
 const PERMISSION_RANK: Record<PermissionTier, number> = {
-  T0_qwen: 0,
+  T0: 0,
   T1_minimax: 1,
   T2_claude: 2,
   T3_creator: 3,
@@ -60,7 +60,7 @@ function narrowingToPermission(level: NarrowingLevel): PermissionTier {
   switch (level) {
     case 'full': return 'T2_claude'    // fully typed → full AI access
     case 'partial': return 'T1_minimax' // partially typed → execution only
-    case 'minimal': return 'T0_qwen'    // mostly unknown → perception only
+    case 'minimal': return 'T0'    // mostly unknown → perception only
   }
 }
 
@@ -133,7 +133,7 @@ const INFO_LEVEL_POLICIES: Record<InfoLevel, InfoLevelPolicy> = {
     canModifyConstitution: false,
     canCreateNodes: false,
     canDeleteNodes: false,
-    maxPermission: 'T0_qwen',
+    maxPermission: 'T0',
     requiresVerification: false,  // L0 = objective, no verification needed
   },
   L1_objective_law: {
@@ -273,7 +273,7 @@ function checkNarrowing(
   const effectiveRank = Math.min(actorRank, narrowingRank)
 
   const effectivePermission = Object.entries(PERMISSION_RANK)
-    .find(([_, r]) => r === effectiveRank)?.[0] as PermissionTier ?? 'T0_qwen'
+    .find(([_, r]) => r === effectiveRank)?.[0] as PermissionTier ?? 'T0'
 
   return { tokenViolations: violations, effectivePermission }
 }
@@ -416,7 +416,7 @@ export function quickCheck(
   const level = getNarrowingLevel(token)
   const maxPermission = narrowingToPermission(level)
 
-  if (!hasPermission(actor, 'T0_qwen')) {
+  if (!hasPermission(actor, 'T0')) {
     return { allowed: false, maxPermission, reason: 'Actor has no permission at all' }
   }
 
