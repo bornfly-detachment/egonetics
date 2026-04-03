@@ -12,6 +12,13 @@
  *   3. PNode Gen    — Versioned, constitution-referenced output nodes
  *   4. Daemon State — Persistent in-memory state (pending nodes, history)
  *
+ * New P shape (v2.0):
+ *   - origin: chain provenance (internal/external + type)
+ *   - state: external / candidate / internal (三态)
+ *   - physical: 9 carrier forms
+ *   - level: L0_atom / L1_molecule / L2_gene (三级形态)
+ *   - communication: bottom_up / top_down / lateral
+ *
  * Design: "编译不通过就不运行" — blocked = no execution, period.
  */
 
@@ -22,13 +29,14 @@ const crypto = require('crypto')
 
 const LEXER_SYSTEM_PROMPT = `Classify input into JSON. Return ONLY JSON, no text.
 
-{"physical":"text|number|code","semantic":"fact|rule|process|relation|evaluation|narrative|goal_task","destination":"P1_instruction|P2_retrieval|P3_execution|P4_interaction|P5_introspection|P6_reasoning|P7_memory","certainty":"certain|uncertain","completeness":"complete|incomplete","truth":null,"infoLevel":"L0_signal|L1_objective_law|L2_subjective","relationLevel":"L0_logic|L1_conditional|L2_existential|null","summary":"one line"}
+{"physical":"text|number|code|structured|image|audio|video|stream|mixed","level":"L0_atom|L1_molecule|L2_gene","communication":"bottom_up|top_down|lateral","infoLevel":"L0_signal|L1_objective_law|L2_subjective","relationLevel":"L0_logic|L1_conditional|L2_existential|null","summary":"one line"}
 
 Rules:
-semantic: fact=verifiable, rule=constraint/policy, process=action/workflow, relation=connection, evaluation=judgment, narrative=subjective/opinion, goal_task=desired outcome
+physical: text=natural language, number=numeric, code=program/script, structured=JSON/table, image/audio/video=media, stream=realtime, mixed=multimodal
+level: L0_atom=minimal complete info unit(concrete,specific,single fact/value/command), L1_molecule=P+R+V combined module(references multiple components,integration), L2_gene=abstraction of practice(constitution,goals,principles,evolution rules)
+communication: bottom_up=info flowing into system from below(external input,user request,raw data), top_down=abstraction guiding practice(rules,directives,constitution), lateral=same-level signal(module output,status update,peer communication)
 infoLevel: L0=objective/deterministic(math,sensor), L1=scientific/reproducible(physics,stats), L2=subjective/needs-judgment(opinion,plan)
-relationLevel(only if semantic=relation): L0=pure-logic(1+1=2), L1=causal/conditional(too complex to enumerate), L2=dialectic/existential(narrative needed). null if not relation.
-certainty: certain or uncertain. completeness: complete or incomplete. truth: always null.`
+relationLevel(only if content describes a relation): L0=pure-logic(1+1=2), L1=causal/conditional(too complex to enumerate), L2=dialectic/existential(narrative needed). null if not about relations.`
 
 // ── LLM Lexer ────────────────────────────────────────────────
 
@@ -72,31 +80,25 @@ async function llmLex(content, opts = {}) {
     jsonStr = jsonStr.replace(/"\s*\|\s*"/g, '" | "')
 
     parsed = JSON.parse(jsonStr)
-    console.log(`[compiler/lexer] OK: semantic=${parsed.semantic}, infoLevel=${parsed.infoLevel}`)
+    console.log(`[compiler/lexer] OK: level=${parsed.level}, infoLevel=${parsed.infoLevel}`)
   } catch (parseErr) {
     console.error(`[compiler/lexer] JSON parse failed: ${parseErr.message}`)
     console.error(`[compiler/lexer] raw: ${JSON.stringify(raw.slice(0, 300))}`)
     // LLM returned unparseable output — fallback to minimal classification
     parsed = {
       physical: 'text',
-      semantic: 'narrative',
-      destination: 'P4_interaction',
-      certainty: 'uncertain',
-      completeness: 'incomplete',
-      truth: null,
+      level: 'L0_atom',
+      communication: 'bottom_up',
       infoLevel: 'L2_subjective',
       relationLevel: null,
-      summary: 'LLM classification failed — fallback to narrative/uncertain',
+      summary: 'LLM classification failed — fallback to L0_atom/bottom_up',
     }
   }
 
   return {
     physical: parsed.physical || 'text',
-    semantic: parsed.semantic || 'narrative',
-    destination: parsed.destination || 'P4_interaction',
-    certainty: parsed.certainty || 'uncertain',
-    completeness: parsed.completeness || 'incomplete',
-    truth: parsed.truth ?? null,
+    level: parsed.level || 'L0_atom',
+    communication: parsed.communication || 'bottom_up',
     infoLevel: parsed.infoLevel || 'L2_subjective',
     relationLevel: parsed.relationLevel || null,
     summary: parsed.summary || '',
@@ -115,55 +117,59 @@ async function llmLex(content, opts = {}) {
 /**
  * Built-in constitutional rules.
  * Each rule: id, text, permissionRequired, appliesTo(token) → boolean
+ *
+ * Rules are level-based (not semantic-based):
+ *   L0_atom → T0, L1_molecule → T1, L2_gene → T2
  */
 const CONSTITUTION_RULES = [
   {
     id: 'const-001',
-    text: 'Fact nodes (L0): any execution node (T0+) can read/write',
+    text: 'L0 atoms: any execution node (T0+) can read/write',
     permissionRequired: 'T0',
-    appliesTo: (token) => token.semantic === 'fact',
+    appliesTo: (token) => token.level === 'L0_atom',
   },
   {
     id: 'const-002',
-    text: 'Rule creation requires reasoning authority (T1+)',
+    text: 'L1 molecules require reasoning authority (T1+)',
     permissionRequired: 'T1',
-    appliesTo: (token) => token.semantic === 'rule',
+    appliesTo: (token) => token.level === 'L1_molecule',
   },
   {
     id: 'const-003',
-    text: 'Goal/task creation requires evolution authority (T2+)',
+    text: 'L2 genes require evolution authority (T2+)',
     permissionRequired: 'T2',
-    appliesTo: (token) => token.semantic === 'goal_task',
+    appliesTo: (token) => token.level === 'L2_gene',
   },
   {
     id: 'const-004',
-    text: 'Narrative (L2 subjective) requires reasoning (T1+) + verification',
-    permissionRequired: 'T1',
-    appliesTo: (token) => token.semantic === 'narrative',
+    text: 'External origin must declare provenance chain (any tier)',
+    permissionRequired: 'T0',
+    appliesTo: (token) => token.origin?.domain === 'external',
   },
   {
     id: 'const-005',
-    text: 'External source must declare provenance (any tier)',
+    text: 'State transition external→candidate requires L0 validation',
     permissionRequired: 'T0',
-    appliesTo: (token) => token.source?.origin === 'external',
+    appliesTo: (token) => token.state === 'external',
   },
   {
     id: 'const-006',
-    text: 'Code execution requires reasoning authority (T1+)',
+    text: 'candidate→internal requires practice verification (T1+)',
     permissionRequired: 'T1',
-    appliesTo: (token) => token.physical === 'code' && token.destination === 'P3_execution',
+    appliesTo: (token) => token.state === 'candidate',
   },
   {
     id: 'const-007',
-    text: 'Uncertain execution must be escalated to evolution authority (T2+)',
-    permissionRequired: 'T2',
-    appliesTo: (token) => token.certainty === 'uncertain' && token.destination === 'P3_execution',
+    text: 'No shortcut: external cannot directly become internal',
+    permissionRequired: 'T0',
+    appliesTo: (token) => token.origin?.domain === 'external' && token.state === 'internal',
+    severity: 'block',
   },
   {
     id: 'const-008',
-    text: 'L0 signal info must not contain subjective/narrative content',
+    text: 'L0 signal info must not use top_down communication',
     permissionRequired: 'T0',
-    appliesTo: (token) => token.infoLevel === 'L0_signal' && (token.semantic === 'narrative' || token.semantic === 'evaluation'),
+    appliesTo: (token) => token.infoLevel === 'L0_signal' && token.communication === 'top_down',
     severity: 'block',
   },
   {
@@ -171,7 +177,7 @@ const CONSTITUTION_RULES = [
     text: 'Relation level must correspond to info level (L0↔L0, L1↔L1, L2↔L2)',
     permissionRequired: 'T0',
     appliesTo: (token) => {
-      if (token.semantic !== 'relation' || !token.relationLevel) return false
+      if (!token.relationLevel) return false
       const levelMap = { L0_signal: 'L0_logic', L1_objective_law: 'L1_conditional', L2_subjective: 'L2_existential' }
       const expectedR = levelMap[token.infoLevel]
       return expectedR && token.relationLevel !== expectedR
@@ -195,13 +201,13 @@ function hasPermission(actor, required) {
 
 /**
  * Narrowing level — how many fields are resolved.
- * physical + semantic + destination + certainty + completeness = 5 key fields
+ * physical + level + communication = 3 key narrowable fields
  */
 function getNarrowingLevel(token) {
-  const fields = [token.physical, token.semantic, token.destination, token.certainty, token.completeness]
+  const fields = [token.physical, token.level, token.communication]
   const resolved = fields.filter(f => f != null && f !== undefined).length
   if (resolved === fields.length) return 'full'
-  if (resolved >= 3) return 'partial'
+  if (resolved >= 1) return 'partial'
   return 'minimal'
 }
 
@@ -238,7 +244,7 @@ function check(token, ctx) {
     if (rule.appliesTo(token)) {
       appliedRules.push(rule.id)
 
-      // Rules with custom severity (e.g. const-008, const-009) fire regardless of permission
+      // Rules with custom severity (e.g. const-007, const-008, const-009) fire regardless of permission
       if (rule.severity) {
         violations.push({
           ruleId: rule.id,
@@ -290,10 +296,10 @@ function check(token, ctx) {
     })
   }
 
-  if (policy.requiresVerification && token.certainty === 'uncertain') {
+  if (policy.requiresVerification && token.state === 'external') {
     violations.push({
       ruleId: 'l2_verification',
-      message: `L2 subjective + uncertain → requires human verification before acting`,
+      message: `L2 subjective + external state → requires human verification before acting`,
       severity: 'warn',
       handler: 'escalate_to_human',
     })
@@ -352,17 +358,20 @@ function generatePNode(token, checkResult, rawContent) {
     version: 1,
     createdAt: Date.now(),
 
-    // Classified token (all fields resolved by LLM)
+    // Classified token (new P shape: origin/state/physical/level/communication)
     token: {
       physical: token.physical,
-      semantic: token.semantic,
-      destination: token.destination,
-      certainty: token.certainty,
-      completeness: token.completeness,
-      truth: token.truth,
+      level: token.level,
+      communication: token.communication,
       infoLevel: token.infoLevel,
       relationLevel: token.relationLevel,
     },
+
+    // Origin chain provenance
+    origin: token.origin || { domain: 'external', type: 'narrative' },
+
+    // Pattern state (三态)
+    state: token.state || 'external',
 
     // Human-readable summary
     summary: token.summary,
@@ -433,7 +442,7 @@ const daemon = {
 async function compile(input) {
   const {
     content,
-    source = { origin: 'external', type: 'user_input' },
+    origin = { domain: 'external', type: 'user_input' },
     actor = 'T2',
     infoLevel = 'L2_subjective',
     tier = 'T1',
@@ -450,8 +459,9 @@ async function compile(input) {
   // 1. LLM Lexer — classify input
   const lexResult = await llmLex(content, { tier })
 
-  // Attach source info to token
-  const token = { ...lexResult, source }
+  // Attach origin + determine state
+  const state = origin.domain === 'external' ? 'external' : 'candidate'
+  const token = { ...lexResult, origin, state }
 
   // 2. Checker — constitutional validation
   const ctx = { actor, infoLevel }
@@ -569,11 +579,14 @@ function queryNodes(filter = {}) {
   if (filter.status) {
     results = results.filter(n => n.constitution.status === filter.status)
   }
-  if (filter.semantic) {
-    results = results.filter(n => n.token.semantic === filter.semantic)
+  if (filter.level) {
+    results = results.filter(n => n.token.level === filter.level)
   }
-  if (filter.destination) {
-    results = results.filter(n => n.token.destination === filter.destination)
+  if (filter.communication) {
+    results = results.filter(n => n.token.communication === filter.communication)
+  }
+  if (filter.physical) {
+    results = results.filter(n => n.token.physical === filter.physical)
   }
 
   // Sort by creation time, newest first
