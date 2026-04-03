@@ -389,11 +389,32 @@ export type CommLevel = 'L0_descriptive' | 'L1_request' | 'L2_control'
 /** Resource tier — who executes */
 export type ResourceTier = 'T0' | 'T1' | 'T2'
 
-/** Permission tier — who is allowed */
 /**
- * Permission tier — abstract capability levels, NOT bound to specific models.
- * T0 = perception/signal, T1 = execution, T2 = reasoning, T3 = constitutional authority.
- * Which model/agent fills each tier is a runtime binding, not a compiler concern.
+ * Permission Tier — abstract capability levels, NOT bound to specific models.
+ * External display is always 3-tier (T0/T1/T2). T3 is internal only.
+ * Which agent fills each tier is a runtime binding, not a compiler concern.
+ *
+ * T0 — Execution/Practice (对外第一级)
+ *   All execution nodes. Perception + task execution merged.
+ *   Can read/write L0 data, execute verified instructions.
+ *   Every bottom-layer agent is T0.
+ *
+ * T1 — Reasoning/Control (对外第二级)
+ *   AI-level processing. Handles L1/L2 information.
+ *   PRVSE middle-layer engine: compiler, physics engine, state machine.
+ *   Can create nodes, evaluate conditions, run complex inference.
+ *
+ * T2 — Evolution Authority (对外第三级, prvse-world 顶层)
+ *   Human-machine co-evolution. The E (Evolution) node's authority.
+ *   Establishes goals, constitution, resources.
+ *   Can modify system structure, trigger level transitions.
+ *   This is the top-level permission in prvse-world.
+ *
+ * T3 — 生变论 (内部隐藏层, bornfly 独有)
+ *   Creator authority for the self-cybernetics system.
+ *   The supreme permission of all Egonetics machines.
+ *   Future: cryptographic identity + subjectivity practice legitimacy.
+ *   Internal narrative only — not exposed in external 3-tier display.
  */
 export type PermissionTier = 'T0' | 'T1' | 'T2' | 'T3'
 
