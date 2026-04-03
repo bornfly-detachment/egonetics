@@ -46,7 +46,7 @@ import {
  */
 const PERMISSION_RANK: Record<PermissionTier, number> = {
   T0: 0,
-  T1_minimax: 1,
+  T1: 1,
   T2_claude: 2,
   T3_creator: 3,
 }
@@ -59,7 +59,7 @@ function hasPermission(actor: PermissionTier, required: PermissionTier): boolean
 function narrowingToPermission(level: NarrowingLevel): PermissionTier {
   switch (level) {
     case 'full': return 'T2_claude'    // fully typed → full AI access
-    case 'partial': return 'T1_minimax' // partially typed → execution only
+    case 'partial': return 'T1' // partially typed → execution only
     case 'minimal': return 'T0'    // mostly unknown → perception only
   }
 }
@@ -140,7 +140,7 @@ const INFO_LEVEL_POLICIES: Record<InfoLevel, InfoLevelPolicy> = {
     canModifyConstitution: false,
     canCreateNodes: true,
     canDeleteNodes: false,
-    maxPermission: 'T1_minimax',
+    maxPermission: 'T1',
     requiresVerification: false,  // L1 = verified by science
   },
   L2_subjective: {
