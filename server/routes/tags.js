@@ -111,17 +111,60 @@ function flattenTree(obj, depth = 0, result = []) {
   return result
 }
 
+/**
+ * 将 JSON 树节点转换为前端 TagNode 格式 {id, name, color, select_mode, children}
+ */
+function toTagNode(obj) {
+  if (!obj || typeof obj !== 'object' || !obj.id) return null
+  const node = {
+    id: obj.id,
+    name: obj.name || '',
+    color: obj.color || '#6b7280',
+    select_mode: obj.select_mode || 'multi',
+  }
+  const kids = []
+  if (Array.isArray(obj.children)) {
+    for (const child of obj.children) {
+      const c = toTagNode(child)
+      if (c) kids.push(c)
+    }
+  } else if (obj.children && typeof obj.children === 'object') {
+    for (const child of Object.values(obj.children)) {
+      const c = toTagNode(child)
+      if (c) kids.push(c)
+    }
+  }
+  if (kids.length) node.children = kids
+  return node
+}
+
 function genId() {
   return `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
 // ── 路由 ──────────────────────────────────────────────────────
 
-// GET /api/tag-trees — 返回完整 JSON 树
+// GET /api/tag-trees — 返回 TagNode[] 格式（前端兼容）
 router.get('/tag-trees', (_req, res) => {
   try {
     const tree = readTree()
-    res.json(tree)
+    const roots = []
+    for (const key of ['P', 'R', 'V', 'S', 'E']) {
+      if (tree[key]) {
+        const node = toTagNode(tree[key])
+        if (node) roots.push(node)
+      }
+    }
+    res.json(roots)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/tag-trees/raw — 返回原始 JSON 树（编译器/内核使用）
+router.get('/tag-trees/raw', (_req, res) => {
+  try {
+    res.json(readTree())
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
