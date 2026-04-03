@@ -166,7 +166,7 @@ function resolveResourceTier(
     case 'T0': return 'T0'
     case 'T1': return 'T1'
     case 'T2':
-    case 'T3_creator': return 'T2'
+    case 'T3': return 'T2'
   }
 }
 

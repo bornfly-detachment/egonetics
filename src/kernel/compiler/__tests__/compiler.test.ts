@@ -305,7 +305,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
     const tokens = scanBatch([makeInput('hello world.')])
     const midIR = bind({ tokens, edges: [], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -320,7 +320,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
     }
     const midIR = bind({ tokens: [token], edges: [], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T0_qwen',
+      actor: 'T0',
       infoLevel: 'L1_objective_law',
     })
 
@@ -347,7 +347,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
 
     const midIR = bind({ tokens, edges: [illegalEdge], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -373,7 +373,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
 
     const midIR = bind({ tokens, edges: [legalEdge], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -397,12 +397,12 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
 
     const midIR = bind({ tokens: [token], edges: [], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
     // T2 actor should be downgraded due to minimal narrowing
-    expect(lowIR.permissionLevel).not.toBe('T2_claude')
+    expect(lowIR.permissionLevel).not.toBe('T2')
   })
 
   it('reports failed value gates', () => {
@@ -421,7 +421,7 @@ describe('Checker — isConstitutionSatisfiedBy', () => {
 
     const midIR = bind({ tokens, edges: [], gates: [failingGate] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -439,7 +439,7 @@ describe('Emitter', () => {
     const tokens = scanBatch([makeInput('test')])
     const midIR = bind({ tokens, edges: [], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -463,7 +463,7 @@ describe('Emitter', () => {
     const tokens = scanBatch([makeInput('hello world.')])
     const midIR = bind({ tokens, edges: [], gates: [] })
     const lowIR = isConstitutionSatisfiedBy(midIR, {
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -483,7 +483,7 @@ describe('compile — full pipeline', () => {
   it('compiles simple text input successfully', () => {
     const result = compile({
       inputs: [makeInput('This is a fact.')],
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -501,7 +501,7 @@ describe('compile — full pipeline', () => {
         source: userSource,
         hints: { semantic: 'goal_task' },
       }],
-      actor: 'T0_qwen',
+      actor: 'T0',
       infoLevel: 'L1_objective_law',
     })
 
@@ -524,7 +524,7 @@ describe('compile — full pipeline', () => {
         ],
         onFail: 'reject',
       }],
-      actor: 'T1_minimax',
+      actor: 'T1',
       infoLevel: 'L1_objective_law',
     })
 
@@ -545,7 +545,7 @@ describe('compile — full pipeline', () => {
         ],
         onFail: 'reject',
       }],
-      actor: 'T1_minimax',
+      actor: 'T1',
       infoLevel: 'L1_objective_law',
     })
 
@@ -558,7 +558,7 @@ describe('compile — full pipeline', () => {
         content: 'const validate = function(input) { if (!input) { return false; } return true; }',
         source: { origin: 'internal', type: 'component_output' },
       }],
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -572,7 +572,7 @@ describe('compile — full pipeline', () => {
   it('Chinese input compiles correctly', () => {
     const result = compile({
       inputs: [makeInput('用户登录失败超过5次就锁定。')],
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L1_objective_law',
     })
 
@@ -583,7 +583,7 @@ describe('compile — full pipeline', () => {
   it('uncertain Chinese input detected', () => {
     const result = compile({
       inputs: [makeInput('可能需要重新设计这个模块')],
-      actor: 'T2_claude',
+      actor: 'T2',
       infoLevel: 'L2_subjective',
     })
 
@@ -602,13 +602,13 @@ describe('quickCheck', () => {
 
   it('allows any token for T2 actor', () => {
     const token = scan(makeInput('anything'))
-    const result = quickCheck(token, 'T2_claude')
+    const result = quickCheck(token, 'T2')
     expect(result.allowed).toBe(true)
   })
 
   it('returns maxPermission based on narrowing', () => {
     const token = scan(makeInput('hello world.'))
-    const result = quickCheck(token, 'T2_claude')
+    const result = quickCheck(token, 'T2')
     expect(result.maxPermission).toBeDefined()
   })
 })
