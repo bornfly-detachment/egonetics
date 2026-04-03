@@ -68,12 +68,21 @@ export type {
   GateResult,
   GateFailure,
 
-  // S — State
-  StateInstruction,
-  SSource,
-  SNodeTier,
-  SStateMachine,
+  // S — State (PRV完备组织的运行时状态)
+  SDrivingForce,
+  SL0RuntimeState,
+  SL1TaskState,
+  SL1FeedbackRecord,
+  SL1FeedbackLoop,
+  SL2StrategicState,
+  SL2Learner,
+  SL2LearnerSignal,
+  SL2GoalLevel,
+  SL2GoalDecomposition,
   SEffect,
+  SLevel,
+  SCurrentState,
+  StateInstruction,
 
   // E — Evolution
   EvolutionEvent,
