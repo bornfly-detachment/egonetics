@@ -1,0 +1,415 @@
+/**
+ * PRVSE Compiler — Type System
+ *
+ * Bridges tag-tree semantic types → kernel execution primitives.
+ * Source of truth: docs/prvse-compiler-lang.md + pages.db tag_trees
+ *
+ * Design:
+ *   - PatternToken  → compiled into kernel Pattern + NodeState
+ *   - RelationEdge  → compiled into kernel Contract
+ *   - ValueGate     → used by checker as constraint gate
+ *   - StateInstruction → compiled into kernel Patch[]
+ *   - EvolutionEvent → compiled into kernel Effect
+ *
+ * TypeScript gradual typing: fields start as `unknown`, narrow through
+ * the pipeline. Un-narrowed fields → downgrade permission, not reject.
+ */
+
+import type { NodeId, ContractId } from '../types'
+
+// ── Narrowable<T> — gradual typing primitive ──────────────────
+
+/**
+ * A value that starts unknown and narrows through the compiler pipeline.
+ * `resolved: true` means the field has been classified.
+ * `resolved: false` means it's still unknown → triggers permission downgrade.
+ */
+export type Narrowable<T> =
+  | { resolved: true; value: T }
+  | { resolved: false }
+
+export function resolved<T>(value: T): Narrowable<T> {
+  return { resolved: true, value }
+}
+
+export function unresolved<T>(): Narrowable<T> {
+  return { resolved: false }
+}
+
+export function isResolved<T>(n: Narrowable<T>): n is { resolved: true; value: T } {
+  return n.resolved
+}
+
+// ── P — Pattern Token (Lexer output) ──────────────────────────
+
+/** External input sources — must declare provenance */
+export type PExternalSource =
+  | 'user_input'
+  | 'env_perception'
+  | 'external_search'
+  | 'external_push'
+  | 'external_api'
+  | 'llm_api_call'
+
+/** Internal input sources — must declare component connection */
+export type PInternalSource =
+  | 'execution_result'
+  | 'component_output'
+  | 'process_memory'
+
+export type PSource =
+  | { origin: 'external'; type: PExternalSource }
+  | { origin: 'internal'; type: PInternalSource }
+
+/** A — Physical structure (data carrier form) */
+export type PPhysicalType = 'text' | 'number' | 'image' | 'audio' | 'code'
+
+/** B — Semantic structure (functional pre-classification) */
+export type PSemanticType =
+  | 'fact'
+  | 'rule'
+  | 'process'
+  | 'relation'
+  | 'evaluation'
+  | 'narrative'
+  | 'goal_task'
+
+/** C — Value attributes (pre-markers for V layer) */
+export type PCertainty = 'certain' | 'uncertain'
+export type PCompleteness = 'complete' | 'incomplete'
+export type PTruth = 'true' | 'false'
+
+/** Destination — output routing (what the pattern drives) */
+export type PDestination =
+  | 'P1_instruction'
+  | 'P2_retrieval'
+  | 'P3_execution'
+  | 'P4_interaction'
+  | 'P5_introspection'
+  | 'P6_reasoning'
+  | 'P7_memory'
+
+/**
+ * PatternToken — the output of the Lexer (scanner).
+ *
+ * source + destination are required (must know where info comes from and goes).
+ * physical, semantic, value attrs use Narrowable — start unknown, narrow through pipeline.
+ */
+export interface PatternToken {
+  readonly id: string
+  readonly timestamp: number
+  readonly rawContent: string
+
+  // Required — must be declared at entry
+  readonly source: PSource
+  readonly destination: Narrowable<PDestination>
+
+  // Narrowable — start unknown, narrow through pipeline
+  readonly physical: Narrowable<PPhysicalType>
+  readonly semantic: Narrowable<PSemanticType>
+  readonly certainty: Narrowable<PCertainty>
+  readonly completeness: Narrowable<PCompleteness>
+  readonly truth: Narrowable<PTruth>
+}
+
+/** How narrowed is this token? Determines permission level. */
+export type NarrowingLevel = 'full' | 'partial' | 'minimal'
+
+export function getNarrowingLevel(token: PatternToken): NarrowingLevel {
+  const fields = [
+    token.destination, token.physical, token.semantic,
+    token.certainty, token.completeness, token.truth,
+  ]
+  const resolvedCount = fields.filter(isResolved).length
+  if (resolvedCount === fields.length) return 'full'
+  if (resolvedCount >= 3) return 'partial'
+  return 'minimal'
+}
+
+// ── R — Relation Edge (Parser output) ─────────────────────────
+
+export type RDirection = 'none' | 'one_way' | 'bidirectional'
+export type RCertainty = 'deterministic' | 'probabilistic' | 'fuzzy'
+export type RTemporal = 'simultaneous' | 'sequential' | 'cyclic'
+
+export type RLogic = 'deductive' | 'inductive' | 'analogical'
+export type RCausal = 'direct' | 'indirect' | 'counterfactual'
+export type RProcess = 'conditional_transform' | 'quantitative_accumulation' | 'qualitative_emergence'
+export type RDialectic = 'oppose' | 'transform' | 'unify'
+export type RStrength = 'positive' | 'negative'
+
+/** Propagation direction — how changes travel along this edge */
+export type RPropagation = 'forward' | 'backward' | 'bidirectional'
+
+/** Edge type — maps to kernel Contract types */
+export type REdgeType =
+  | 'contains'
+  | 'constraint'
+  | 'mutual_constraint'
+  | 'signal'
+  | 'derives'
+  | 'directed'
+
+/** What this relation does in the system */
+export type RDestination =
+  | 'R_D1_drive_reasoning'
+  | 'R_D2_support_value_calc'
+  | 'R_D3_record_evolution'
+  | 'R_D4_execute_constraint'
+  | 'R_D5_activate_related'
+
+export interface RelationEdge {
+  readonly id: string
+  readonly sourceNode: NodeId
+  readonly targetNode: NodeId
+
+  // Physical attributes
+  readonly direction: RDirection
+  readonly certainty: RCertainty
+  readonly temporal: RTemporal
+
+  // Semantic nature (at least one should be set)
+  readonly logic?: RLogic
+  readonly causal?: RCausal
+  readonly process?: RProcess
+  readonly dialectic?: RDialectic
+  readonly strength: RStrength
+
+  // Compiler-required
+  readonly edgeType: REdgeType
+  readonly propagation: RPropagation
+  readonly priority: number
+  readonly destination: RDestination
+}
+
+// ── V — Value Gate (Semantic Analysis) ────────────────────────
+
+export type VSource = 'computer_system' | 'ai_model' | 'human_narrative' | 'external_narrative'
+export type VTemporal = 'static' | 'dynamic'
+export type VScope = 'local' | 'global'
+export type VCertainty = 'deterministic' | 'uncertain'
+export type VControl = 'controllable' | 'uncontrollable'
+export type VBaseline = 'maintain' | 'challenge'
+
+export type VDestination =
+  | 'V_D1_align_human_preference'
+  | 'V_D2_task_completion'
+  | 'V_D3_system_evolution'
+
+/** V1 — objective metrics (deterministic) */
+export type V1MetricType = 'counter' | 'timer' | 'token_consumption' | 'probability' | 'binary'
+
+export interface V1Metric {
+  readonly dimension: 'v1'
+  readonly metricType: V1MetricType
+  readonly currentValue: number
+  readonly threshold: number
+}
+
+/** V2 — external probability metrics */
+export type V2MetricType =
+  | 'confidence'
+  | 'relevance_prob'
+  | 'causal_prob'
+  | 'prediction_prob'
+  | 'narrative_legitimacy'
+  | 'narrative_completeness'
+  | 'narrative_logic'
+
+export interface V2Metric {
+  readonly dimension: 'v2'
+  readonly metricType: V2MetricType
+  readonly currentValue: number  // [0, 1]
+  readonly threshold: number     // [0, 1]
+}
+
+/** V3 — internal/constitutional evaluation */
+export type V3MetricType =
+  | 'constitutional_rule'
+  | 'value_alignment'
+  | 'cognitive_eval'
+  | 'narrative_consistency'
+  | 'prediction_prob_internal'
+
+export interface V3Metric {
+  readonly dimension: 'v3'
+  readonly metricType: V3MetricType
+  readonly currentValue: number  // [0, 1]
+  readonly threshold: number     // [0, 1]
+  readonly ruleId?: string       // for constitutional_rule: which rule
+}
+
+export type VMetric = V1Metric | V2Metric | V3Metric
+
+/** Phi factor — independent, composed at runtime */
+export interface PhiFactor {
+  readonly id: 'phi_causal' | 'phi_temporal' | 'phi_contradiction' | 'phi_dependency'
+  readonly rEdgeTypes: readonly REdgeType[]
+  readonly computedValue: number  // [0, 1]
+}
+
+/** Value Gate — the core constraint mechanism */
+export interface ValueGate {
+  readonly id: string
+  readonly source: VSource
+  readonly temporal: VTemporal
+  readonly scope: VScope
+  readonly destination: VDestination
+
+  readonly metrics: readonly VMetric[]
+  readonly phi?: readonly PhiFactor[]
+
+  /** What happens when gate fails */
+  readonly onFail: 'reject' | 'escalate' | 'downgrade'
+}
+
+/** Check if a value gate passes */
+export function checkGate(gate: ValueGate): GateResult {
+  const failures: VMetric[] = []
+
+  for (const metric of gate.metrics) {
+    if (metric.currentValue < metric.threshold) {
+      failures.push(metric)
+    }
+  }
+
+  if (failures.length === 0) {
+    return { passed: true, gate }
+  }
+
+  return {
+    passed: false,
+    gate,
+    failures,
+    action: gate.onFail,
+  }
+}
+
+export type GateResult =
+  | { passed: true; gate: ValueGate }
+  | { passed: false; gate: ValueGate; failures: readonly VMetric[]; action: 'reject' | 'escalate' | 'downgrade' }
+
+// ── S — State Instruction (Codegen output) ────────────────────
+
+export type SSource =
+  | 'S1_task_driven'
+  | 'S2_survival_driven'
+  | 'S3_evolution_driven'
+  | 'S4_exploration_driven'
+
+export type SNodeTier = 'execution' | 'research' | 'update'
+
+export type SStateMachine =
+  | 'building'
+  | 'trial'
+  | 'stable'
+  | 'bug_suspended'
+  | 'waiting'
+  | 'positive_loop'
+  | 'negative_loop'
+  | 'archived'
+
+export type SEffect =
+  | 'trigger_perception'
+  | 'trigger_execution'
+  | 'trigger_evolution'
+  | 'trigger_communication'
+
+export interface StateInstruction {
+  readonly source: SSource
+  readonly nodeTier: SNodeTier
+  readonly currentState: SStateMachine
+  readonly targetState: SStateMachine
+  readonly guards: readonly ValueGate[]  // all must pass
+  readonly effects: readonly SEffect[]   // triggered on success
+}
+
+// ── E — Evolution Event (Runtime output) ──────────────────────
+
+/** Information credibility level */
+export type InfoLevel = 'L0_signal' | 'L1_objective_law' | 'L2_subjective'
+
+/** Communication level */
+export type CommLevel = 'L0_descriptive' | 'L1_request' | 'L2_control'
+
+/** Resource tier — who executes */
+export type ResourceTier = 'T0' | 'T1' | 'T2'
+
+/** Permission tier — who is allowed */
+export type PermissionTier = 'T0_qwen' | 'T1_minimax' | 'T2_claude' | 'T3_creator'
+
+export type MutationType = 'create' | 'update' | 'delete' | 'transition'
+
+export interface EvolutionEvent {
+  readonly id: string
+  readonly timestamp: number
+
+  // What triggered this
+  readonly trigger: StateInstruction
+  readonly infoLevel: InfoLevel
+  readonly commLevel: CommLevel
+
+  // What changed
+  readonly mutationType: MutationType
+  readonly affectedNodes: readonly NodeId[]
+
+  // Authorization
+  readonly actor: PermissionTier
+  readonly executor: ResourceTier
+
+  // Diff
+  readonly diff: {
+    readonly before: unknown
+    readonly after: unknown
+  }
+}
+
+// ── Constitution Violation (checked exception) ────────────────
+
+export type ViolationSeverity = 'block' | 'downgrade' | 'warn'
+
+export interface ConstitutionViolation {
+  readonly ruleId: string
+  readonly message: string
+  readonly severity: ViolationSeverity
+  readonly node?: NodeId
+  readonly handler: 'reject' | 'escalate_to_human' | 'downgrade_permission'
+}
+
+// ── Compiler Pipeline Types ───────────────────────────────────
+
+/** High-IR: scanner output — PatternToken with unknown fields */
+export type HighIR = PatternToken
+
+/** Mid-IR: binder output — fully typed PRVSE graph fragment */
+export interface MidIR {
+  readonly tokens: readonly PatternToken[]
+  readonly edges: readonly RelationEdge[]
+  readonly gates: readonly ValueGate[]
+  readonly constitutionBindings: readonly ConstitutionBinding[]
+}
+
+/** A binding from a node to a constitutional rule */
+export interface ConstitutionBinding {
+  readonly nodeId: string
+  readonly ruleId: string
+  readonly ruleText: string
+  readonly permissionRequired: PermissionTier
+}
+
+/** Low-IR: checker output — executable instructions */
+export interface LowIR {
+  readonly instructions: readonly StateInstruction[]
+  readonly violations: readonly ConstitutionViolation[]
+  readonly permissionLevel: PermissionTier
+}
+
+/** Full compilation result */
+export interface CompileResult {
+  readonly success: boolean
+  readonly highIR: HighIR
+  readonly midIR: MidIR | null
+  readonly lowIR: LowIR | null
+  readonly events: readonly EvolutionEvent[]
+  readonly violations: readonly ConstitutionViolation[]
+}
