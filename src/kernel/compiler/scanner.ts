@@ -109,7 +109,7 @@ function determineState(origin: POrigin): PState {
  * Classify level from content + origin heuristics.
  * Most content starts as L0_atom — the binder refines this.
  */
-function classifyLevel(content: string, origin: POrigin, physical: PPhysicalType | null): PLevel | null {
+function classifyLevel(_content: string, origin: POrigin, physical: PPhysicalType | null): PLevel | null {
   // Internal execution results are L0 atoms (deterministic output)
   if (origin.domain === 'internal' && origin.type === 'module_output') return 'L0_atom'
   if (origin.domain === 'internal' && origin.type === 'system_event') return 'L0_atom'
