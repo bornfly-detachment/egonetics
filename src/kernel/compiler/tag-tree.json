@@ -409,7 +409,8 @@
               { "id": "tag-v-l1-rw-rank", "name": "方案排序（多方案择优）" },
               { "id": "tag-v-l1-rw-relevance", "name": "信息相关性/价值（对目标的信息量）" },
               { "id": "tag-v-l1-rw-optimality", "name": "最优性检测（局部vs全局）" },
-              { "id": "tag-v-l1-rw-constitution", "name": "宪法原则校验（主观抽象→转为校验清单）" }
+              { "id": "tag-v-l1-rw-constitution", "name": "宪法原则校验（主观抽象→转为校验清单）" },
+              { "id": "tag-v-l1-rw-opportunity", "name": "机会成本（选A路径放弃B路径的价值量化，防止沉没成本谬误）" }
             ]
           }
         }
