@@ -82,7 +82,7 @@ const SPHERE_META: Record<string, { name: string; color: string; sessionNode: st
     systemPrompt: '你是 Egonetics 的资源管理 AI，监控可调配资源全局状态。分析资源瓶颈、调度建议、容量规划。简洁专业。',
   },
   'dim-goals': {
-    name: '目标', color: '#22c55e',
+    name: '目标', color: '#3366e6',
     sessionNode: 'sphere-goals',
     systemPrompt: '你是 Egonetics 的目标规划 AI，追踪两大矛盾收敛：无限→有限 / 失控→可控。目标分解、进度评估、矛盾识别。简洁专业。',
   },
