@@ -57,6 +57,8 @@ export interface RuntimeConfig {
   readonly observer: ObserverFn
   /** Run selection every N ticks (0 = disabled) */
   readonly selectionInterval: number
+  /** Pre-patch constitutional hooks — applied before every applyPatches() call */
+  readonly hooks?: HookRegistry
 }
 
 export interface Runtime {
