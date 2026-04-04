@@ -400,42 +400,42 @@ export default function PrvseWorldView() {
         />
       )}
 
-      {/* ── Full-panel mode: sphere bookmarks on left edge, hover to expand ── */}
-      {spherePanel && isFullPanel && !l1Panel && (
-        <div className="absolute top-1/2 -translate-y-1/2 left-0 z-50 flex flex-col gap-0">
+      {/* ── Fullscreen mode: sphere bookmarks on left edge, hover to expand ── */}
+      {spherePanel && panelFullscreen && !l1Panel && (
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 z-50 flex flex-col">
           {tree.map(root => {
             const isActive = spherePanel?.id === root.id
             return (
               <button
                 key={root.id}
                 onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
-                className="group relative flex items-center h-10 transition-all duration-200"
+                className="group relative flex items-center h-12 transition-all duration-200"
               >
-                {/* Bookmark tab — always visible */}
+                {/* Bookmark tab — colored bar always visible */}
                 <div
-                  className="w-[6px] h-10 rounded-r-sm transition-all"
+                  className="w-[5px] h-12 transition-all"
                   style={{
-                    background: isActive ? root.color : `${root.color}40`,
-                    boxShadow: isActive ? `0 0 10px ${root.color}50` : 'none',
+                    background: isActive ? root.color : `${root.color}50`,
+                    boxShadow: isActive ? `2px 0 12px ${root.color}40` : 'none',
                   }}
                 />
-                {/* Hover popup — name label */}
+                {/* Hover popup — name label slides out */}
                 <div
-                  className="absolute left-[6px] flex items-center gap-2 px-3 py-1.5 rounded-r-lg
-                    opacity-0 -translate-x-1 pointer-events-none
-                    group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto
-                    transition-all duration-200"
+                  className="absolute left-[5px] flex items-center gap-2 px-3 py-1.5 rounded-r-lg
+                    opacity-0 scale-95 pointer-events-none
+                    group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto
+                    transition-all duration-150 origin-left"
                   style={{
-                    background: isActive ? `${root.color}25` : 'rgba(10,10,15,0.9)',
-                    border: `1px solid ${isActive ? `${root.color}40` : 'rgba(255,255,255,0.08)'}`,
+                    background: 'rgba(4,5,10,0.95)',
+                    border: `1px solid ${root.color}30`,
                     borderLeft: 'none',
                   }}
                 >
                   <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: root.color, boxShadow: `0 0 6px ${root.color}60` }}
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: root.color, boxShadow: `0 0 8px ${root.color}60` }}
                   />
-                  <span className="text-[10px] font-mono whitespace-nowrap" style={{ color: isActive ? root.color : 'rgba(255,255,255,0.5)' }}>
+                  <span className="text-[11px] font-mono whitespace-nowrap font-semibold" style={{ color: root.color }}>
                     {root.name}
                   </span>
                 </div>
@@ -449,10 +449,9 @@ export default function PrvseWorldView() {
       {spherePanel && !l1Panel && (
         <WorldSpherePanel
           node={spherePanel}
-          onClose={() => { setSpherePanel(null); setPanelWidth(380) }}
-          width={panelWidth}
-          onWidthChange={setPanelWidth}
-          containerWidth={containerWidth}
+          onClose={() => { setSpherePanel(null); setPanelFullscreen(false) }}
+          isFullscreen={panelFullscreen}
+          onToggleFullscreen={() => setPanelFullscreen(v => !v)}
         />
       )}
 
