@@ -81,7 +81,15 @@ export {
   validateContract,
   validateRegistry,
   defaultUniverseSpec,
+  resolveRuleSeverity,
+  defaultRuleRegistry,
 } from './constitution'
+export type {
+  ConstitutionRuleSource,
+  RuleSourceEntry,
+  RuleSourceRegistry,
+} from './types'
+export { RULE_SOURCE_PRIORITY } from './types'
 
 // ── Observer Protocol ──
 export {
