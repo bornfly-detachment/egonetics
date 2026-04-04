@@ -20,6 +20,10 @@ import {
   Cpu, HardDrive, ListOrdered, Crown, Scale,
   TrendingDown, Octagon,
   Expand, Eye, EyeOff, Wand2,
+  // S layer icons
+  Hammer, Play, Wrench, Bug, Pause, Search, FileText, Package, Archive,
+  Rocket, BookMarked, Shield, XCircle, Trophy,
+  ListChecks, HeartPulse, Compass,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SliderWidget } from '@/design/components/SliderWidget'
