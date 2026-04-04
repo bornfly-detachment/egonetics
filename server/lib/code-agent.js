@@ -112,6 +112,9 @@ async function ensureClaudeRunning(sphere = 'main') {
   if (!tmuxHasSession()) {
     execSync(`tmux new-session -d -s ${TMUX} -x 220 -y 50 -n main`)
     await new Promise(r => setTimeout(r, 300))
+    // 加载用户环境变量（PATH, API keys 等）
+    execSync(`tmux send-keys -t ${TMUX}:main "source ~/.bash_profile" Enter`)
+    await new Promise(r => setTimeout(r, 500))
   }
   // 确保对应 window 存在
   try {
