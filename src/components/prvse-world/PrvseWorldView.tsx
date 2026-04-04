@@ -218,6 +218,9 @@ export default function PrvseWorldView() {
   const panelRatio = spherePanel ? panelWidth / containerWidth : 0
   const isFullPanel = panelRatio > 0.82  // panel covers >82% → button mode
 
+  // Keep panelRatioRef in sync for tick closure
+  useEffect(() => { panelRatioRef.current = panelRatio }, [panelRatio])
+
   // ── Layer transitions ──────────────────────────────────────
 
   const drillDown = useCallback((
