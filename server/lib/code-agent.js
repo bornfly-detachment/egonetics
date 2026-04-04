@@ -175,6 +175,13 @@ async function ensureClaudeRunning(sphere = 'main', model) {
       if (c === 'claude') break
     } catch { /* ignore */ }
   }
+
+  // claude 启动完成后，如需切换 model，用 /model 命令
+  if (model) {
+    execSync(`tmux send-keys -t ${pane} "/model ${model}" Enter`)
+    await new Promise(r => setTimeout(r, 1500))
+    _runningModel[sphere] = model
+  }
 }
 
 // ── 交互式 prompt 检测与等待 ──────────────────────────────────
