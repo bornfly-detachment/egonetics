@@ -18,7 +18,7 @@ import {
   Target, Crosshair, Focus, Gauge, Timer, Coins, BarChart2, CheckCircle,
   ClipboardCheck, Puzzle, AlertOctagon, FileCheck,
   Cpu, HardDrive, ListOrdered, Crown, Scale,
-  TrendingDown, OctagonX,
+  TrendingDown, Octagon,
   Expand, Eye, EyeOff, Wand2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -38,7 +38,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Target, Crosshair, Focus, Gauge, Timer, Coins, BarChart2, CheckCircle,
   ClipboardCheck, Puzzle, AlertOctagon, FileCheck,
   Cpu, HardDrive, ListOrdered, Crown, Scale,
-  TrendingDown, OctagonX,
+  TrendingDown, Octagon,
   Expand, Eye, EyeOff, Wand2,
 }
 
