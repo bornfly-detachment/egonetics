@@ -496,17 +496,35 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
   const systemPrompt = SPHERE_SYSTEM_PROMPTS[node.id] ?? `你是 ${node.name} 的 AI 守护者，用中文回答。`
   const componentId  = SPHERE_COMPONENT_IDS[node.id]  ?? `L3-${node.id}-Guardian-PersistentContext`
 
+  const spectrum = ROOT_SPECTRUM[node.id]
+  // Parse base color for gradient rgba values
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace('#', '')
+    return `${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)}`
+  }
+  const rgb = spectrum ? hexToRgb(spectrum.base) : '255,255,255'
+
   return (
     <div
       className="absolute top-0 right-0 h-full z-40 flex flex-col transition-all duration-300"
       style={{
         width: isFullscreen ? '100%' : '380px',
-        background: 'rgba(4,5,10,0.96)',
+        background: `linear-gradient(180deg, rgba(${rgb},0.08) 0%, rgba(${rgb},0.03) 12%, rgba(4,5,10,0.97) 30%, rgba(4,5,10,0.97) 100%)`,
         backdropFilter: 'blur(28px)',
-        borderLeft: isFullscreen ? 'none' : `1px solid ${node.color}22`,
-        boxShadow: isFullscreen ? 'none' : `-8px 0 32px rgba(0,0,0,0.6)`,
+        borderLeft: 'none',
+        boxShadow: isFullscreen ? 'none' : `-12px 0 48px rgba(0,0,0,0.8), -2px 0 20px rgba(${rgb},0.04)`,
       }}
     >
+      {/* Gradient left border line */}
+      {!isFullscreen && spectrum && (
+        <div
+          className="absolute left-0 top-0 h-full pointer-events-none"
+          style={{
+            width: '1px',
+            background: `linear-gradient(180deg, transparent 0%, ${spectrum.highlight} 15%, ${spectrum.base} 50%, ${spectrum.shadow} 85%, transparent 100%)`,
+          }}
+        />
+      )}
       {/* Header */}
       <div
         className="flex items-center gap-2.5 px-4 py-3.5 shrink-0"
