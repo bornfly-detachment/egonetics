@@ -622,7 +622,7 @@ export default function WorldSpherePanel({ node, onClose, width, onWidthChange, 
           componentId={componentId}
         />
       </div>
-      </div>{/* end Panel Body */}
-    </div>{/* end outer flex */}
+      </div>
+    </div>
   )
 }
