@@ -227,7 +227,7 @@ export function setHighlight(entities: EntityMap, nodeId: string | null, prevId:
     if (group) {
       const sphere = group.children[0] as THREE.Mesh
       const mat = sphere.material as THREE.MeshStandardMaterial
-      mat.emissiveIntensity = 1.1
+      mat.emissiveIntensity = 0.65
       // Brighten ring on hover
       for (let i = 1; i < group.children.length; i++) {
         const child = group.children[i]
