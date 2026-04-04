@@ -58,7 +58,7 @@ export default function PrvseWorldView() {
   // Root sphere IDs ordered to match figure-8 bodies [0,1,2]
   const ROOT_IDS = ['dim-constitution', 'dim-resources', 'dim-goals'] as const
   // Scene scale: figure-8 spans ±1.5 natural units → map to ±SCENE_R scene units
-  const SCENE_R   = 180
+  const SCENE_R   = 100      // tighter orbits — spheres stay closer together
   const TB_DT     = 0.00095  // natural-unit dt per frame ≈ ~110 s visual period
 
   const [layer, setLayer] = useState<Layer>('L3')  // 从L3世界层出发
