@@ -110,11 +110,14 @@ export function createRuntime(config?: Partial<RuntimeConfig>): Runtime {
   const buffer = createPortBuffer()
   const tracker = createFitnessTracker()
   let tickCount = 0
+  const HISTORY_SIZE = cfg.historySize ?? 10
+  const stateHistory: State[] = []
 
   return {
     get state() { return state },
     get tickCount() { return tickCount },
     get config() { return cfg },
+    get historyLength() { return stateHistory.length },
 
     // ── Node management ──
 
