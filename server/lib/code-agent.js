@@ -135,17 +135,16 @@ async function ensureClaudeRunning(sphere = 'main', model) {
     } catch { return '' }
   })()
 
-  // 如果 claude 已在运行，检查 model 是否匹配
+  // 如果 claude 已在运行，切换 model（如需要）
   if (cmd === 'claude') {
     const currentModel = _runningModel[sphere]
     if (model && currentModel && model !== currentModel) {
-      // model 不匹配，退出当前 claude 重启
-      execSync(`tmux send-keys -t ${pane} "/exit" Enter`)
+      // 在 claude 内部用 /model 切换，不重启
+      execSync(`tmux send-keys -t ${pane} "/model ${model}" Enter`)
       await new Promise(r => setTimeout(r, 1500))
-      delete _runningModel[sphere]
-    } else {
-      return  // model 匹配或未指定，直接复用
+      _runningModel[sphere] = model
     }
+    return
   }
 
   // 有其他进程先 Ctrl+C
