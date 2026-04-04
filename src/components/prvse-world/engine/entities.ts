@@ -211,7 +211,7 @@ export function setHighlight(entities: EntityMap, nodeId: string | null, prevId:
       const sphere = group.children[0] as THREE.Mesh
       const mat = sphere.material as THREE.MeshStandardMaterial
       const node = entities.nodeData.get(prevId)!
-      mat.emissiveIntensity = node.depth === 0 ? 0.55 : 0.18
+      mat.emissiveIntensity = node.depth === 0 ? 0.45 : 0.15
       // Reset ring opacity
       for (let i = 1; i < group.children.length; i++) {
         const child = group.children[i]
