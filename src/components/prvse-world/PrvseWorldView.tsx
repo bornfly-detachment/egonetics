@@ -404,11 +404,37 @@ export default function PrvseWorldView() {
         />
       )}
 
+      {/* ── Full-panel mode: sphere buttons in top-left when panel >82% ── */}
+      {spherePanel && isFullPanel && !l1Panel && (
+        <div className="absolute top-14 left-4 z-50 flex flex-col gap-1.5">
+          {tree.map(root => (
+            <button
+              key={root.id}
+              onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all"
+              style={spherePanel?.id === root.id
+                ? { background: `${root.color}20`, border: `1px solid ${root.color}40`, color: root.color }
+                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
+              }
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ background: root.color, boxShadow: spherePanel?.id === root.id ? `0 0 8px ${root.color}` : 'none' }}
+              />
+              <span className="text-[10px] font-mono">{root.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── L3 Sphere Panel: 右侧抽屉，点击三球体展开 L0/L1/L2 树 + AI 上下文 ── */}
       {spherePanel && !l1Panel && (
         <WorldSpherePanel
           node={spherePanel}
-          onClose={() => setSpherePanel(null)}
+          onClose={() => { setSpherePanel(null); setPanelWidth(380) }}
+          width={panelWidth}
+          onWidthChange={setPanelWidth}
+          containerWidth={containerWidth}
         />
       )}
 
