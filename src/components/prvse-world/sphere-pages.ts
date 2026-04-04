@@ -59,12 +59,12 @@ export const SPHERE_PAGES: SphereEntry[] = [
   {
     id: 'dim-constitution',
     name: '宪法',
-    color: '#ef4444',
+    color: '#e63333',
     pages: [
       // L0 物理执行层
       { id: 'c-kernel',    name: 'Kernel 物理引擎',   color: '#8b5cf6', layer: 'L0', component: 'kernel',           desc: 'PRVSE 物理引擎·合约验证·tick 驱动' },
       { id: 'c-ctrl',      name: '控制器',             color: '#3b82f6', layer: 'L0', component: 'controller-view',  desc: '感知→决策→行动控制器实现' },
-      { id: 'c-queue',     name: '执行队列',           color: '#22c55e', layer: 'L0', component: 'queue-view',       desc: '任务执行队列状态监控与调度' },
+      { id: 'c-queue',     name: '执行队列',           color: '#3366e6', layer: 'L0', component: 'queue-view',       desc: '任务执行队列状态监控与调度' },
       { id: 'c-mq',        name: '消息队列 MQ',        color: '#8b5cf6', layer: 'L0', component: 'mq-view',          desc: '事件驱动消息总线·累积≥3触发 dispatch' },
       // L1 客观规律层
       { id: 'c-prvse',     name: 'PRVSE 规则集',       color: '#6366f1', layer: 'L1', component: 'prvse-rules',      desc: 'P·R·V·S 五层语义标签树·宪法底座' },
