@@ -65,8 +65,7 @@ export default function PrvseWorldView() {
   const [selectedRoot, setSelectedRoot] = useState<ControlNode | null>(null)
   const [l1Panel, setL1Panel] = useState<ControlNode | null>(null)   // 2D overlay for L1
   const [spherePanel, setSpherePanel] = useState<ControlNode | null>(null)  // L3 sphere drawer
-  const [panelWidth, setPanelWidth] = useState(380)
-  const [containerWidth, setContainerWidth] = useState(1200)
+  const [panelFullscreen, setPanelFullscreen] = useState(false)
   const [focus, setFocus] = useState<FocusState | null>(null)
   const [interactNode, setInteractNode] = useState<ControlNode | null>(null)
   const [establishedNodes, setEstablishedNodes] = useState<Set<string>>(new Set())
