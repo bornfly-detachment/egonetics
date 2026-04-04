@@ -22,7 +22,8 @@
  * Design: "编译不通过就不运行" — blocked = no execution, period.
  */
 
-const { createLLMEngine } = require('./llm-engine')
+const t0Engine = require('./t0-engine')
+const t1Engine = require('./t1-engine')
 const crypto = require('crypto')
 
 // ── LLM Lexer System Prompt ─────────────────────────────────
