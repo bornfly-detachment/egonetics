@@ -51,7 +51,7 @@ export function buildEntities(nodes: PrvseNode[], parent: THREE.Group, lang: Lan
     const mat = new THREE.MeshStandardMaterial({
       color,
       emissive: emissiveColor,
-      emissiveIntensity: node.depth === 0 ? 0.55 : 0.18,
+      emissiveIntensity: node.depth === 0 ? 0.45 : 0.15,
       roughness: node.depth === 0 ? 0.15 : 0.45,
       metalness: node.depth === 0 ? 0.45 : 0.15,
       transparent: true,
