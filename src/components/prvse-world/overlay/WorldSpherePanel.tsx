@@ -533,17 +533,23 @@ export default function WorldSpherePanel({ node, onClose }: WorldSpherePanelProp
         </button>
       </div>
 
-      {/* Tree View */}
-      <div className="overflow-y-auto px-3 py-3 shrink-0" style={{ maxHeight: '52%' }}>
-        {layerGroups.map((group, i) => (
-          <LayerGroupSection
-            key={group.layer}
-            group={group}
-            defaultExpanded={i === 0}
-            onNavigate={onClose}
-          />
-        ))}
-      </div>
+      {/* Content — ResourcePanel for resources sphere, tree view for others */}
+      {node.id === 'dim-resources' ? (
+        <div className="overflow-y-auto shrink-0" style={{ maxHeight: '52%' }}>
+          <ResourcePanel sphereColor={node.color} />
+        </div>
+      ) : (
+        <div className="overflow-y-auto px-3 py-3 shrink-0" style={{ maxHeight: '52%' }}>
+          {layerGroups.map((group, i) => (
+            <LayerGroupSection
+              key={group.layer}
+              group={group}
+              defaultExpanded={i === 0}
+              onNavigate={onClose}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Gradient divider */}
       <div
