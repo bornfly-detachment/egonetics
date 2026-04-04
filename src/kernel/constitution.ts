@@ -275,6 +275,48 @@ function checkGlobalLiveness(contracts: Contract[]): Violation[] {
   return []
 }
 
+// ── Rule Source Registry ───────────────────────────────────────
+
+/**
+ * Resolve the effective severity for a rule given a registry.
+ *
+ * When the same rule appears at multiple sources, the highest-priority
+ * source wins. L0 rules cannot be disabled by L2 or session entries.
+ *
+ * Returns undefined if the rule is disabled at the winning source level.
+ */
+export function resolveRuleSeverity(
+  rule: string,
+  registry: RuleSourceRegistry,
+): { severity: 'critical' | 'warning'; source: ConstitutionRuleSource } | undefined {
+  const matching = registry.entries.filter(e => e.rule === rule)
+  if (!matching.length) return undefined
+
+  // Pick highest-priority source entry
+  const winner = matching.reduce<RuleSourceEntry>((best, entry) =>
+    RULE_SOURCE_PRIORITY[entry.source] > RULE_SOURCE_PRIORITY[best.source] ? entry : best,
+  matching[0])
+
+  if (!winner.enabled) return undefined
+  return { severity: winner.severity, source: winner.source }
+}
+
+/**
+ * Default rule source registry.
+ * All six constitutional rules active at L0 (highest authority).
+ */
+export function defaultRuleRegistry(): RuleSourceRegistry {
+  const L0_RULES = ['exclusivity', 'monotonicity', 'scope', 'dependency', 'algebra', 'liveness']
+  return {
+    entries: L0_RULES.map(rule => ({
+      rule: rule as RuleSourceEntry['rule'],
+      source: 'L0' as ConstitutionRuleSource,
+      severity: 'warning' as const,
+      enabled: true,
+    })),
+  }
+}
+
 // ── Default Universe Spec ──────────────────────────────────────
 
 export function defaultUniverseSpec(): UniverseSpec {
