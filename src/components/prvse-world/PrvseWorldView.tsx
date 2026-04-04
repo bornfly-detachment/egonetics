@@ -466,8 +466,8 @@ export default function PrvseWorldView() {
                 >
                   <BookmarkTag
                     size={15}
-                    color={isActive ? (ROOT_SPECTRUM[root.id]?.highlight ?? root.color) : `${root.color}80`}
-                    filled={isActive}
+                    color={isActive ? (ROOT_SPECTRUM[root.id]?.highlight ?? root.color) : `${root.color}60`}
+                    active={isActive}
                   />
                   {/* Label — slides out on hover */}
                   <span
