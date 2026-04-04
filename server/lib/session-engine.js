@@ -16,6 +16,7 @@ const fs   = require('fs')
 const path = require('path')
 const { randomUUID } = require('crypto')
 const { getClientForTier, DEFAULT_MAX_TOKENS } = require('./llm')
+const { createLLMEngine } = require('./llm-engine')
 
 const DATA_ROOT = path.join(__dirname, '../data/chat')
 
