@@ -14,20 +14,22 @@ import * as THREE from 'three'
 import { ChevronRight, ArrowLeft, MessageSquare } from 'lucide-react'
 import { ROOT_SPECTRUM } from './constants'
 
-/** 书签吊牌图标 — 五边形标签 + 小圆孔 */
-function BookmarkTag({ size = 16, color = '#fff', filled = false }: { size?: number; color?: string; filled?: boolean }) {
+/** 书签吊牌图标 — 始终 outline，active 用亮色+粗描边+圆孔填色 */
+function BookmarkTag({ size = 16, color = '#fff', active = false }: { size?: number; color?: string; active?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8 8a2 2 0 0 0 2.828 0l7.172-7.172a2 2 0 0 0 0-2.828l-8-8Z"
-        fill={filled ? color : 'none'}
+        fill="none"
         stroke={color}
-        strokeWidth="1.8"
+        strokeWidth={active ? 2.2 : 1.6}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <circle cx="7.5" cy="7.5" r="1.5"
-        fill={filled ? 'rgba(0,0,0,0.5)' : color}
+        fill={active ? color : 'none'}
+        stroke={active ? 'none' : color}
+        strokeWidth="1.2"
       />
     </svg>
   )
