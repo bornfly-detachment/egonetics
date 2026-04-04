@@ -129,7 +129,7 @@ export default function ProtocolVisual({ category, layer, uiVisual }: VisualProp
   const vis = parseVis(uiVisual)
 
   // ── PRVSE type-based routing (优先于 category fallback) ──────────
-  const prvse = PrvseTypeRouter({ vis })
+  const prvse = PrvseTypeRouter({ vis, layer })
   if (prvse) return prvse
 
   if (category === 'layer') {
