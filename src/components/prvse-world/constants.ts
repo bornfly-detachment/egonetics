@@ -65,5 +65,42 @@ export const LAYOUT = {
   LEAF_SPREAD: 30,
 }
 
+/** 5-stop color spectrum per root sphere — highlight → base → shadow → glow-near → glow-far */
+export interface ColorSpectrum {
+  highlight: string
+  base: string
+  shadow: string
+  glowNear: string   // inner atmosphere, ~18% opacity
+  glowFar: string    // outer corona, ~4% opacity
+  text: string       // readable text on dark bg
+}
+
+export const ROOT_SPECTRUM: Record<string, ColorSpectrum> = {
+  'dim-constitution': {
+    highlight: '#ff6b6b',
+    base:      '#e63333',
+    shadow:    '#8b1a1a',
+    glowNear:  'rgba(230,51,51,0.18)',
+    glowFar:   'rgba(255,34,68,0.04)',
+    text:      '#ff8888',
+  },
+  'dim-resources': {
+    highlight: '#ffe066',
+    base:      '#e6c833',
+    shadow:    '#8b7200',
+    glowNear:  'rgba(230,200,51,0.16)',
+    glowFar:   'rgba(255,221,0,0.04)',
+    text:      '#ffdd66',
+  },
+  'dim-goals': {
+    highlight: '#7aaeff',
+    base:      '#3366e6',
+    shadow:    '#0d2a80',
+    glowNear:  'rgba(51,102,230,0.18)',
+    glowFar:   'rgba(68,136,255,0.05)',
+    text:      '#88aaff',
+  },
+}
+
 /** Background color */
 export const BG_COLOR = 0x050508
