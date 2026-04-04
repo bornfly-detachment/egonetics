@@ -199,6 +199,38 @@ export interface StateView {
   getNodesByPattern(patternId: NodeId): readonly NodeState[]
 }
 
+// ── Hook Gateway ───────────────────────────────────────────────
+
+/**
+ * Constitutional gate that runs between mergePatches() and applyPatches().
+ * Analogous to OpenClaudeCode's PreToolUse hook.
+ *
+ * 'allow' → applyPatches proceeds normally
+ * 'deny'  → applyPatches is skipped, state rolls back to pre-tick State
+ */
+export type HookDecision = 'allow' | 'deny'
+
+export interface PatchHookContext {
+  readonly patches: readonly Patch[]
+  readonly conflicts: readonly Conflict[]
+  /** State before this tick started (rollback target) */
+  readonly prevState: State
+  readonly tick: number
+  readonly round: number
+}
+
+export interface PatchHookResult {
+  readonly decision: HookDecision
+  readonly reason?: string
+}
+
+/** Synchronous constitutional gate — must be pure and side-effect free */
+export type PatchHook = (ctx: PatchHookContext) => PatchHookResult
+
+export interface HookRegistry {
+  readonly prePatch: readonly PatchHook[]
+}
+
 // ── E (Evolution) — Control System ─────────────────────────────
 
 /**
@@ -210,6 +242,8 @@ export interface TickResult {
   readonly converged: boolean
   readonly conflicts: readonly Conflict[]
   readonly patchesApplied: number
+  /** true if a prePatch hook denied the tick — state is the pre-tick original */
+  readonly rolledBack?: boolean
 }
 
 /**
