@@ -39,15 +39,21 @@ export function buildEntities(nodes: PrvseNode[], parent: THREE.Group, lang: Lan
     group.userData = { prvseId: node.id, depth: node.depth }
 
     const color = new THREE.Color(node.color)
+    const spectrum = node.depth === 0 ? ROOT_SPECTRUM[node.id] : null
 
     // Sphere — depthWrite false so labels behind are not clipped
+    // Root spheres: polished orb (low roughness, high metalness, bright emissive)
+    // Child spheres: subtler presence
     const geo = node.depth <= 1 ? sphereGeo16 : sphereGeo8
+    const emissiveColor = spectrum
+      ? new THREE.Color(spectrum.highlight)   // glow uses highlight variant
+      : color
     const mat = new THREE.MeshStandardMaterial({
       color,
-      emissive: color,
-      emissiveIntensity: node.depth === 0 ? 0.35 : 0.15,
-      roughness: 0.6,
-      metalness: 0.1,
+      emissive: emissiveColor,
+      emissiveIntensity: node.depth === 0 ? 0.55 : 0.18,
+      roughness: node.depth === 0 ? 0.15 : 0.45,
+      metalness: node.depth === 0 ? 0.45 : 0.15,
       transparent: true,
       opacity: 1,
       depthWrite: false,
