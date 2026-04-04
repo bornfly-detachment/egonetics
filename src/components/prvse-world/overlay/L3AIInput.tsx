@@ -162,7 +162,6 @@ export default function L3AIInput({ activeSphereId }: Props) {
         tierLabel: m.tier_label ?? undefined,
       }))
       setMessages(msgs)
-      if (msgs.length > 0) setPanelOpen(true)
     }).catch(() => {})
     setHistoryLoaded(true)
   }, [historyLoaded, activeSphereId])
