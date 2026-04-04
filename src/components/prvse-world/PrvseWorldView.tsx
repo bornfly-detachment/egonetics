@@ -11,7 +11,26 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import { ChevronRight, ArrowLeft, MessageSquare, Bookmark } from 'lucide-react'
+import { ChevronRight, ArrowLeft, MessageSquare } from 'lucide-react'
+
+/** 书签矢量图标 — 标签形 + 顶部圆环 */
+function BookmarkTag({ size = 15, color = '#fff', filled = false }: { size?: number; color?: string; filled?: boolean }) {
+  return (
+    <svg width={size} height={size * 1.4} viewBox="0 0 1024 1434" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* 圆环 */}
+      <circle cx="512" cy="200" r="140" stroke={color} strokeWidth={filled ? 0 : 70} fill={filled ? color : 'none'} />
+      {filled && <circle cx="512" cy="200" r="80" fill="rgba(0,0,0,0.6)" />}
+      {/* 书签体 */}
+      <path
+        d={`M300 340 L300 1300 L512 1130 L724 1300 L724 340 A200 200 0 0 0 300 340Z`}
+        fill={filled ? color : 'none'}
+        stroke={color}
+        strokeWidth={filled ? 0 : 55}
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 import { useControlTree, type ControlNode } from './useControlTree'
 import { solveLayout, getNodePath } from './engine/layout-solver'
 import { createScene, type SceneContext } from './engine/scene'
