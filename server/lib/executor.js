@@ -94,21 +94,10 @@ function buildT0Prompt(taskDesc) {
 // ── T1: MiniMax 云端 ──
 
 async function callMiniMax(messages, opts = {}) {
-  const { client, DEFAULT_MODEL } = require('./llm')
-  const res = await client.messages.create({
-    model: opts.model || DEFAULT_MODEL,
-    max_tokens: opts.max_tokens || 16384,
-    messages,
-  })
-  const content = Array.isArray(res.content) ? res.content : []
-  const text = content
-    .filter(c => c.type === 'text')
-    .map(c => c.text || '')
-    .join('')
-  const fallbackText = !text && content.length > 0
-    ? (content[content.length - 1].text || JSON.stringify(content[content.length - 1]))
-    : text
-  return { text: fallbackText || text, usage: res.usage }
+  const { createLLMEngine } = require('./llm-engine')
+  const engine = createLLMEngine('T1')
+  const { content: text, usage } = await engine.call(messages, { maxTokens: opts.max_tokens || 16384 })
+  return { text, usage }
 }
 
 function buildT1Prompt(taskDesc, prevSteps) {
