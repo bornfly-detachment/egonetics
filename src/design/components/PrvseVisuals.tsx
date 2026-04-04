@@ -991,6 +991,427 @@ export function DrivingForceVisual({ vis }: { vis: Record<string, unknown> }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  E — Evolution 演化层
+// ══════════════════════════════════════════════════════════════════════
+
+const E_COLOR = '#818cf8'
+
+// ── E: info-level-cards — 信息分级 ───────────────────────────────────
+interface EInfoLevel { id: string; label: string; color: string; icon: string; certainty: string; practice: string; boundary: string }
+
+export function InfoLevelCardsVisual({ vis }: { vis: Record<string, unknown> }) {
+  const levels = (vis.levels as EInfoLevel[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E 信息分级</SectionLabel>
+      <div className="grid grid-cols-3 gap-2">
+        {levels.map(l => (
+          <div key={l.id} className="p-3 rounded-lg border"
+            style={{ background: l.color + '0a', borderColor: l.color + '30' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon name={l.icon} size={14} style={{ color: l.color }} />
+              <div className="text-[11px] font-bold" style={{ color: l.color }}>{l.id}</div>
+            </div>
+            <div className="text-[10px] font-semibold text-white/60 mb-1">{l.label}</div>
+            <div className="space-y-1 text-[8px] text-white/30">
+              <div><span className="text-white/40">确定性:</span> {l.certainty}</div>
+              <div><span className="text-white/40">实践:</span> {l.practice}</div>
+              <div><span className="text-white/40">边界:</span> {l.boundary}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── E: comm-tier-cards — 通信机制 ────────────────────────────────────
+interface ECommTier { id: string; label: string; color: string; icon: string; risk: string; strategy: string; scenes: string[] }
+
+export function CommTierCardsVisual({ vis }: { vis: Record<string, unknown> }) {
+  const tiers = (vis.tiers as ECommTier[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E 通信机制</SectionLabel>
+      <div className="grid grid-cols-3 gap-2">
+        {tiers.map(t => {
+          const riskColor = t.risk === '极高' ? '#ef4444' : t.risk === '高' ? '#f59e0b' : '#34d399'
+          return (
+            <div key={t.id} className="p-3 rounded-lg border"
+              style={{ background: t.color + '0a', borderColor: t.color + '30' }}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Icon name={t.icon} size={14} style={{ color: t.color }} />
+                <div className="text-[11px] font-bold" style={{ color: t.color }}>{t.label}</div>
+              </div>
+              <div className="flex items-center gap-1 mb-2">
+                <span className="text-[8px]" style={{ color: riskColor }}>风险: {t.risk}</span>
+              </div>
+              <div className="text-[9px] font-mono mb-2"
+                style={{ color: t.color + 'aa' }}>{t.strategy}</div>
+              <div className="flex flex-wrap gap-1">
+                {t.scenes.map(s => (
+                  <span key={s} className="px-1 py-0.5 rounded text-[8px] border"
+                    style={{ color: t.color + '80', borderColor: t.color + '20', background: t.color + '08' }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="text-[9px] text-white/25 border-t border-white/[0.06] pt-2">
+        AI 间通信必须经过 Control Bus 校验
+      </div>
+    </div>
+  )
+}
+
+// ── E: permission-tier-cards — 权限分级 ──────────────────────────────
+interface EPermTier { id: string; label: string; color: string; icon: string; agents: string; capability: string }
+
+export function PermissionTierCardsVisual({ vis }: { vis: Record<string, unknown> }) {
+  const tiers = (vis.tiers as EPermTier[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E 权限分级</SectionLabel>
+      <div className="space-y-2">
+        {tiers.map(t => (
+          <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border min-h-[44px]"
+            style={{ background: t.color + '08', borderColor: t.color + '25' }}>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: t.color + '18', border: `1px solid ${t.color}40` }}>
+              <Icon name={t.icon} size={16} style={{ color: t.color }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-bold" style={{ color: t.color }}>{t.id} {t.label}</div>
+              <div className="text-[9px] text-white/40 mt-0.5">{t.agents}</div>
+            </div>
+            <div className="flex flex-wrap gap-1 max-w-[200px]">
+              {t.capability.split(', ').map(c => (
+                <span key={c} className="px-1 py-0.5 rounded text-[8px] font-mono border"
+                  style={{ color: t.color + '80', borderColor: t.color + '20', background: t.color + '06' }}>
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="text-[9px] text-white/25 border-t border-white/[0.06] pt-2">
+        T2 级 CRUD 需要用户审批（宪法级）
+      </div>
+    </div>
+  )
+}
+
+// ── E: evolution-trigger-panel — L0 完备性触发 ───────────────────────
+interface ETrigger { id: string; label: string; icon: string; desc: string }
+
+export function EvolutionTriggerVisual({ vis }: { vis: Record<string, unknown> }) {
+  const triggers = (vis.triggers as ETrigger[]) ?? []
+  const updateTypes = (vis.update_types as string[]) ?? []
+  const principles = (vis.principles as string[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E-L0 系统完备性维护</SectionLabel>
+
+      <div className="grid grid-cols-2 gap-2">
+        {triggers.map(t => (
+          <div key={t.id} className="flex items-start gap-2 p-2.5 rounded-lg border min-h-[44px]"
+            style={{ background: E_COLOR + '06', borderColor: E_COLOR + '20' }}>
+            <Icon name={t.icon} size={14} className="shrink-0 mt-0.5" style={{ color: E_COLOR + 'cc' }} />
+            <div>
+              <div className="text-[10px] font-semibold" style={{ color: E_COLOR + 'dd' }}>{t.label}</div>
+              <div className="text-[9px] text-white/30 mt-0.5">{t.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-3 border-t border-white/[0.06] pt-2">
+        <div>
+          <div className="text-[8px] text-white/25 mb-1">更新类型</div>
+          <div className="flex gap-1">
+            {updateTypes.map(u => (
+              <span key={u} className="px-1.5 py-0.5 rounded text-[9px] border"
+                style={{ color: E_COLOR + 'aa', borderColor: E_COLOR + '25', background: E_COLOR + '08' }}>
+                {u}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="text-[8px] text-white/25 mb-1">原则</div>
+          <div className="flex flex-wrap gap-1">
+            {principles.map(p => (
+              <span key={p} className="px-1.5 py-0.5 rounded text-[8px] text-white/40 border border-white/10 bg-white/[0.03]">
+                {p}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── E: learning-board — L1 学习模块 ──────────────────────────────────
+interface EModule { id: string; label: string; icon: string; sub: string[] }
+
+export function LearningBoardVisual({ vis }: { vis: Record<string, unknown> }) {
+  const modules = (vis.modules as EModule[]) ?? []
+  const outputs = (vis.outputs as string[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E-L1 学习模块</SectionLabel>
+
+      <div className="grid grid-cols-3 gap-2">
+        {modules.map(m => (
+          <div key={m.id} className="p-3 rounded-lg border"
+            style={{ background: E_COLOR + '06', borderColor: E_COLOR + '20' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon name={m.icon} size={14} style={{ color: E_COLOR }} />
+              <div className="text-[10px] font-semibold" style={{ color: E_COLOR + 'dd' }}>{m.label}</div>
+            </div>
+            <div className="space-y-0.5">
+              {m.sub.map(s => (
+                <div key={s} className="text-[9px] text-white/35 flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full shrink-0" style={{ background: E_COLOR + '60' }} />
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {outputs.length > 0 && (
+        <div className="border-t border-white/[0.06] pt-2">
+          <div className="text-[8px] text-white/25 mb-1">产出</div>
+          <div className="flex flex-wrap gap-1">
+            {outputs.map(o => (
+              <span key={o} className="px-1.5 py-0.5 rounded text-[9px] border"
+                style={{ color: '#34d399aa', borderColor: '#34d39925', background: '#34d39908' }}>
+                {o}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── E: subjectivity-panel — L2 主体性引擎 ────────────────────────────
+interface EEngine { id: string; label: string; icon: string; desc: string; sub?: string[] }
+interface ECoevolution { id: string; label: string; icon: string }
+
+export function SubjectivityPanelVisual({ vis }: { vis: Record<string, unknown> }) {
+  const engines = (vis.engines as EEngine[]) ?? []
+  const coevolution = (vis.coevolution as ECoevolution[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E-L2 主体性引擎</SectionLabel>
+
+      <div className="space-y-2">
+        {engines.map(e => (
+          <div key={e.id} className="flex items-start gap-2.5 p-3 rounded-lg border"
+            style={{ background: '#8b5cf606', borderColor: '#8b5cf620' }}>
+            <Icon name={e.icon} size={16} className="shrink-0 mt-0.5" style={{ color: '#8b5cf6cc' }} />
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: '#8b5cf6dd' }}>{e.label}</div>
+              <div className="text-[9px] text-white/35 mt-0.5">{e.desc}</div>
+              {e.sub && (
+                <div className="flex gap-1 mt-1">
+                  {e.sub.map(s => (
+                    <span key={s} className="px-1 py-0.5 rounded text-[8px] font-mono border"
+                      style={{ color: '#8b5cf680', borderColor: '#8b5cf620', background: '#8b5cf608' }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {coevolution.length > 0 && (
+        <div className="border-t border-white/[0.06] pt-2">
+          <div className="text-[8px] text-white/25 mb-1.5">人-AI 协同进化</div>
+          <div className="flex gap-1.5">
+            {coevolution.map((c, i) => (
+              <div key={c.id} className="flex items-center gap-1">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-md border"
+                  style={{ background: '#a78bfa08', borderColor: '#a78bfa20' }}>
+                  <Icon name={c.icon} size={12} style={{ color: '#a78bfaaa' }} />
+                  <span className="text-[9px]" style={{ color: '#a78bfacc' }}>{c.label}</span>
+                </div>
+                {i < coevolution.length - 1 && (
+                  <ArrowRight size={10} style={{ color: '#ffffff15' }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── E: level-transition-flow — 级别迁移 ──────────────────────────────
+interface ELevelTransition { from: string; to: string; color: string; guard: string; desc: string; icon: string }
+
+export function LevelTransitionFlowVisual({ vis }: { vis: Record<string, unknown> }) {
+  const transitions = (vis.transitions as ELevelTransition[]) ?? []
+  const monitor = vis.monitor as string | undefined
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>E 信息级别迁移</SectionLabel>
+
+      <div className="space-y-2">
+        {transitions.map(t => (
+          <div key={`${t.from}-${t.to}`}
+            className="flex items-center gap-3 p-3 rounded-lg border min-h-[44px]"
+            style={{ background: t.color + '08', borderColor: t.color + '25' }}>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[12px] font-bold font-mono" style={{ color: t.color }}>{t.from}</span>
+              <Icon name={t.icon} size={14} style={{ color: t.color + 'aa' }} />
+              <span className="text-[12px] font-bold font-mono" style={{ color: t.color }}>{t.to}</span>
+            </div>
+            <div className="flex-1">
+              <div className="text-[10px] text-white/50">{t.desc}</div>
+              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border mt-1 inline-block"
+                style={{ color: '#fcd34daa', borderColor: '#f59e0b25', background: '#f59e0b08' }}>
+                {t.guard}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {monitor && (
+        <div className="text-[9px] text-white/25 border-t border-white/[0.06] pt-2">{monitor}</div>
+      )}
+    </div>
+  )
+}
+
+// ── E-ui: approval-form — L2 审批表单 ────────────────────────────────
+interface EApprovalField { id: string; label: string; type: string; icon: string; default?: string; options?: string[] }
+interface EApprovalAction { id: string; label: string; variant: string; requires_confirmation?: boolean }
+
+export function ApprovalFormVisual({ vis }: { vis: Record<string, unknown> }) {
+  const componentId = vis.component_id as string | undefined
+  const permissionTier = vis.permission_tier as string | undefined
+  const fields = (vis.fields as EApprovalField[]) ?? []
+  const actions = (vis.actions as EApprovalAction[]) ?? []
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <SectionLabel>{componentId ?? 'L2 审批表单'}</SectionLabel>
+        {permissionTier && (
+          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border"
+            style={{ color: '#fbbf24', borderColor: '#fbbf2430', background: '#fbbf2408' }}>
+            {permissionTier} 权限
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        {fields.map(f => (
+          <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-lg border min-h-[44px]"
+            style={{ background: '#ffffff04', borderColor: '#ffffff10' }}>
+            <Icon name={f.icon} size={14} className="shrink-0" style={{ color: E_COLOR + 'cc' }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-medium text-white/60">{f.label}</div>
+            </div>
+            {f.options ? (
+              <div className="flex gap-1 shrink-0 flex-wrap justify-end max-w-[200px]">
+                {f.options.map((o, i) => (
+                  <span key={o} className="px-1.5 py-0.5 rounded text-[9px] font-mono border cursor-pointer"
+                    style={{
+                      color: i === 0 ? E_COLOR : E_COLOR + '70',
+                      borderColor: i === 0 ? E_COLOR + '50' : E_COLOR + '20',
+                      background: i === 0 ? E_COLOR + '12' : E_COLOR + '06',
+                    }}>
+                    {o}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-[9px] font-mono px-2 py-1 rounded border"
+                style={{ color: '#ffffff40', borderColor: '#ffffff10', background: '#ffffff04' }}>
+                {f.default ?? f.type}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {actions.length > 0 && (
+        <div className="flex gap-2 justify-end pt-2 border-t border-white/[0.06]">
+          {actions.map(a => {
+            const isPrimary = a.variant === 'primary'
+            return (
+              <button key={a.id} type="button"
+                className="px-4 py-2 rounded-lg text-[11px] font-medium min-h-[44px] cursor-pointer border transition-all duration-200"
+                style={{
+                  background: isPrimary ? E_COLOR + '20' : 'transparent',
+                  borderColor: isPrimary ? E_COLOR + '60' : '#ffffff15',
+                  color: isPrimary ? E_COLOR : '#ffffff60',
+                }}>
+                {a.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── E-ui: dashboard-layout — 组合仪表盘 ──────────────────────────────
+interface EDashSection { id: string; label: string; component: string; span: string }
+
+export function DashboardLayoutVisual({ vis }: { vis: Record<string, unknown> }) {
+  const componentId = vis.component_id as string | undefined
+  const sections = (vis.sections as EDashSection[]) ?? []
+
+  const spanClass: Record<string, string> = {
+    full: 'col-span-3',
+    half: 'col-span-3 sm:col-span-2 lg:col-span-1',
+    third: 'col-span-1',
+  }
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>{componentId ?? '组合仪表盘'}</SectionLabel>
+
+      <div className="grid grid-cols-3 gap-2">
+        {sections.map(s => (
+          <div key={s.id}
+            className={`p-3 rounded-lg border ${spanClass[s.span] ?? ''}`}
+            style={{ background: E_COLOR + '06', borderColor: E_COLOR + '18' }}>
+            <div className="text-[10px] font-medium" style={{ color: E_COLOR + 'cc' }}>{s.label}</div>
+            <div className="text-[8px] font-mono text-white/25 mt-1">{s.component}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  主分发器 — 根据 vis.type 路由到对应渲染器
 // ══════════════════════════════════════════════════════════════════════
 
