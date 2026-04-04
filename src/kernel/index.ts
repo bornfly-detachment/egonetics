@@ -126,3 +126,7 @@ export type {
 // ── Runtime (Interpreter Bridge) ──
 export { createRuntime } from './runtime'
 export type { Runtime, RuntimeConfig, RuntimeTickResult } from './runtime'
+
+// ── Resource Registry ──
+export { createRegistry, createDefaultRegistry, SEED_RESOURCES } from './resource-registry'
+export type { Resource, ResourceRegistry, ResourceType, ResourceTier, ResourceLevel, ResourceStatus } from './resource-registry'
