@@ -442,20 +442,29 @@ export default function PrvseWorldView() {
                 onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
                 className="group relative flex items-center transition-all duration-200"
               >
-                {/* Bookmark icon — always visible */}
+                {/* Bookmark icon — gradient active, subtle inactive */}
                 <div
-                  className="flex items-center justify-center w-8 h-9 rounded-r-md transition-all duration-200
+                  className="flex items-center justify-center w-9 h-10 rounded-r-md transition-all duration-200
                     group-hover:w-auto group-hover:px-2.5 group-hover:gap-2"
-                  style={{
-                    background: isActive ? `${root.color}22` : 'rgba(10,10,15,0.88)',
-                    border: `1px solid ${isActive ? `${root.color}40` : 'rgba(255,255,255,0.08)'}`,
-                    borderLeft: 'none',
-                    boxShadow: isActive ? `2px 0 12px ${root.color}20` : '2px 0 6px rgba(0,0,0,0.3)',
-                  }}
+                  style={(() => {
+                    const sp = ROOT_SPECTRUM[root.id]
+                    if (isActive && sp) return {
+                      background: `linear-gradient(135deg, ${sp.highlight}25 0%, ${sp.base}12 100%)`,
+                      border: `1px solid ${sp.base}55`,
+                      borderLeft: 'none' as const,
+                      boxShadow: `3px 0 16px ${sp.base}30, inset 0 1px 0 ${sp.highlight}20`,
+                    }
+                    return {
+                      background: 'rgba(10,10,15,0.92)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderLeft: 'none' as const,
+                      boxShadow: '2px 0 6px rgba(0,0,0,0.3)',
+                    }
+                  })()}
                 >
                   <BookmarkTag
                     size={15}
-                    color={isActive ? root.color : `${root.color}99`}
+                    color={isActive ? (ROOT_SPECTRUM[root.id]?.highlight ?? root.color) : `${root.color}80`}
                     filled={isActive}
                   />
                   {/* Label — slides out on hover */}
