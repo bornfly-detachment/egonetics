@@ -256,7 +256,7 @@ async function* runQuery(prompt, opts = {}) {
   const pane = spherePane(sphere)
 
   try {
-    await ensureClaudeRunning(sphere)
+    await ensureClaudeRunning(sphere, opts.model)
     yield { type: 'stream_start' }
 
     // 发 prompt
