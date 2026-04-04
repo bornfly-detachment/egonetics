@@ -1,36 +1,40 @@
 /**
  * server/lib/t2-client.js
  *
- * T2 Agent Client — 替换 code-agent.js 的 tmux 实现。
- * 通过 HTTP/SSE 调用 free-code Agent Server（默认 localhost:3003）。
+ * T2 Agent Client — 直接 spawn `claude -p --output-format stream-json`
+ * 不经过 HTTP 中转，与 T0/T1（llm-engine.js → MiniMax API）完全隔离。
  *
- * 对外接口与 code-agent.js 完全兼容：
+ * 对外接口：
  *   runQuery(prompt, opts)   → AsyncGenerator<event>
  *   getSessionId(contextKey) → string | null
  *   getHistory(contextKey)   → event[]
  *   listContexts()           → string[]
  *   resetContext(ctx)        → void
- *   reloadConfig()           → void  (no-op，server 无状态)
+ *   checkT2Health()          → Promise<boolean>
+ *   reloadConfig()           → void  (no-op)
  *
- * 事件格式（与 llm-engine agentLoop 一致）：
- *   { type: 'init',        sessionId }
+ * 事件格式：
+ *   { type: 'init',        sessionId, tools? }
  *   { type: 'text',        text }
- *   { type: 'tool_use',   id, name, input }
+ *   { type: 'tool_use',    id, name, input }
  *   { type: 'tool_result', id, content, isError? }
- *   { type: 'done',        result, cost, usage, sessionId }
+ *   { type: 'done',        result, cost?, usage?, sessionId? }
  *   { type: 'error',       error }
  *   { type: 'stream_end' }
  */
 
 'use strict'
 
-const fs   = require('fs')
-const path = require('path')
+const fs     = require('fs')
+const path   = require('path')
+const { spawn } = require('child_process')
 
-const T2_SERVER_URL  = process.env.T2_SERVER_URL || 'http://localhost:3003'
+// ── Config ──────────────────────────────────────────────────────────────────
+
+const CLAUDE_BIN    = process.env.CLAUDE_BIN || '/Users/bornfly/.npm-global/bin/claude'
 const T2_CONFIG_PATH = path.resolve(__dirname, '../config/t2-agents.json')
 
-// ── Config lookup (sphere → { workdir, default_model }) ────────────────────
+// ── Config lookup ────────────────────────────────────────────────────────────
 
 function _loadConfig() {
   try { return JSON.parse(fs.readFileSync(T2_CONFIG_PATH, 'utf-8')) }
@@ -38,14 +42,12 @@ function _loadConfig() {
 }
 
 function _getSphereConfig(sphere) {
-  const entries = _loadConfig()
-  return entries.find(e => e.sphere === sphere && e.active !== false) ?? null
+  return _loadConfig().find(e => e.sphere === sphere && e.active !== false) ?? null
 }
 
-// ── In-memory context store ─────────────────────────────────────────────────
-// 按 contextKey 存储 sessionId + event 历史，用于 getHistory / getSessionId
+// ── In-memory context store ──────────────────────────────────────────────────
 
-const _sessions  = new Map()   // contextKey → { sessionId, events[] }
+const _sessions = new Map()  // contextKey → { sessionId, events[] }
 
 function _getCtx(contextKey) {
   if (!_sessions.has(contextKey)) {
@@ -54,20 +56,83 @@ function _getCtx(contextKey) {
   return _sessions.get(contextKey)
 }
 
-// ── Public API ──────────────────────────────────────────────────────────────
+// ── SDKMessage normalizer ────────────────────────────────────────────────────
+// 与 free-code/src/entrypoints/httpServer.ts 的 normalize() 逻辑一致
+
+function* _normalize(msg) {
+  if (msg.type === 'system' && msg.subtype === 'init') {
+    const tools = Array.isArray(msg.tools)
+      ? msg.tools
+          .map(t => (t && typeof t === 'object' && t.name) ? t.name : null)
+          .filter(Boolean)
+      : undefined
+    yield { type: 'init', sessionId: String(msg.session_id ?? ''), tools }
+    return
+  }
+
+  if (msg.type === 'assistant') {
+    const content = msg.message?.content
+    if (!Array.isArray(content)) return
+    for (const block of content) {
+      if (block.type === 'text' && block.text) {
+        yield { type: 'text', text: String(block.text) }
+      } else if (block.type === 'tool_use') {
+        yield {
+          type:  'tool_use',
+          id:    String(block.id   ?? ''),
+          name:  String(block.name ?? ''),
+          input: block.input ?? {},
+        }
+      }
+    }
+    return
+  }
+
+  if (msg.type === 'user') {
+    const content = msg.message?.content
+    if (!Array.isArray(content)) return
+    for (const block of content) {
+      if (block.type === 'tool_result') {
+        const raw  = block.content
+        const text = Array.isArray(raw)
+          ? raw.map(c => c.text ?? '').join('')
+          : String(raw ?? '')
+        yield {
+          type:    'tool_result',
+          id:      String(block.tool_use_id ?? ''),
+          content: text,
+          ...(block.is_error ? { isError: true } : {}),
+        }
+      }
+    }
+    return
+  }
+
+  if (msg.type === 'result') {
+    yield {
+      type:      'done',
+      result:    String(msg.result ?? ''),
+      cost:      typeof msg.total_cost_usd === 'number' ? msg.total_cost_usd : undefined,
+      usage:     msg.usage,
+      sessionId: String(msg.session_id ?? ''),
+    }
+  }
+}
+
+// ── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * 运行 T2 agent query，流式 yield 事件。
+ * 运行 T2 agent query，直接 spawn claude -p，流式 yield 事件。
  *
  * @param {string} prompt
  * @param {{
- *   contextKey?:  string,
- *   maxTurns?:    number,
- *   model?:       string,
- *   cwd?:         string,
- *   resetCtx?:    boolean,
- *   systemPrompt?: string,
- *   allowedTools?: string[],
+ *   contextKey?:    string,
+ *   maxTurns?:      number,
+ *   model?:         string,
+ *   cwd?:           string,
+ *   resetCtx?:      boolean,
+ *   systemPrompt?:  string,
+ *   allowedTools?:  string[],
  * }} opts
  */
 async function* runQuery(prompt, opts = {}) {
@@ -79,99 +144,121 @@ async function* runQuery(prompt, opts = {}) {
     allowedTools,
   } = opts
 
-  // sphere config → defaults for model + cwd
   const sphereCfg = _getSphereConfig(contextKey)
   const model = opts.model ?? sphereCfg?.default_model ?? 'claude-sonnet-4-6'
   const cwd   = opts.cwd   ?? sphereCfg?.workdir       ?? process.cwd()
 
   if (resetCtx) resetContext(contextKey)
-
   const ctx = _getCtx(contextKey)
 
-  // health check — 给前端友好错误
-  const healthy = await checkT2Health()
-  if (!healthy) {
-    const err = { type: 'error', error: `T2 server 未启动，请先运行: bun run src/entrypoints/httpServer.ts (port ${T2_SERVER_URL})` }
-    ctx.events.push(err)
-    yield err
-    yield { type: 'stream_end' }
-    return
+  // Build args
+  const args = [
+    '-p', prompt,
+    '--output-format', 'stream-json',
+    '--verbose',
+    '--dangerously-skip-permissions',
+    '--model', model,
+    '--max-turns', String(maxTurns),
+  ]
+
+  if (systemPrompt) {
+    args.push('--system-prompt', systemPrompt)
+  }
+  if (allowedTools?.length) {
+    args.push('--allowedTools', allowedTools.join(','))
   }
 
-  let resp
+  // Spawn T2 process
+  let proc
   try {
-    resp = await fetch(`${T2_SERVER_URL}/run`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        prompt,
-        cwd:                       cwd ?? process.cwd(),
-        systemPrompt,
-        dangerouslySkipPermissions: true,
-        maxTurns,
-        allowedTools,
-        model,
-      }),
+    proc = spawn(CLAUDE_BIN, args, {
+      cwd,
+      env:   process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
-  } catch (err) {
-    const ev = { type: 'error', error: `T2 server 连接失败: ${err.message}` }
+  } catch (spawnErr) {
+    const ev = { type: 'error', error: `T2 spawn 失败: ${spawnErr.message}` }
     ctx.events.push(ev)
     yield ev
     yield { type: 'stream_end' }
     return
   }
 
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '')
-    const ev   = { type: 'error', error: `T2 server 返回 ${resp.status}: ${text}` }
-    ctx.events.push(ev)
-    yield ev
-    yield { type: 'stream_end' }
-    return
-  }
+  // Collect stderr for error reporting
+  const stderrChunks = []
+  proc.stderr.on('data', chunk => stderrChunks.push(chunk))
 
-  // ── Parse SSE stream ─────────────────────────────────────────────────────
-  const reader  = resp.body.getReader()
+  // Parse stdout line by line
+  let buffer = ''
   const decoder = new TextDecoder()
-  let   buffer  = ''
 
   try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
+    for await (const chunk of proc.stdout) {
+      buffer += decoder.decode(chunk, { stream: true })
       const lines = buffer.split('\n')
       buffer = lines.pop() ?? ''
 
       for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6).trim()
-        if (!data) continue
+        const trimmed = line.trim()
+        if (!trimmed) continue
 
-        let event
-        try { event = JSON.parse(data) } catch { continue }
+        let parsed
+        try { parsed = JSON.parse(trimmed) } catch { continue }
 
-        // 更新 context store
-        ctx.events.push({ ...event, _ts: Date.now() })
-        if (event.type === 'init' && event.sessionId) {
-          ctx.sessionId = event.sessionId
+        for (const event of _normalize(parsed)) {
+          const stamped = { ...event, _ts: Date.now() }
+          ctx.events.push(stamped)
+          if (event.type === 'init' && event.sessionId) {
+            ctx.sessionId = event.sessionId
+          }
+          yield event
         }
-
-        yield event
       }
     }
-  } finally {
-    reader.releaseLock()
+
+    // Flush remaining buffer
+    if (buffer.trim()) {
+      try {
+        const parsed = JSON.parse(buffer.trim())
+        for (const event of _normalize(parsed)) {
+          ctx.events.push({ ...event, _ts: Date.now() })
+          if (event.type === 'init' && event.sessionId) ctx.sessionId = event.sessionId
+          yield event
+        }
+      } catch { /* partial line, discard */ }
+    }
+  } catch (readErr) {
+    const ev = { type: 'error', error: `T2 读取失败: ${readErr.message}` }
+    ctx.events.push(ev)
+    yield ev
+  }
+
+  // Wait for process exit
+  const exitCode = await new Promise(resolve => {
+    if (proc.exitCode !== null) {
+      resolve(proc.exitCode)
+    } else {
+      proc.once('close', code => resolve(code ?? 0))
+    }
+  })
+
+  if (exitCode !== 0) {
+    const stderr = Buffer.concat(stderrChunks).toString().trim()
+    const errMsg = stderr || `T2 进程退出码 ${exitCode}`
+    // Only emit error if we haven't already seen a 'done' event
+    const hasDone = ctx.events.some(e => e.type === 'done')
+    if (!hasDone) {
+      const ev = { type: 'error', error: errMsg }
+      ctx.events.push(ev)
+      yield ev
+    }
   }
 
   yield { type: 'stream_end' }
 }
 
 /**
- * 获取 contextKey 对应的 sessionId（来自最近一次 init 事件）。
- * @param {string} contextKey
- * @returns {string|null}
+ * 获取 contextKey 对应的 sessionId。
  */
 function getSessionId(contextKey = 'main') {
   return _sessions.get(contextKey)?.sessionId ?? null
@@ -179,8 +266,6 @@ function getSessionId(contextKey = 'main') {
 
 /**
  * 获取 contextKey 的完整事件历史。
- * @param {string} contextKey
- * @returns {object[]}
  */
 function getHistory(contextKey = 'main') {
   return _sessions.get(contextKey)?.events ?? []
@@ -188,7 +273,6 @@ function getHistory(contextKey = 'main') {
 
 /**
  * 列出所有已知 context keys。
- * @returns {string[]}
  */
 function listContexts() {
   return Array.from(_sessions.keys())
@@ -196,30 +280,24 @@ function listContexts() {
 
 /**
  * 清空某 context 的内存状态。
- * @param {string} contextKey
  */
 function resetContext(contextKey = 'main') {
   _sessions.delete(contextKey)
 }
 
 /**
- * 健康检查 — 返回 true 表示 T2 server 可用。
- * @returns {Promise<boolean>}
+ * 检查 claude binary 是否可用。
  */
 async function checkT2Health() {
-  try {
-    const resp = await fetch(`${T2_SERVER_URL}/health`, {
-      signal: AbortSignal.timeout(3000),
-    })
-    return resp.ok
-  } catch {
-    return false
-  }
+  return new Promise(resolve => {
+    const proc = spawn(CLAUDE_BIN, ['--version'], { stdio: 'ignore' })
+    proc.once('close', code => resolve(code === 0))
+    proc.once('error', () => resolve(false))
+  })
 }
 
 /**
- * no-op：t2-client 无状态，无需重载配置。
- * 保留此函数保证 t2-config.js 路由兼容。
+ * no-op — 兼容旧接口。
  */
 function reloadConfig() { /* no-op */ }
 
@@ -231,5 +309,5 @@ module.exports = {
   resetContext,
   checkT2Health,
   reloadConfig,
-  T2_SERVER_URL,
+  CLAUDE_BIN,
 }
