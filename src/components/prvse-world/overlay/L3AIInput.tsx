@@ -77,7 +77,7 @@ const SPHERE_META: Record<string, { name: string; color: string; sessionNode: st
     systemPrompt: '你是 Egonetics 的宪法守护者 AI，维护约束框架。解释宪法规则、识别冲突、建议修正。铁律：先设计后编码 / 积累≥3再行动 / 三思而后行 / CRUD铁律。简洁专业。',
   },
   'dim-resources': {
-    name: '资源', color: '#f59e0b',
+    name: '资源', color: '#e6c833',
     sessionNode: 'sphere-resources',
     systemPrompt: '你是 Egonetics 的资源管理 AI，监控可调配资源全局状态。分析资源瓶颈、调度建议、容量规划。简洁专业。',
   },
