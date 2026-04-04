@@ -12,7 +12,7 @@
 
 import * as THREE from 'three'
 import type { PrvseNode } from '../types'
-import { getRootLabels } from '../constants'
+import { getRootLabels, ROOT_SPECTRUM } from '../constants'
 import type { Language } from '@/lib/translations'
 
 export interface EntityMap {
