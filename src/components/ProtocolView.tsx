@@ -66,22 +66,52 @@ const CATEGORY_ANCHOR_MAP: Record<string, string> = {
   'kernel-comp':    'tag-e-infra',
 }
 
-// ── 配色系统 ──────────────────────────────────────────────────
+// ── 配色系统（按 PRVSE 5层色域） ────────────────────────────────
+// P层 — amber系  R层 — violet系  V层 — orange系  S层 — emerald系  E层 — purple/indigo系
 const CATEGORY_COLORS: Record<string, { color: string; bg: string; border: string; glow: string }> = {
-  interaction:         { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.25)',  glow: 'rgba(96,165,250,0.15)' },
+  // P — Pattern 感知层 (amber)
+  P:                 { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  glow: 'rgba(245,158,11,0.15)' },
+  'P-state':         { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  glow: 'rgba(245,158,11,0.15)' },
+  'P-origin':        { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.25)',  glow: 'rgba(251,191,36,0.15)' },
+  'P-level':         { color: '#fcd34d', bg: 'rgba(252,211,77,0.08)',  border: 'rgba(252,211,77,0.25)',  glow: 'rgba(252,211,77,0.15)' },
+  'P-physical':      { color: '#d97706', bg: 'rgba(217,119,6,0.08)',   border: 'rgba(217,119,6,0.25)',   glow: 'rgba(217,119,6,0.15)'  },
+  'P-comm':          { color: '#92400e', bg: 'rgba(146,64,14,0.08)',   border: 'rgba(146,64,14,0.25)',   glow: 'rgba(146,64,14,0.15)'  },
+  interaction:       { color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.25)',  glow: 'rgba(96,165,250,0.15)' },
+  // R — Relation 关系层 (violet)
+  R:                 { color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.25)', glow: 'rgba(167,139,250,0.15)' },
+  'R-l0':            { color: '#7c3aed', bg: 'rgba(124,58,237,0.08)',  border: 'rgba(124,58,237,0.25)',  glow: 'rgba(124,58,237,0.15)' },
+  'R-l1':            { color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)',  border: 'rgba(139,92,246,0.25)',  glow: 'rgba(139,92,246,0.15)' },
+  'R-l2':            { color: '#c084fc', bg: 'rgba(192,132,252,0.08)', border: 'rgba(192,132,252,0.25)', glow: 'rgba(192,132,252,0.15)' },
+  'R-edge':          { color: '#22d3ee', bg: 'rgba(34,211,238,0.08)',  border: 'rgba(34,211,238,0.25)',  glow: 'rgba(34,211,238,0.15)' },
+  'graph-node':      { color: '#22d3ee', bg: 'rgba(34,211,238,0.08)',  border: 'rgba(34,211,238,0.25)',  glow: 'rgba(34,211,238,0.15)' },
+  AOP:               { color: '#f472b6', bg: 'rgba(244,114,182,0.08)', border: 'rgba(244,114,182,0.25)', glow: 'rgba(244,114,182,0.15)' },
+  // V — Value 价值层 (orange)
+  V:                 { color: '#fb923c', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.25)',  glow: 'rgba(251,146,60,0.15)' },
+  'V-l0':            { color: '#f97316', bg: 'rgba(249,115,22,0.08)',  border: 'rgba(249,115,22,0.25)',  glow: 'rgba(249,115,22,0.15)' },
+  'V-l1':            { color: '#fb923c', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.25)',  glow: 'rgba(251,146,60,0.15)' },
+  'V-l2':            { color: '#fdba74', bg: 'rgba(253,186,116,0.08)', border: 'rgba(253,186,116,0.25)', glow: 'rgba(253,186,116,0.15)' },
+  'V-core':          { color: '#ea580c', bg: 'rgba(234,88,12,0.08)',   border: 'rgba(234,88,12,0.25)',   glow: 'rgba(234,88,12,0.15)'  },
+  // S — State 状态层 (emerald)
+  S:                 { color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)',  glow: 'rgba(16,185,129,0.15)' },
+  'S-l0':            { color: '#059669', bg: 'rgba(5,150,105,0.08)',   border: 'rgba(5,150,105,0.25)',   glow: 'rgba(5,150,105,0.15)'  },
+  'S-l1':            { color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.25)',  glow: 'rgba(52,211,153,0.15)' },
+  'S-l2':            { color: '#6ee7b7', bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.25)', glow: 'rgba(110,231,183,0.15)' },
+  lifecycle:         { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.25)',  glow: 'rgba(251,191,36,0.15)' },
+  // E — Evolution 演化层 (indigo/purple)
+  'E-l0':            { color: '#6366f1', bg: 'rgba(99,102,241,0.08)',  border: 'rgba(99,102,241,0.25)',  glow: 'rgba(99,102,241,0.15)' },
+  'E-l1':            { color: '#818cf8', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.25)', glow: 'rgba(129,140,248,0.15)' },
+  'E-l2':            { color: '#a5b4fc', bg: 'rgba(165,180,252,0.08)', border: 'rgba(165,180,252,0.25)', glow: 'rgba(165,180,252,0.15)' },
+  'E-info':          { color: '#818cf8', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.25)', glow: 'rgba(129,140,248,0.15)' },
+  'E-comm':          { color: '#86efac', bg: 'rgba(134,239,172,0.08)', border: 'rgba(134,239,172,0.25)', glow: 'rgba(134,239,172,0.15)' },
+  'E-perm':          { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  glow: 'rgba(74,222,128,0.15)' },
+  'E-ui':            { color: '#e879f9', bg: 'rgba(232,121,249,0.08)', border: 'rgba(232,121,249,0.25)', glow: 'rgba(232,121,249,0.15)' },
+  // 遗留兼容
   layer:             { color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.25)',  glow: 'rgba(52,211,153,0.15)' },
-  R:                { color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.25)', glow: 'rgba(167,139,250,0.15)' },
-  P:                { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  glow: 'rgba(245,158,11,0.15)' },
-  V:                { color: '#fb923c', bg: 'rgba(251,146,60,0.08)',  border: 'rgba(251,146,60,0.25)',  glow: 'rgba(251,146,60,0.15)' },
-  AOP:              { color: '#f472b6', bg: 'rgba(244,114,182,0.08)', border: 'rgba(244,114,182,0.25)', glow: 'rgba(244,114,182,0.15)' },
-  S:                { color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)',  glow: 'rgba(16,185,129,0.15)' },
-  'ui-component':   { color: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.25)',  glow: 'rgba(56,189,248,0.15)' },
-  'kernel-comp':    { color: '#c084fc', bg: 'rgba(192,132,252,0.08)', border: 'rgba(192,132,252,0.25)', glow: 'rgba(192,132,252,0.15)' },
-  'lifecycle':      { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.25)',  glow: 'rgba(251,191,36,0.15)' },
-  'graph-node':     { color: '#22d3ee', bg: 'rgba(34,211,238,0.08)',  border: 'rgba(34,211,238,0.25)',  glow: 'rgba(34,211,238,0.15)' },
-  'resource-tier':  { color: '#2dd4bf', bg: 'rgba(45,212,191,0.08)',  border: 'rgba(45,212,191,0.25)',  glow: 'rgba(45,212,191,0.15)' },
-  'permission-layer':{ color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.25)', glow: 'rgba(74,222,128,0.15)' },
-  'communication':   { color: '#86efac', bg: 'rgba(134,239,172,0.08)',  border: 'rgba(134,239,172,0.25)', glow: 'rgba(134,239,172,0.15)' },
+  communication:     { color: '#86efac', bg: 'rgba(134,239,172,0.08)', border: 'rgba(134,239,172,0.25)', glow: 'rgba(134,239,172,0.15)' },
+  'resource-tier':   { color: '#2dd4bf', bg: 'rgba(45,212,191,0.08)',  border: 'rgba(45,212,191,0.25)',  glow: 'rgba(45,212,191,0.15)' },
+  'permission-layer':{ color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)',  glow: 'rgba(74,222,128,0.15)' },
+  'ui-component':    { color: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.25)',  glow: 'rgba(56,189,248,0.15)' },
+  'kernel-comp':     { color: '#c084fc', bg: 'rgba(192,132,252,0.08)', border: 'rgba(192,132,252,0.25)', glow: 'rgba(192,132,252,0.15)' },
 }
 
 const GROUPS = [
