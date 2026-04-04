@@ -452,11 +452,10 @@ export default function PrvseWorldView() {
                     boxShadow: isActive ? `2px 0 12px ${root.color}20` : '2px 0 6px rgba(0,0,0,0.3)',
                   }}
                 >
-                  <Bookmark
+                  <BookmarkTag
                     size={15}
-                    fill={isActive ? root.color : 'none'}
-                    className="shrink-0 transition-colors"
-                    style={{ color: isActive ? root.color : `${root.color}80` }}
+                    color={isActive ? root.color : `${root.color}99`}
+                    filled={isActive}
                   />
                   {/* Label — slides out on hover */}
                   <span
