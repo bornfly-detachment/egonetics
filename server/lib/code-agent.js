@@ -42,6 +42,13 @@ function stripAnsi(str) {
 
 // ── tmux 工具 ─────────────────────────────────────────────────
 
+function tmuxHasSession() {
+  try {
+    execSync(`tmux has-session -t ${TMUX} 2>/dev/null`)
+    return true
+  } catch { return false }
+}
+
 function paneCurrentCommand() {
   try {
     return execSync(`tmux display-message -t ${PANE} -p '#{pane_current_command}'`, { encoding: 'utf8' }).trim()
