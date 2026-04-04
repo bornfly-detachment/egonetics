@@ -102,7 +102,7 @@ router.delete('/code-agent/session/:ctx', (req, res) => {
 // ── GET /api/code-agent/health ────────────────────────────────────────────
 router.get('/code-agent/health', async (_req, res) => {
   const ok = await agent.checkT2Health()
-  res.json({ ok, server: agent.T2_SERVER_URL })
+  res.json({ ok, bin: agent.CLAUDE_BIN })
 })
 
 module.exports = router
