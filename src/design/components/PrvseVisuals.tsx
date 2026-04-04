@@ -40,6 +40,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Cpu, HardDrive, ListOrdered, Crown, Scale,
   TrendingDown, Octagon,
   Expand, Eye, EyeOff, Wand2,
+  OctagonX: Octagon,
 }
 
 function Icon({ name, size = 14, className, style }: {
