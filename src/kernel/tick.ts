@@ -15,10 +15,11 @@
  */
 
 import type {
-  State, Snapshot, Contract, Patch, Conflict, TickResult, PortBuffer,
+  State, Snapshot, Contract, Patch, Conflict, TickResult, PortBuffer, HookRegistry,
 } from './types'
 import { createStateView } from './state'
 import { mergePatches, applyPatches } from './patch'
+import { runPrePatchHooks } from './hooks'
 
 /** Hard upper bound on convergence rounds per tick */
 const MAX_ROUNDS = 100
