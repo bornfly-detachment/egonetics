@@ -115,15 +115,52 @@ const CATEGORY_COLORS: Record<string, { color: string; bg: string; border: strin
 }
 
 const GROUPS = [
-  { label: '资源权限通信层', accent: '#34d399', categories: [
-    { id: 'permission-layer', label: '权限层级' }, { id: 'communication', label: '通信机制' }, { id: 'resource-tier', label: '智能资源分级' },
+  { label: 'P — Pattern 感知层', accent: '#f59e0b', categories: [
+    { id: 'P',          label: 'P 基础' },
+    { id: 'P-state',    label: 'P 状态三态' },
+    { id: 'P-origin',   label: 'P 溯源链' },
+    { id: 'P-level',    label: 'P 三级形态' },
+    { id: 'P-physical', label: 'P 物理载体' },
+    { id: 'P-comm',     label: 'P 通信方向' },
+    { id: 'interaction',label: '交互操作' },
   ]},
-  { label: '分级约束控制层', accent: '#f59e0b', categories: [
-    { id: 'P', label: 'P 模式' }, { id: 'R', label: 'R 关系' }, { id: 'V', label: 'V 价值' }, { id: 'S', label: 'S 状态' }, { id: 'AOP', label: 'AOP' },
+  { label: 'R — Relation 关系层', accent: '#a78bfa', categories: [
+    { id: 'R',          label: 'R 基础' },
+    { id: 'R-l0',       label: 'L0 逻辑' },
+    { id: 'R-l1',       label: 'L1 条件时间' },
+    { id: 'R-l2',       label: 'L2 存在矛盾' },
+    { id: 'R-edge',     label: '图边视觉' },
+    { id: 'graph-node', label: 'Graph 节点' },
+    { id: 'AOP',        label: 'AOP' },
   ]},
-  { label: '实践层', accent: '#a78bfa', categories: [
-    { id: 'interaction', label: '交互操作' }, { id: 'ui-component', label: 'UI 组件库' },
-    { id: 'kernel-comp', label: 'Kernel 组件' }, { id: 'lifecycle', label: '生命周期态' }, { id: 'graph-node', label: 'Graph 节点' },
+  { label: 'V — Value 价值层', accent: '#fb923c', categories: [
+    { id: 'V',      label: 'V 基础' },
+    { id: 'V-l0',   label: 'L0 客观指标' },
+    { id: 'V-l1',   label: 'L1 动态评估' },
+    { id: 'V-l2',   label: 'L2 宪法校验' },
+    { id: 'V-core', label: '核心机制' },
+  ]},
+  { label: 'S — State 状态层', accent: '#10b981', categories: [
+    { id: 'S',         label: 'S 基础' },
+    { id: 'S-l0',      label: 'L0 状态机' },
+    { id: 'lifecycle', label: '生命周期态' },
+    { id: 'S-l1',      label: 'L1 任务周期' },
+    { id: 'S-l2',      label: 'L2 战略目标' },
+  ]},
+  { label: 'E — Evolution 演化层', accent: '#818cf8', categories: [
+    { id: 'E-info',          label: 'E 信息分级' },
+    { id: 'E-comm',          label: 'E 通信机制' },
+    { id: 'E-perm',          label: 'E 权限分级' },
+    { id: 'E-l0',            label: 'E-L0 完备性' },
+    { id: 'E-l1',            label: 'E-L1 学习构建' },
+    { id: 'E-l2',            label: 'E-L2 主体性' },
+    { id: 'E-ui',            label: 'UI 注册表 ✦' },
+    { id: 'communication',   label: '通信管道 (旧)' },
+    { id: 'resource-tier',   label: '智能资源 (旧)' },
+    { id: 'layer',           label: '信息层 (旧)' },
+    { id: 'permission-layer',label: '权限层 (旧)' },
+    { id: 'kernel-comp',     label: 'Kernel 组件' },
+    { id: 'ui-component',    label: 'UI 组件库' },
   ]},
 ]
 
