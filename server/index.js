@@ -61,7 +61,6 @@ const codeAgentRouter    = require('./routes/code-agent');
 const acpGatewayRouter   = require('./routes/acp-gateway')
 const signalsRouter      = require('./routes/signals');
 const compilerModule     = require('./routes/compiler');
-const codeAgent          = require('./lib/code-agent');
 
 const app = express();
 const PORT = 3002;
