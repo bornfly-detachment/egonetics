@@ -213,84 +213,37 @@ const _runningModel = {}
 
 async function ensureClaudeRunning(sphere = 'main', model) {
   const pane = spherePane(sphere)
-  const workdir = SPHERE_WORKDIR[sphere] ?? SPHERE_WORKDIR.main
 
-  // ── 确保 tmux session + window 存在 ──────────────────────────
-  if (!tmuxHasSession()) {
-    execSync(`tmux new-session -d -s ${TMUX} -x 220 -y 50 -n main`)
-    await new Promise(r => setTimeout(r, 300))
-    execSync(`tmux send-keys -t ${TMUX}:main "source ~/.bash_profile" Enter`)
-    await new Promise(r => setTimeout(r, 500))
-  }
-  try {
-    execSync(`tmux select-window -t ${pane} 2>/dev/null || tmux new-window -t ${TMUX} -n ${sphere === 'main' ? 'main' : sphere}`)
-    if (sphere !== 'main') {
-      execSync(`tmux send-keys -t ${pane} "source ~/.bash_profile" Enter`)
-      await new Promise(r => setTimeout(r, 300))
-    }
-  } catch { /* ignore */ }
-
-  // ── 检测 claude 是否已在运行 ─────────────────────────────────
-  if (isClaudeRunningInPane(pane)) {
-    // _runningModel 重启后为空，从 JSONL 读上次实际使用的 model，避免盲目切换
-    if (!_runningModel[sphere]) {
-      const projectsDir = getProjectsDir(sphere)
-      const jsonlPath = findActiveJsonl(projectsDir)
-      if (jsonlPath) {
-        try {
-          const lines = fss.readFileSync(jsonlPath, 'utf8').split('\n').filter(l => l.trim())
-          for (let i = lines.length - 1; i >= 0; i--) {
-            const e = JSON.parse(lines[i])
-            if (e.type === 'assistant' && e.message?.model && e.message.model !== '<synthetic>') {
-              _runningModel[sphere] = e.message.model
-              break
-            }
-          }
-        } catch { /* ignore */ }
-      }
-    }
-
-    const currentModel = _runningModel[sphere]
-    if (model && currentModel && model !== currentModel) {
-      await switchModelInClaude(pane, model)
-      _runningModel[sphere] = model
-    }
-    return
-  }
-
-  // ── 有其他进程先 Ctrl+C ───────────────────────────────────────
-  const otherCmd = (() => {
-    try {
-      return execSync(
-        `tmux display-message -t ${pane} -p '#{pane_current_command}' 2>/dev/null || echo ""`,
-        { encoding: 'utf8' }
-      ).trim()
-    } catch { return '' }
-  })()
-  if (otherCmd && !['zsh', 'bash', 'sh', 'claude'].includes(otherCmd)) {
-    execSync(`tmux send-keys -t ${pane} C-c`)
-    await new Promise(r => setTimeout(r, 800))
-  }
-
-  // ── 启动 claude（只执行一次，不带 --model） ───────────────────
-  execSync(`tmux send-keys -t ${pane} "cd ${workdir} && env -u ANTHROPIC_API_KEY claude --dangerously-skip-permissions" Enter`)
-
-  // 等待初始化（最多 20s），自动回应确认框
-  const deadline = Date.now() + 20000
-  while (Date.now() < deadline) {
-    await new Promise(r => setTimeout(r, 600))
-    const paneText = stripAnsi(
-      execSync(`tmux capture-pane -t ${pane} -p -S -30 2>/dev/null || true`, { encoding: 'utf8' })
+  // ── claude 必须由用户手动启动，后端无权执行 claude --dangerously-skip-permissions ──
+  if (!isClaudeRunningInPane(pane)) {
+    throw new Error(
+      `Claude 未在 tmux pane "${pane}" 中运行。\n` +
+      `请手动执行：tmux new-session -d -s ${TMUX} -n main && ` +
+      `tmux send-keys -t ${TMUX}:main "claude --dangerously-skip-permissions" Enter`
     )
-    if (/\(y\/n\)|\[Y\/n\]|\[y\/N\]|Yes\/No|accept|trust/i.test(paneText)) {
-      execSync(`tmux send-keys -t ${pane} "y" Enter`)
-      await new Promise(r => setTimeout(r, 400))
-    }
-    if (isClaudeReadyInPane(pane)) break
   }
 
-  // 启动完成后切换 model（switchModelInClaude 内部处理菜单）
-  if (model) {
+  // ── _runningModel 重启后为空，从 JSONL 读上次实际使用的 model，避免盲目切换 ──
+  if (!_runningModel[sphere]) {
+    const projectsDir = getProjectsDir(sphere)
+    const jsonlPath = findActiveJsonl(projectsDir)
+    if (jsonlPath) {
+      try {
+        const lines = fss.readFileSync(jsonlPath, 'utf8').split('\n').filter(l => l.trim())
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const e = JSON.parse(lines[i])
+          if (e.type === 'assistant' && e.message?.model && e.message.model !== '<synthetic>') {
+            _runningModel[sphere] = e.message.model
+            break
+          }
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  // ── 仅在用户明确指定且与当前不同时切换 model ──────────────────
+  const currentModel = _runningModel[sphere]
+  if (model && currentModel && model !== currentModel) {
     await switchModelInClaude(pane, model)
     _runningModel[sphere] = model
   }
