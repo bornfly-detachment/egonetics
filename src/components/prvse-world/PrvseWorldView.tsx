@@ -393,12 +393,7 @@ export default function PrvseWorldView() {
         </div>
       )}
 
-      {/* ── L3: AI 世界构建输入（仅当无面板时显示）── */}
-      {layer === 'L3' && !l1Panel && !spherePanel && tree.length > 0 && (
-        <L3AIInput
-          activeSphereId={null}
-        />
-      )}
+      {/* L3AIInput: removed from default view — user explicitly said no auto-popup */}
 
       {/* ── Fullscreen mode: sphere bookmarks on left edge, hover to expand ── */}
       {spherePanel && panelFullscreen && !l1Panel && (
