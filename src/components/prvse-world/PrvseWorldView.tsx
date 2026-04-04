@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { ChevronRight, ArrowLeft, MessageSquare } from 'lucide-react'
+import { ROOT_SPECTRUM } from './constants'
 
 /** 书签吊牌图标 — 五边形标签 + 小圆孔 */
 function BookmarkTag({ size = 16, color = '#fff', filled = false }: { size?: number; color?: string; filled?: boolean }) {
