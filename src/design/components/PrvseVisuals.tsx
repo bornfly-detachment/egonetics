@@ -346,7 +346,7 @@ export function RelationCardVisual({ vis, layer }: { vis: Record<string, unknown
 //  主分发器 — 根据 vis.type 路由到对应渲染器
 // ══════════════════════════════════════════════════════════════════════
 
-export function PrvseTypeRouter({ vis }: { vis: Record<string, unknown> }) {
+export function PrvseTypeRouter({ vis, layer }: { vis: Record<string, unknown>; layer?: string }) {
   const type = vis.type as string | undefined
   if (!type) return null
 
@@ -357,6 +357,8 @@ export function PrvseTypeRouter({ vis }: { vis: Record<string, unknown> }) {
     case 'tier-cards':           return <TierCardsVisual vis={vis} />
     case 'chip-selector':        return <ChipSelectorVisual vis={vis} />
     case 'comm-direction-cards': return <CommDirectionVisual vis={vis} />
+    // R layer
+    case 'relation-card':        return <RelationCardVisual vis={vis} layer={layer ?? 'l0'} />
     default:                     return null
   }
 }
