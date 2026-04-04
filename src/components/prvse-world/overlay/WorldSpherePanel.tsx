@@ -585,7 +585,6 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
           componentId={componentId}
         />
       </div>
-      </div>
     </div>
   )
 }
