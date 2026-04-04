@@ -123,6 +123,23 @@ export type {
   ContractFitness, FitnessRates, SelectionPolicy, SelectionAction, FitnessTracker,
 } from './selection'
 
+// ── Hook Gateway ──
+export {
+  createHookRegistry,
+  defaultHookRegistry,
+  runPrePatchHooks,
+  conflictBlockHook,
+  divergenceGuardHook,
+  DEFAULT_HOOKS,
+} from './hooks'
+export type {
+  HookDecision,
+  PatchHookContext,
+  PatchHookResult,
+  PatchHook,
+  HookRegistry,
+} from './types'
+
 // ── Runtime (Interpreter Bridge) ──
 export { createRuntime } from './runtime'
 export type { Runtime, RuntimeConfig, RuntimeTickResult } from './runtime'
