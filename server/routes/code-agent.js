@@ -99,18 +99,10 @@ router.delete('/code-agent/session/:ctx', (req, res) => {
   }
 })
 
-// ── POST /api/code-agent/respond ─────────────────────────────────────────
-// 前端用户选择交互式 prompt 选项
-router.post('/code-agent/respond', (req, res) => {
-  const { pane, option } = req.body
-  if (!pane || option === undefined) return res.status(400).json({ error: 'pane and option required' })
-  const ok = agent.respondToPrompt(pane, String(option))
-  res.json({ ok })
-})
-
-// ── GET /api/code-agent/tmux/status ───────────────────────────────────────
-router.get('/code-agent/tmux/status', (_req, res) => {
-  res.json({ session: 'egonetics-coding-agent', ok: true })
+// ── GET /api/code-agent/health ────────────────────────────────────────────
+router.get('/code-agent/health', async (_req, res) => {
+  const ok = await agent.checkT2Health()
+  res.json({ ok, server: agent.T2_SERVER_URL })
 })
 
 module.exports = router
