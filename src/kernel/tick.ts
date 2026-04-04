@@ -33,17 +33,17 @@ const MAX_ROUNDS = 100
  * @param buffer  Port buffer with accumulated external inputs
  * @returns       TickResult with new state, convergence info, conflicts
  */
-export function tick(state: State, buffer: PortBuffer): TickResult {
+export function tick(state: State, buffer: PortBuffer, hooks?: HookRegistry): TickResult {
   // ── Phase 0: FREEZE ──
   const snapshot = buffer.freeze(state.tick + 1)
 
-  return tickWithSnapshot(state, snapshot)
+  return tickWithSnapshot(state, snapshot, hooks)
 }
 
 /**
  * Execute tick with a pre-built snapshot (for testing / deterministic replay).
  */
-export function tickWithSnapshot(state: State, snapshot: Snapshot): TickResult {
+export function tickWithSnapshot(state: State, snapshot: Snapshot, hooks?: HookRegistry): TickResult {
   const allConflicts: Conflict[] = []
   let totalPatchesApplied = 0
   let current = state
