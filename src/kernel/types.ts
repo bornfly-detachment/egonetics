@@ -279,6 +279,45 @@ export interface UniverseSpec {
 // ── Constitution Layer ─────────────────────────────────────────
 
 /**
+ * Rule source hierarchy — higher source = higher authority.
+ * Mirrors OpenClaudeCode's permission source chain.
+ *
+ *   L0  (100) — structural/physical laws, never overridable
+ *   L1  (50)  — learned patterns, verified by practice
+ *   L2  (20)  — cognitive/subjective rules, human-defined
+ *   session (5) — ephemeral, current session only
+ */
+export type ConstitutionRuleSource = 'L0' | 'L1' | 'L2' | 'session'
+
+export const RULE_SOURCE_PRIORITY: Readonly<Record<ConstitutionRuleSource, number>> = {
+  L0: 100,
+  L1: 50,
+  L2: 20,
+  session: 5,
+}
+
+/**
+ * A single rule entry in the source registry.
+ * Higher-source entries override lower-source entries for the same rule.
+ */
+export interface RuleSourceEntry {
+  readonly rule: ConstitutionRule
+  readonly source: ConstitutionRuleSource
+  readonly severity: 'critical' | 'warning'
+  readonly enabled: boolean
+  readonly reason?: string
+}
+
+/**
+ * Registry of constitutional rules with source priorities.
+ * When the same rule appears at multiple sources, the highest-priority
+ * source wins (L0 cannot be overridden by L2 or session).
+ */
+export interface RuleSourceRegistry {
+  readonly entries: readonly RuleSourceEntry[]
+}
+
+/**
  * Violation found during contract registration validation.
  * Constitution blocks registration if any CRITICAL violation exists.
  */
@@ -287,6 +326,8 @@ export interface Violation {
   readonly rule: ConstitutionRule
   readonly message: string
   readonly contracts: readonly ContractId[]
+  /** Source that triggered this violation */
+  readonly source?: ConstitutionRuleSource
 }
 
 export type ConstitutionRule =
