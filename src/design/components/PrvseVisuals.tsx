@@ -24,6 +24,10 @@ import {
   Hammer, Play, Wrench, Bug, Pause, Search, FileText, Package, Archive,
   Rocket, BookMarked, Shield, XCircle, Trophy,
   ListChecks, HeartPulse, Compass,
+  // E layer icons
+  Radio, MessageSquare, ShieldAlert, HelpCircle, Ban, Lock,
+  GraduationCap, Settings2, User, Globe,
+  Repeat, Database,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SliderWidget } from '@/design/components/SliderWidget'
