@@ -157,7 +157,7 @@ export function createRuntime(config?: Partial<RuntimeConfig>): Runtime {
 
     tick(): RuntimeTickResult {
       const prevState = state
-      const tickResult = kernelTick(state, buffer)
+      const tickResult = kernelTick(state, buffer, cfg.hooks)
       const nextState = tickResult.state
 
       // Observer: pure diff → effects
