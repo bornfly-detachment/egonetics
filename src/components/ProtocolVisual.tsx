@@ -176,16 +176,97 @@ export default function ProtocolVisual({ category, layer, uiVisual }: VisualProp
 
   if (category === 'AOP') return <AopStubVisual vis={vis} />
 
-  if (category === 'S') return <StateMachineVisual vis={vis} layer={layer} />
+  if (category === 'S' || category === 'S-l0' || category === 'S-l1' || category === 'S-l2')
+    return <StateMachineVisual vis={vis} layer={layer} />
 
-  if (category === 'ui-component') return <UIComponentVisual vis={vis} />
+  if (category === 'ui-component' || category === 'E-ui') return <UIComponentVisual vis={vis} />
 
-  if (category === 'resource-tier') return <ResourceTierVisual vis={vis} />
+  if (category === 'resource-tier' || category === 'E-perm') return <ResourceTierVisual vis={vis} />
 
-  if (category === 'communication')  return <CommunicationVisual vis={vis} />
+  if (category === 'communication' || category === 'E-comm') return <CommunicationVisual vis={vis} />
   if (category === 'kernel-comp')    return <KernelComponentCard vis={vis} />
   if (category === 'lifecycle')      return <LifecycleStateCard vis={vis} />
-  if (category === 'graph-node')     return <GraphNodeCard vis={vis} />
+  if (category === 'graph-node' || category === 'R-edge') return <GraphNodeCard vis={vis} />
+
+  // ── P 子分类 → 复用 P 渲染 ──────────────────────────────────────
+  if (category.startsWith('P-')) {
+    const fields = (vis.fields as string[]) ?? []
+    if (fields.length) {
+      const color = category === 'P-state' ? '#f59e0b'
+        : category === 'P-origin'   ? '#fbbf24'
+        : category === 'P-level'    ? '#fcd34d'
+        : category === 'P-physical' ? '#d97706'
+        : '#92400e'
+      return <FieldChips fields={fields} color={color} />
+    }
+  }
+
+  // ── R 子分类 → 复用 R 渲染 ──────────────────────────────────────
+  if (category.startsWith('R-')) {
+    if (layer === 'slider') return (
+      <SliderWidget value={0.5} readOnly
+        leftLabel={(vis.leftLabel as string) ?? '矛盾/对立'}
+        rightLabel={(vis.rightLabel as string) ?? '统一/融合'}
+      />
+    )
+    if (layer === 'timeline') return <TimelineWidget color={layerTokens.l1.border} />
+    const edgeType = rLayerToEdgeType(layer, vis)
+    return <Arrow type={edgeType} />
+  }
+
+  // ── V 子分类 → 复用 V 渲染 ──────────────────────────────────────
+  if (category.startsWith('V-')) {
+    if (layer === 'phi') return <PhiFunctionDisplay vis={vis} />
+    if (layer === 'v1')  return <V1MetricDisplay vis={vis} />
+    if (layer === 'v2' || layer === 'v3') return <VProbDisplay vis={vis} layer={layer} />
+    return <VMetrics vis={vis} />
+  }
+
+  // ── E 子分类 — 信息分级 ──────────────────────────────────────────
+  if (category === 'E-info' || category === 'layer') {
+    const INFO_LEVELS = [
+      { id: 'L0', label: '信号层',   color: '#3b82f6', desc: '客观确定 ≥99%，规则路由' },
+      { id: 'L1', label: '规律层',   color: '#10b981', desc: '可复现可验证，约束条件建模' },
+      { id: 'L2', label: '认知层',   color: '#8b5cf6', desc: '主观/叙事，警惕幻觉' },
+    ]
+    const active = (vis.level as string) ?? layer
+    return (
+      <div className="flex gap-1.5">
+        {INFO_LEVELS.map(lv => (
+          <div key={lv.id}
+            className="flex-1 rounded-lg px-2 py-1.5 border text-center transition-all"
+            style={{
+              background: active === lv.id.toLowerCase() ? lv.color + '20' : 'transparent',
+              borderColor: active === lv.id.toLowerCase() ? lv.color + '55' : lv.color + '20',
+            }}>
+            <div className="text-[10px] font-bold font-mono mb-0.5" style={{ color: lv.color }}>{lv.id}</div>
+            <div className="text-[9px] text-white/50">{lv.label}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // ── E 子分类 — 演化阶段 ──────────────────────────────────────────
+  if (category === 'E-l0' || category === 'E-l1' || category === 'E-l2') {
+    const E_CFG: Record<string, { color: string; icon: string; label: string }> = {
+      'E-l0': { color: '#6366f1', icon: '⚙️', label: 'L0 系统完备性维护' },
+      'E-l1': { color: '#818cf8', icon: '🧬', label: 'L1 学习模块构建' },
+      'E-l2': { color: '#a5b4fc', icon: '🧠', label: 'L2 主体性 + 生变论' },
+    }
+    const cfg = E_CFG[category]
+    const title = (vis.title as string) ?? cfg.label
+    const desc  = (vis.description as string) ?? ''
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-base mt-0.5">{cfg.icon}</span>
+        <div>
+          <div className="text-[10px] font-semibold" style={{ color: cfg.color }}>{title}</div>
+          {desc && <div className="text-[9px] text-white/40 mt-0.5 leading-snug">{desc}</div>}
+        </div>
+      </div>
+    )
+  }
 
   // fallback
   const entries = Object.entries(vis).slice(0, 4)
