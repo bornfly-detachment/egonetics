@@ -17,6 +17,7 @@ import { getToken } from '@/lib/http'
 import type { ControlNode } from '../useControlTree'
 import { COMPONENT_ROUTE } from '../sphere-pages'
 import ResourcePanel from '../panels/ResourcePanel'
+import CompilerPanel from '../panels/CompilerPanel'
 
 // ── Types ──────────────────────────────────────────────────────────
 
