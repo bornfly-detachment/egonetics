@@ -7,9 +7,9 @@
 
 /** Root entity colors — the 3 control dimensions */
 export const ROOT_COLORS: Record<string, string> = {
-  'dim-constitution': '#ef4444',  // 宪法 — red
-  'dim-resources':    '#f59e0b',  // 资源 — amber
-  'dim-goals':        '#22c55e',  // 目标 — green
+  'dim-constitution': '#e63333',  // 宪法 — 红 (红黄蓝三原色)
+  'dim-resources':    '#e6c833',  // 资源 — 黄 (红黄蓝三原色)
+  'dim-goals':        '#3366e6',  // 目标 — 蓝 (红黄蓝三原色)
 }
 
 /** Root entity labels for 3D display — language-aware */
