@@ -217,27 +217,23 @@ async function sendMessage(opts) {
   }
 
   // LLM 调用
-  const { client, model } = getClientForTier(tier)
+  const { model } = getClientForTier(tier)
+  const engine = createLLMEngine(tier)
   let fullText = ''
+  let usage = {}
 
   try {
-    const stream = client.messages.stream({
-      model,
-      max_tokens: DEFAULT_MAX_TOKENS,
+    for await (const event of engine.stream(contextMessages, {
+      maxTokens: DEFAULT_MAX_TOKENS,
       system: useSystem ? systemPrompt : undefined,
-      messages: contextMessages,
-    })
-
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-        const token = chunk.delta.text
-        fullText += token
-        onToken(token)
+    })) {
+      if (event.type === 'text') {
+        fullText += event.text
+        onToken(event.text)
+      } else if (event.type === 'done') {
+        usage = event.usage || {}
       }
     }
-
-    const finalMsg = await stream.finalMessage()
-    const usage    = finalMsg.usage || {}
 
     // 写入 assistant message 条目
     const asstMsgId = randomUUID().slice(0, 8)
