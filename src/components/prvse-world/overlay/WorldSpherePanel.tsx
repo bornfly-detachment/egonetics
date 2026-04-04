@@ -466,13 +466,40 @@ function AIChat({
 
 // ── Main Component ─────────────────────────────────────────────────
 
+const MIN_PANEL_W = 320
+const MAX_PANEL_RATIO = 0.95  // max 95% of container
+
 interface WorldSpherePanelProps {
   node: ControlNode
   onClose: () => void
+  width: number
+  onWidthChange: (w: number) => void
+  containerWidth: number
 }
 
-export default function WorldSpherePanel({ node, onClose }: WorldSpherePanelProps) {
+export default function WorldSpherePanel({ node, onClose, width, onWidthChange, containerWidth }: WorldSpherePanelProps) {
   const children = node.children ?? []
+  const dragRef = useRef<{ startX: number; startW: number } | null>(null)
+
+  // ── Drag resize ──
+  const onPointerDown = useCallback((e: RPointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    dragRef.current = { startX: e.clientX, startW: width }
+    const el = e.currentTarget
+    el.setPointerCapture(e.pointerId)
+  }, [width])
+
+  const onPointerMove = useCallback((e: RPointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return
+    const delta = dragRef.current.startX - e.clientX  // drag left = increase width
+    const maxW = containerWidth * MAX_PANEL_RATIO
+    const newW = Math.max(MIN_PANEL_W, Math.min(maxW, dragRef.current.startW + delta))
+    onWidthChange(newW)
+  }, [containerWidth, onWidthChange])
+
+  const onPointerUp = useCallback(() => {
+    dragRef.current = null
+  }, [])
 
   // Group direct children by their meta.layer
   const layerGroups: LayerGroup[] = (['L0', 'L1', 'L2'] as SphereLayer[]).map(layer => ({
