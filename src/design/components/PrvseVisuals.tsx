@@ -1442,6 +1442,17 @@ export function PrvseTypeRouter({ vis, layer }: { vis: Record<string, unknown>; 
     case 'lifecycle-pipeline':   return <LifecyclePipelineVisual vis={vis} />
     case 'strategy-board':       return <StrategyBoardVisual vis={vis} />
     case 'driving-force-cards':  return <DrivingForceVisual vis={vis} />
+    // E layer
+    case 'info-level-cards':     return <InfoLevelCardsVisual vis={vis} />
+    case 'comm-tier-cards':      return <CommTierCardsVisual vis={vis} />
+    case 'permission-tier-cards': return <PermissionTierCardsVisual vis={vis} />
+    case 'evolution-trigger-panel': return <EvolutionTriggerVisual vis={vis} />
+    case 'learning-board':       return <LearningBoardVisual vis={vis} />
+    case 'subjectivity-panel':   return <SubjectivityPanelVisual vis={vis} />
+    case 'level-transition-flow': return <LevelTransitionFlowVisual vis={vis} />
+    // E-ui composite
+    case 'approval-form':        return <ApprovalFormVisual vis={vis} />
+    case 'dashboard-layout':     return <DashboardLayoutVisual vis={vis} />
     default:                     return null
   }
 }
