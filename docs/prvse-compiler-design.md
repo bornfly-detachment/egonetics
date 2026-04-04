@@ -612,23 +612,89 @@ accumulates confidence — exceeds threshold → recommend restart.
 
 ---
 
-## 11. E — Evolution Event
+## 11. E — Evolution (系统的自我改造引擎)
 
-### 11.1 E Trigger Condition (Constitutional)
+S manages "what is happening now"; E manages "how should the system change, learn, and evolve."
+E generates tasks for S to execute; S execution results feed back to E for the next evolution cycle.
+Evolution capability = the differentiator of intelligence at equivalent resources.
 
-Only when L1 practice produces statistically significant high-probability patterns
-that emerge as constitution/goals/rules does Evolution trigger a system update.
-This is NOT arbitrary — it requires measurable evidence from practice.
+### 11.1 L0 — System Completeness Maintenance
 
-### 11.2 Level Transitions
+**Triggers**: S runtime encounters unknown Pattern / compilation failure / unsupported execution.
 
-Levels are engineering state snapshots, NOT permanent labels:
-- L2 → L1: validated through practice (dialectical prediction confirmed)
-- L1 → L0: engineering certainty reaches threshold (e.g., 99.XX% accuracy)
+| Trigger | Description |
+|---------|-------------|
+| `unknown_pattern` | Pattern can't be compiled/classified |
+| `high_freq_error` | Same-type errors appearing at high frequency |
+| `unsupported_exec` | Theoretically executable but Kernel doesn't support |
+| `design_bottleneck` | Past design becomes unavoidable obstacle to future optimization |
 
-E monitors confidence metrics and triggers transitions at thresholds.
+**Update Types**:
+- **Incremental** — add new support, minimal impact on existing system
+- **Modification** — batch replacement, requires V testing + constitutional compliance + human review
 
-### 11.3 Structure
+**Principles**: parallel extension by default (never hardcode), high cohesion low coupling, 三思后行.
+L0 updates may trigger L1 sync updates.
+
+### 11.2 L1 — Learning Module Construction + AI Training
+
+Core: system's ability to learn external knowledge and digest it into internal cybernetic cognition/structure/capability.
+**Emergent materialism** — the most irreplaceable future AI capability.
+Same resources → evolution capability = intelligence level differentiator.
+
+**Training** (algorithm laboratory):
+- Local model training (replace external API calls)
+- Deep learning paradigm exploration (next-gen algorithms/architectures)
+- Controlled experiments (AB testing, control variables)
+- Training data management (collection/cleaning/annotation/distribution)
+
+**Optimization** (improve existing processes):
+- External API → local model replacement
+- API usage optimization (better leverage vendor model capabilities)
+- Pipeline optimization (reduce redundancy, improve throughput)
+
+**Capability Expansion**:
+- Video generation, voice generation, multimodal, custom capabilities (dynamic registration)
+
+**Evolution Output** (delivered to S for deployment):
+- Trained local models
+- Optimized pipelines
+- New system capabilities
+- Internalized knowledge (external → internal structure)
+
+### 11.3 L2 — Subjectivity + 生变论 + Original Value
+
+**Subjectivity Engine** (long-running component):
+- Internal narrative maintenance (self-narrative isolated from external cybernetic narrative)
+- Subjectivity simulation (generate subjective behavior and judgment)
+- Anti-infiltration / anti-brainwashing / anti-hallucination
+
+**生变论 Engine**:
+- Understand → Apply → Update continuous cycle of bornfly's 生变论
+
+**Cognitive Engine** (original value generation):
+- **Problem awareness engine**: detect problems not in probability distribution — creative problem discovery > problem solving
+- **Intuition engine**: unprecedented intuition = condition for original value creation. Emergent from extensive practice and learning
+- **Learner**: shared with S's L2 layer (shelved goal monitoring + conditional probability)
+
+**Human-AI Coevolution**:
+- Interaction product updates
+- Subjective + objective labeled training data collection
+- Mixed training (give model human capabilities)
+- Practice feedback training (fill gaps in high-frequency cybernetic scenarios)
+
+### 11.4 Infrastructure (cross-layer shared)
+
+**Info Level** (constitutional definition, engineering state snapshots):
+- L0: signal layer (deterministic ≥99%, rule routing)
+- L1: objective law layer (reproducible, verifiable, goal: convert to L0)
+- L2: subjective cognition layer (beware hallucination, must verify)
+
+**Level Transitions** (E monitors confidence, triggers upgrades):
+- L2 → L1: validated through practice
+- L1 → L0: engineering certainty reaches threshold (e.g., 99.XX%)
+
+### 11.5 EvolutionEvent Structure
 
 | Field | Description |
 |-------|-------------|
@@ -643,6 +709,13 @@ E monitors confidence metrics and triggers transitions at thresholds.
 | `executor` | Resource tier that executes |
 | `diff` | Before/after snapshot |
 | `levelTransition?` | If this triggers a level change |
+| `systemMaintenance?` | L0: system completeness maintenance context |
+| `learningModule?` | L1: learning/training context |
+| `evolutionOutput?` | L1: evolution output ready for deployment |
+| `subjectivity?` | L2: subjectivity engine state |
+| `shengbianlun?` | L2: 生变论 engine state |
+| `cognitive?` | L2: cognitive engine (problem awareness + intuition) |
+| `coevolution?` | L2: human-AI coevolution metrics |
 
 ---
 
