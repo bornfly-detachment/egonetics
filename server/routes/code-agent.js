@@ -21,7 +21,7 @@
 
 const express    = require('express')
 const router     = express.Router()
-const agent      = require('../lib/code-agent')
+const agent      = require('../lib/t2-client')
 
 // ── POST /api/code-agent/chat ──────────────────────────────────────────────
 // Body: { prompt, contextKey?, maxTurns?, model?, cwd?, resetCtx?, useTmux? }
