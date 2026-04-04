@@ -119,6 +119,11 @@ async function ensureClaudeRunning(sphere = 'main') {
   // 确保对应 window 存在
   try {
     execSync(`tmux select-window -t ${pane} 2>/dev/null || tmux new-window -t ${TMUX} -n ${sphere === 'main' ? 'main' : sphere}`)
+    // 新 window 也需要加载环境
+    if (sphere !== 'main') {
+      execSync(`tmux send-keys -t ${pane} "source ~/.bash_profile" Enter`)
+      await new Promise(r => setTimeout(r, 300))
+    }
   } catch { /* ignore */ }
 
   const cmd = (() => {
