@@ -268,7 +268,7 @@ async function ensureClaudeRunning(sphere = 'main', model) {
       execSync(`tmux send-keys -t ${pane} "y" Enter`)
       await new Promise(r => setTimeout(r, 400))
     }
-    if (isClaudeRunningInPane(pane)) break
+    if (isClaudeReadyInPane(pane)) break
   }
 
   // 启动完成后切换 model（switchModelInClaude 内部处理菜单）
