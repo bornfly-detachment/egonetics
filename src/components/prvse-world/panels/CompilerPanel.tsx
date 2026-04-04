@@ -428,37 +428,41 @@ export default function CompilerPanel({ sphereColor = '#94a3b8' }: CompilerPanel
             </Section>
 
             {/* Mid-IR: Binder output */}
-            <Section
-              title="Mid-IR (Binder 输出)"
-              icon={Layers}
-              color="#7dd3fc"
-              count={result.midIR.tokens.length}
-            >
-              <div className="space-y-1">
-                <Field label="Tokens" value={String(result.midIR.tokens.length)} />
-                <Field label="Edges" value={String(result.midIR.edges.length)} />
-                <Field label="Gates" value={String(result.midIR.gates.length)} />
-                <Field label="Bindings" value={String(result.midIR.bindings.length)} />
-              </div>
-              <div className="mt-2">
-                {result.midIR.tokens.map(t => (
-                  <TokenCard key={t.id} token={t} />
-                ))}
-              </div>
-            </Section>
+            {result.midIR && (
+              <Section
+                title="Mid-IR (Binder 输出)"
+                icon={Layers}
+                color="#7dd3fc"
+                count={result.midIR.tokens.length}
+              >
+                <div className="space-y-1">
+                  <Field label="Tokens" value={String(result.midIR.tokens.length)} />
+                  <Field label="Edges" value={String(result.midIR.edges.length)} />
+                  <Field label="Gates" value={String(result.midIR.gates.length)} />
+                  <Field label="Bindings" value={String(result.midIR.constitutionBindings.length)} />
+                </div>
+                <div className="mt-2">
+                  {result.midIR.tokens.map(t => (
+                    <TokenCard key={t.id} token={t} />
+                  ))}
+                </div>
+              </Section>
+            )}
 
             {/* Low-IR: Checker output */}
-            <Section
-              title="Low-IR (Checker 输出)"
-              icon={Zap}
-              color="#a78bfa"
-            >
-              <div className="space-y-1">
-                <Field label="Permission" value={result.lowIR.permissionLevel} />
-                <Field label="Instructions" value={String(result.lowIR.instructions.length)} />
-                <Field label="Violations" value={String(result.lowIR.violations.length)} />
-              </div>
-            </Section>
+            {result.lowIR && (
+              <Section
+                title="Low-IR (Checker 输出)"
+                icon={Zap}
+                color="#a78bfa"
+              >
+                <div className="space-y-1">
+                  <Field label="Permission" value={result.lowIR.permissionLevel} />
+                  <Field label="Instructions" value={String(result.lowIR.instructions.length)} />
+                  <Field label="Violations" value={String(result.lowIR.violations.length)} />
+                </div>
+              </Section>
+            )}
 
             {/* Events: Emitter output */}
             {result.events.length > 0 && (
