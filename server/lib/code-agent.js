@@ -267,7 +267,7 @@ async function ensureClaudeRunning(sphere = 'main', model) {
       ).trim()
     } catch { return '' }
   })()
-  if (otherCmd && !['zsh', 'bash', 'sh', 'node', 'claude', 'claude-cli'].includes(otherCmd)) {
+  if (otherCmd && !['zsh', 'bash', 'sh', 'claude'].includes(otherCmd)) {
     execSync(`tmux send-keys -t ${pane} C-c`)
     await new Promise(r => setTimeout(r, 800))
   }
