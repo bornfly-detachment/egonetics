@@ -293,17 +293,6 @@ function getQueue(sphere) {
   return _queues[sphere]
 }
 
-// ── history_size 工具 ─────────────────────────────────────────
-
-function getPaneHistorySize(pane) {
-  try {
-    return parseInt(
-      execSync(`tmux display-message -t ${pane} -p '#{history_size}'`, { encoding: 'utf8' }).trim(),
-      10
-    ) || 0
-  } catch { return 0 }
-}
-
 // ── 核心：runQuery ─────────────────────────────────────────────
 
 async function* runQuery(prompt, opts = {}) {
@@ -319,8 +308,9 @@ async function* runQuery(prompt, opts = {}) {
     await ensureClaudeRunning(sphere, opts.model)
     yield { type: 'stream_start' }
 
-    // 记录发 prompt 前的 history_size（时间戳基准）
-    const histBefore = getPaneHistorySize(pane)
+    // 记录发 prompt 前的时间戳 — 用于 JSONL 条目过滤的确定性边界
+    const startTs = Date.now()
+    const projectsDir = getProjectsDir(sphere)
 
     // 发 prompt
     execSync(`tmux send-keys -t ${pane} -- ${JSON.stringify(prompt)} Enter`)
@@ -349,16 +339,13 @@ async function* runQuery(prompt, opts = {}) {
       } catch { /* ignore */ }
     }
 
-    // 基于 history_size delta 精准捕获新内容（不多不少）
-    const histAfter = getPaneHistorySize(pane)
-    const delta = Math.max(histAfter - histBefore + 60, 80)  // +60 行容差，至少80行
-    const rawCapture = (() => {
-      try { return stripAnsi(execSync(`tmux capture-pane -t ${pane} -p -S -${delta} 2>/dev/null || true`, { encoding: 'utf8' })) }
-      catch { return '' }
-    })()
+    // 等待 JSONL flush（claude CLI 异步写盘，给 300ms 余量）
+    await new Promise(r => setTimeout(r, 300))
 
-    const filteredLines = filterClaudeOutput(rawCapture.split('\n'))
-    const responseText = filteredLines.join('\n').trim()
+    // 从 JSONL 读取 startTs 之后写入的 assistant 条目
+    const jsonlPath = findActiveJsonl(projectsDir)
+    const newEntries = jsonlPath ? readNewAssistantEntries(jsonlPath, startTs) : []
+    const responseText = extractDisplayContent(newEntries)
 
     if (responseText) {
       yield {
