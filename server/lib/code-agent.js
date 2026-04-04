@@ -70,30 +70,36 @@ function paneHasClaudePrompt() {
   return /╭─/.test(out) || /^>\s*$/m.test(out)
 }
 
-// ── 过滤 claude 执行 UI，提取纯文字响应 ─────────────────────
+// ── 过滤 claude TUI，只保留纯文字响应 ──────────────────────
+//
+// Claude tmux 输出结构：
+//   > user prompt          ← 用户输入（跳过）
+//   ⏺ / ● / ⎔ ...         ← TUI 状态装饰（跳过）
+//   ToolName(args)         ← 工具调用 header（跳过）
+//   │ result content       ← 工具返回内容（跳过）
+//   ✓ Done / Cost: ...     ← 状态/费用行（跳过）
+//   实际的文字回答           ← 保留
+//   ╭──────────────╮       ← 输入框（跳过，也是结束标志）
 
-const UI_LINE = /^[\s]*(●|⎔|✓|✗|⊕|·|▸|◆|■|□|╭|╰|│|├|└|─|↓|↑|✦|⏎|⚡)/u
-const BOX_BORDER = /^[\s╭╰│├└─╮╯┤┬┴┼]+$/
+const SKIP_LINE = /^[\s]*(⏺|●|⎔|✓|✗|⊕|·|▸|◆|■|□|╭|╰|│|├|└|─|↓|↑|✦|⏎|⚡|❯)/u
+const BOX_LINE  = /^[\s╭╰│├└─╮╯┤┬┴┼]{3,}$/
+const TOOL_CALL = /^(Read|Edit|Write|Bash|Glob|Grep|Agent|Task|WebFetch|WebSearch|Notebook)\s*[({(]/
+const COST_LINE = /^\s*(Tokens:|Cost:|Cache|API cost|Total cost|Input:|Output:)/i
+const PROMPT_MARKER = /^>\s*/  // claude 输入提示符行
 
-function extractResponse(captureText, sentPrompt) {
-  const lines = captureText.split('\n')
-
-  // 找到用户 prompt 所在行之后的内容
-  const promptIdx = lines.findLastIndex(l => l.includes(sentPrompt.slice(0, 30)))
-  const start = promptIdx >= 0 ? promptIdx + 1 : 0
-
-  const responseLines = lines.slice(start).filter(line => {
+function filterClaudeOutput(lines) {
+  return lines.filter(line => {
     const t = line.trim()
     if (!t) return false
-    if (UI_LINE.test(t)) return false
-    if (BOX_BORDER.test(t)) return false
-    // claude 的输入框行
-    if (/^[>?]\s*$/.test(t)) return false
-    if (/^\s*╭─/.test(t) || /^\s*╰─/.test(t)) return false
+    if (SKIP_LINE.test(t)) return false
+    if (BOX_LINE.test(t)) return false
+    if (TOOL_CALL.test(t)) return false
+    if (COST_LINE.test(t)) return false
+    if (PROMPT_MARKER.test(t)) return false
+    // 纯符号/数字行（工具结果分隔符）
+    if (/^[-=]{10,}$/.test(t)) return false
     return true
   })
-
-  return responseLines.join('\n').trim()
 }
 
 // ── 确保 claude 在 tmux 中运行（幂等）────────────────────────
