@@ -128,6 +128,10 @@ export default function ProtocolVisual({ category, layer, uiVisual }: VisualProp
   const { layer: layerTokens } = useTokens()
   const vis = parseVis(uiVisual)
 
+  // ── PRVSE type-based routing (优先于 category fallback) ──────────
+  const prvse = PrvseTypeRouter({ vis })
+  if (prvse) return prvse
+
   if (category === 'layer') {
     if (['l0', 'l1', 'l2'].includes(layer)) {
       return <LayerBadge layerId={layer as 'l0' | 'l1' | 'l2'} showPerm showName />
