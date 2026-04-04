@@ -67,10 +67,11 @@ export function buildEntities(nodes: PrvseNode[], parent: THREE.Group, lang: Lan
 
     // Glow ring for root entities — render behind labels
     if (node.depth === 0) {
+      const ringColor = spectrum ? new THREE.Color(spectrum.highlight) : color
       const ringMat = new THREE.MeshBasicMaterial({
-        color,
+        color: ringColor,
         transparent: true,
-        opacity: 0.2,
+        opacity: 0.3,
         side: THREE.DoubleSide,
         depthWrite: false,
       })
