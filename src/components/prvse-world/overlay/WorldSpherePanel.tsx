@@ -10,9 +10,9 @@
  *   - 底部: 持久 AI 对话 (per-sphere contextKey → localStorage)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type PointerEvent as RPointerEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, ChevronDown, ChevronRight, Bot, Send, RotateCcw, Cpu, ArrowUpRight, Paperclip } from 'lucide-react'
+import { X, ChevronDown, ChevronRight, Bot, Send, RotateCcw, Cpu, ArrowUpRight, Paperclip, GripVertical } from 'lucide-react'
 import { getToken } from '@/lib/http'
 import type { ControlNode } from '../useControlTree'
 import { COMPONENT_ROUTE } from '../sphere-pages'
