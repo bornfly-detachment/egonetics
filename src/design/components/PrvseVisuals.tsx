@@ -1008,6 +1008,11 @@ export function PrvseTypeRouter({ vis, layer }: { vis: Record<string, unknown>; 
     case 'homeostasis-gauge':    return <HomeostasisGaugeVisual vis={vis} />
     case 'practice-test-form':   return <PracticeTestFormVisual vis={vis} />
     case 'v-core-panel':         return <VCorePanelVisual vis={vis} />
+    // S layer
+    case 'state-machine':        return <SStateMachineVisual vis={vis} />
+    case 'lifecycle-pipeline':   return <LifecyclePipelineVisual vis={vis} />
+    case 'strategy-board':       return <StrategyBoardVisual vis={vis} />
+    case 'driving-force-cards':  return <DrivingForceVisual vis={vis} />
     default:                     return null
   }
 }
