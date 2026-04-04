@@ -71,36 +71,74 @@ function paneHasClaudePrompt() {
   return /╭─/.test(out) || /^>\s*$/m.test(out)
 }
 
-// ── 过滤 claude TUI，只保留纯文字响应 ──────────────────────
+// ── JSONL 读取：从 .claude/projects/ 取结构化响应 ────────────
 //
-// Claude tmux 输出结构：
-//   > user prompt          ← 用户输入（跳过）
-//   ⏺ / ● / ⎔ ...         ← TUI 状态装饰（跳过）
-//   ToolName(args)         ← 工具调用 header（跳过）
-//   │ result content       ← 工具返回内容（跳过）
-//   ✓ Done / Cost: ...     ← 状态/费用行（跳过）
-//   实际的文字回答           ← 保留
-//   ╭──────────────╮       ← 输入框（跳过，也是结束标志）
+// claude CLI 运行时把每次对话以 JSONL 追加写入
+//   ~/.claude/projects/<project-key>/<session-uuid>.jsonl
+// project-key = cwd 路径把 '/' 全替换为 '-'（去掉首个空段）
+//
+// 每行格式：
+//   { type: "user"|"assistant", timestamp: ISO, message: { content: [...] } }
+// content block type:
+//   "text"      → 最终回答，展示
+//   "thinking"  → 推理过程，展示
+//   "tool_use"  → 工具调用，隐藏
+//   "tool_result" → 工具结果，隐藏
 
-const SKIP_LINE = /^[\s]*(⏺|●|⎔|✓|✗|⊕|·|▸|◆|■|□|╭|╰|│|├|└|─|↓|↑|✦|⏎|⚡|❯)/u
-const BOX_LINE  = /^[\s╭╰│├└─╮╯┤┬┴┼]{3,}$/
-const TOOL_CALL = /^(Read|Edit|Write|Bash|Glob|Grep|Agent|Task|WebFetch|WebSearch|Notebook)\s*[({(]/
-const COST_LINE = /^\s*(Tokens:|Cost:|Cache|API cost|Total cost|Input:|Output:)/i
-const PROMPT_MARKER = /^>\s*/  // claude 输入提示符行
+function workdirToProjectKey(workdir) {
+  // /Users/foo/bar  →  -Users-foo-bar
+  return workdir.replace(/\//g, '-')
+}
 
-function filterClaudeOutput(lines) {
-  return lines.filter(line => {
-    const t = line.trim()
-    if (!t) return false
-    if (SKIP_LINE.test(t)) return false
-    if (BOX_LINE.test(t)) return false
-    if (TOOL_CALL.test(t)) return false
-    if (COST_LINE.test(t)) return false
-    if (PROMPT_MARKER.test(t)) return false
-    // 纯符号/数字行（工具结果分隔符）
-    if (/^[-=]{10,}$/.test(t)) return false
-    return true
-  })
+function getProjectsDir(sphere) {
+  const workdir = SPHERE_WORKDIR[sphere] ?? SPHERE_WORKDIR.main
+  const key = workdirToProjectKey(workdir)
+  return path.join(os.homedir(), '.claude', 'projects', key)
+}
+
+/** 找该 projects 目录下最近被写入的 .jsonl 文件 */
+function findActiveJsonl(projectsDir) {
+  try {
+    const files = fss.readdirSync(projectsDir)
+      .filter(f => f.endsWith('.jsonl'))
+      .map(f => {
+        const fp = path.join(projectsDir, f)
+        return { fp, mtime: fss.statSync(fp).mtimeMs }
+      })
+      .sort((a, b) => b.mtime - a.mtime)
+    return files[0]?.fp ?? null
+  } catch { return null }
+}
+
+/** 读取 jsonlPath 中 timestamp > afterTs 的 assistant 条目 */
+function readNewAssistantEntries(jsonlPath, afterTs) {
+  try {
+    const lines = fss.readFileSync(jsonlPath, 'utf8').split('\n').filter(l => l.trim())
+    return lines
+      .map(l => { try { return JSON.parse(l) } catch { return null } })
+      .filter(e =>
+        e &&
+        e.type === 'assistant' &&
+        new Date(e.timestamp).getTime() > afterTs
+      )
+  } catch { return [] }
+}
+
+/** 从 assistant 条目中提取 text + thinking，跳过 tool_use / tool_result */
+function extractDisplayContent(entries) {
+  const parts = []
+  for (const entry of entries) {
+    const content = entry.message?.content
+    if (!Array.isArray(content)) continue
+    for (const block of content) {
+      if (block.type === 'thinking' && block.thinking) {
+        parts.push(`<thinking>\n${block.thinking}\n</thinking>`)
+      } else if (block.type === 'text' && block.text?.trim()) {
+        parts.push(block.text.trim())
+      }
+    }
+  }
+  return parts.join('\n\n').trim()
 }
 
 // ── 确保 claude 在 tmux 中运行（幂等）────────────────────────
