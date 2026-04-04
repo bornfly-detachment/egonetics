@@ -203,7 +203,7 @@ export function updateVisibility(
   }
 }
 
-/** Highlight a node (for hover) */
+/** Highlight a node (for hover) — emissive boost + scale pulse */
 export function setHighlight(entities: EntityMap, nodeId: string | null, prevId: string | null) {
   if (prevId) {
     const group = entities.meshes.get(prevId)
@@ -211,7 +211,15 @@ export function setHighlight(entities: EntityMap, nodeId: string | null, prevId:
       const sphere = group.children[0] as THREE.Mesh
       const mat = sphere.material as THREE.MeshStandardMaterial
       const node = entities.nodeData.get(prevId)!
-      mat.emissiveIntensity = node.depth === 0 ? 0.35 : 0.15
+      mat.emissiveIntensity = node.depth === 0 ? 0.55 : 0.18
+      // Reset ring opacity
+      for (let i = 1; i < group.children.length; i++) {
+        const child = group.children[i]
+        if (child instanceof THREE.Mesh && child.userData.isDecoration) {
+          const rm = child.material as THREE.MeshBasicMaterial
+          rm.opacity = 0.3
+        }
+      }
     }
   }
   if (nodeId) {
@@ -219,7 +227,15 @@ export function setHighlight(entities: EntityMap, nodeId: string | null, prevId:
     if (group) {
       const sphere = group.children[0] as THREE.Mesh
       const mat = sphere.material as THREE.MeshStandardMaterial
-      mat.emissiveIntensity = 0.8
+      mat.emissiveIntensity = 1.1
+      // Brighten ring on hover
+      for (let i = 1; i < group.children.length; i++) {
+        const child = group.children[i]
+        if (child instanceof THREE.Mesh && child.userData.isDecoration) {
+          const rm = child.material as THREE.MeshBasicMaterial
+          rm.opacity = 0.5
+        }
+      }
     }
   }
 }
