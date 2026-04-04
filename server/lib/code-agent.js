@@ -19,7 +19,6 @@ const path = require('path')
 const os   = require('os')
 
 const TMUX = 'egonetics-coding-agent'
-const PANE = `${TMUX}:0`
 
 // agent-spaces 软链接：egonetics/agent-spaces → ../prvse_world_workspace/L2/ai-resources
 // __dirname = egonetics/server/lib/  →  ../../agent-spaces = egonetics/agent-spaces
