@@ -53,6 +53,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Hammer, Play, Wrench, Bug, Pause, Search, FileText, Package, Archive,
   Rocket, BookMarked, Shield, XCircle, Trophy,
   ListChecks, HeartPulse, Compass,
+  // E layer
+  Radio, MessageSquare, ShieldAlert, HelpCircle, Ban, Lock,
+  GraduationCap, Settings2, User, Globe,
+  Repeat, Database,
 }
 
 function Icon({ name, size = 14, className, style }: {
