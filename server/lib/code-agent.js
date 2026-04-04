@@ -157,8 +157,8 @@ async function switchModelInClaude(pane, targetModelId) {
 //   "tool_result" → 工具结果，隐藏
 
 function workdirToProjectKey(workdir) {
-  // /Users/foo/bar  →  -Users-foo-bar
-  return workdir.replace(/\//g, '-')
+  // /Users/foo/bar_baz  →  -Users-foo-bar-baz  (Claude CLI converts both / and _ to -)
+  return workdir.replace(/\//g, '-').replace(/_/g, '-')
 }
 
 function getProjectsDir(sphere) {
