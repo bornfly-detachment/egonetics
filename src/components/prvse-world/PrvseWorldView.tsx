@@ -205,11 +205,17 @@ export default function PrvseWorldView() {
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
         sceneRef.current?.resize(entry.contentRect.width, entry.contentRect.height)
+        setContainerWidth(entry.contentRect.width)
       }
     })
     observer.observe(container)
     return () => observer.disconnect()
   }, [])
+
+  // ── Dynamic 3D adjustment when panel resizes ──
+  // Compute how much the panel eats and shift/scale the 3D world
+  const panelRatio = spherePanel ? panelWidth / containerWidth : 0
+  const isFullPanel = panelRatio > 0.82  // panel covers >82% → button mode
 
   // ── Layer transitions ──────────────────────────────────────
 
