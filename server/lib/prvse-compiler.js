@@ -47,19 +47,15 @@ relationLevel(only if content describes a relation): L0=pure-logic(1+1=2), L1=ca
  */
 async function llmLex(content, opts = {}) {
   const tier = opts.tier || 'T1'
-  const { client, model } = getClientForTier(tier)
+  const engine = createLLMEngine(tier)
 
   const startTime = Date.now()
 
-  const msg = await client.messages.create({
-    model,
-    max_tokens: 1024,
-    messages: [
-      { role: 'user', content: `[System]\n${LEXER_SYSTEM_PROMPT}\n\n[Input to classify]\n${content}` },
-    ],
-  })
-
-  const raw = msg.content.find(c => c.type === 'text')?.text || '{}'
+  const { content: rawText } = await engine.call(
+    [{ role: 'user', content: `[System]\n${LEXER_SYSTEM_PROMPT}\n\n[Input to classify]\n${content}` }],
+    { maxTokens: 1024 }
+  )
+  const raw = rawText || '{}'
   const elapsed = Date.now() - startTime
   console.log(`[compiler/lexer] raw length=${raw.length}, first100=${JSON.stringify(raw.slice(0, 100))}`)
 
