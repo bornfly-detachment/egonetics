@@ -50,25 +50,66 @@ function tmuxHasSession() {
   } catch { return false }
 }
 
-function paneCurrentCommand() {
+/**
+ * 判断指定 pane 是否有 claude 在运行。
+ * claude CLI 是 Node.js 进程，#{pane_current_command} 返回 'node'，不是 'claude'。
+ * 双重验证：进程名 + pane 内容含 ╭─ 提示符。
+ */
+function isClaudeRunningInPane(pane) {
   try {
-    return execSync(`tmux display-message -t ${PANE} -p '#{pane_current_command}'`, { encoding: 'utf8' }).trim()
-  } catch { return '' }
+    const cmd = execSync(
+      `tmux display-message -t ${pane} -p '#{pane_current_command}' 2>/dev/null || echo ""`,
+      { encoding: 'utf8' }
+    ).trim()
+    if (cmd === 'claude') return true
+    if (cmd === 'node' || cmd === 'claude-cli') {
+      const out = stripAnsi(
+        execSync(`tmux capture-pane -t ${pane} -p -S -8 2>/dev/null || true`, { encoding: 'utf8' })
+      )
+      return /╭─/.test(out)
+    }
+    return false
+  } catch { return false }
 }
 
-/** 取 pane 当前可见内容（含 N 行历史） */
-function capturePane(historyLines = 300) {
-  try {
-    return stripAnsi(
-      execSync(`tmux capture-pane -t ${PANE} -p -S -${historyLines}`, { encoding: 'utf8' })
+/** 判断 pane 内容是否是 /model 切换菜单（claude 内部模型列表，不转发前端） */
+function isModelSelectionMenu(text) {
+  const lines = text.split('\n').filter(l => /^\s*[1-9][.)]\s+\S/.test(l))
+  return lines.length >= 2 && lines.some(l => /claude-(sonnet|opus|haiku)/i.test(l))
+}
+
+/**
+ * 在 claude 内部切换模型，处理可能出现的选项菜单，不转发前端。
+ * 发 /model <modelId>，等待确认或自动选择匹配的菜单项。
+ */
+async function switchModelInClaude(pane, modelId) {
+  execSync(`tmux send-keys -t ${pane} "/model ${modelId}" Enter`)
+  const deadline = Date.now() + 8000
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 350))
+    const out = stripAnsi(
+      execSync(`tmux capture-pane -t ${pane} -p -S -25 2>/dev/null || true`, { encoding: 'utf8' })
     )
-  } catch { return '' }
-}
-
-/** claude 交互模式等待输入时出现 ╭─ 框 */
-function paneHasClaudePrompt() {
-  const out = capturePane(20)
-  return /╭─/.test(out) || /^>\s*$/m.test(out)
+    // 直接切换成功
+    if (/set model to|model.*changed|已切换/i.test(out)) return
+    // ╭─ 表示 claude 已回到就绪状态
+    if (/╭─/.test(out)) return
+    // 出现了选项菜单 — 找匹配的序号自动选
+    if (isModelSelectionMenu(out)) {
+      const lines = out.split('\n')
+      for (const line of lines) {
+        const m = line.match(/^\s*([1-9])[.)]\s+(claude-\S+)/)
+        if (m && m[2] === modelId) {
+          execSync(`tmux send-keys -t ${pane} ${m[1]} Enter`)
+          await new Promise(r => setTimeout(r, 500))
+          return
+        }
+      }
+      // 找不到精确匹配，按 Escape 取消，保持当前模型
+      execSync(`tmux send-keys -t ${pane} Escape`)
+      return
+    }
+  }
 }
 
 // ── JSONL 读取：从 .claude/projects/ 取结构化响应 ────────────
