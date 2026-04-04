@@ -764,6 +764,15 @@ export function PrvseTypeRouter({ vis, layer }: { vis: Record<string, unknown>; 
     case 'comm-direction-cards': return <CommDirectionVisual vis={vis} />
     // R layer
     case 'relation-card':        return <RelationCardVisual vis={vis} layer={layer ?? 'l0'} />
+    // V layer
+    case 'metrics-dashboard':    return <MetricsDashboardVisual vis={vis} />
+    case 'checklist-form':       return <ChecklistFormVisual vis={vis} />
+    case 'budget-form':          return <BudgetFormVisual vis={vis} />
+    case 'reward-editor':        return <RewardEditorVisual vis={vis} />
+    case 'feedback-indicator':   return <FeedbackIndicatorVisual vis={vis} />
+    case 'homeostasis-gauge':    return <HomeostasisGaugeVisual vis={vis} />
+    case 'practice-test-form':   return <PracticeTestFormVisual vis={vis} />
+    case 'v-core-panel':         return <VCorePanelVisual vis={vis} />
     default:                     return null
   }
 }
