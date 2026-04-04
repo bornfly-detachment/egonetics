@@ -136,7 +136,8 @@ export default function L3AIInput({ activeSphereId }: Props) {
 
   // Tier selector
   const [selectedTier, setSelectedTier] = useState<TierKey>('T1')
-  const [t2Model, setT2Model] = useState<T2Model>('sonnet')
+  const [t2ModelKey, setT2ModelKey] = useState<string>('sonnet')
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
 
   // Active sphere context
   const prevSphereId = useRef<string | null>(null)
