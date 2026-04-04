@@ -471,7 +471,7 @@ export default function PrvseWorldView() {
                   <span
                     className="text-[10px] font-mono font-semibold whitespace-nowrap overflow-hidden transition-all duration-200
                       max-w-0 opacity-0 group-hover:max-w-[80px] group-hover:opacity-100"
-                    style={{ color: isActive ? root.color : 'rgba(255,255,255,0.55)' }}
+                    style={{ color: isActive ? (ROOT_SPECTRUM[root.id]?.text ?? root.color) : 'rgba(255,255,255,0.55)' }}
                   >
                     {root.name}
                   </span>
