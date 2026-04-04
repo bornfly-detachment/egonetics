@@ -79,34 +79,44 @@ function isModelSelectionMenu(text) {
 }
 
 /**
- * 在 claude 内部切换模型，处理可能出现的选项菜单，不转发前端。
- * 发 /model <modelId>，等待确认或自动选择匹配的菜单项。
+ * 在 claude 内部切换模型，所有选项菜单在后端自动处理，不转发前端。
+ *
+ * 逻辑：
+ *   - 有 targetModelId → 找菜单中匹配的行，发序号
+ *   - 无 targetModelId 或找不到精确匹配 → 选 "Default (recommended)"
+ *   - 找不到 Default → 发 Enter（选高亮默认项）
  */
-async function switchModelInClaude(pane, modelId) {
-  execSync(`tmux send-keys -t ${pane} "/model ${modelId}" Enter`)
+async function switchModelInClaude(pane, targetModelId) {
+  execSync(`tmux send-keys -t ${pane} "/model${targetModelId ? ' ' + targetModelId : ''}" Enter`)
   const deadline = Date.now() + 8000
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 350))
     const out = stripAnsi(
-      execSync(`tmux capture-pane -t ${pane} -p -S -25 2>/dev/null || true`, { encoding: 'utf8' })
+      execSync(`tmux capture-pane -t ${pane} -p -S -30 2>/dev/null || true`, { encoding: 'utf8' })
     )
-    // 直接切换成功
     if (/set model to|model.*changed|已切换/i.test(out)) return
-    // ╭─ 表示 claude 已回到就绪状态
-    if (/╭─/.test(out)) return
-    // 出现了选项菜单 — 找匹配的序号自动选
+    if (/╭─/.test(out) && !isModelSelectionMenu(out)) return
+
     if (isModelSelectionMenu(out)) {
       const lines = out.split('\n')
+      let defaultLine = null
+      let targetLine = null
+
       for (const line of lines) {
-        const m = line.match(/^\s*([1-9])[.)]\s+(claude-\S+)/)
-        if (m && m[2] === modelId) {
-          execSync(`tmux send-keys -t ${pane} ${m[1]} Enter`)
-          await new Promise(r => setTimeout(r, 500))
-          return
-        }
+        const m = line.match(/^\s*([1-9])[.)]\s+(.+)/)
+        if (!m) continue
+        if (/default.*recommended/i.test(m[2])) defaultLine = m[1]
+        if (targetModelId && m[2].trim() === targetModelId) targetLine = m[1]
       }
-      // 找不到精确匹配，按 Escape 取消，保持当前模型
-      execSync(`tmux send-keys -t ${pane} Escape`)
+
+      const choice = targetLine ?? defaultLine
+      if (choice) {
+        execSync(`tmux send-keys -t ${pane} ${choice} Enter`)
+      } else {
+        // 菜单中无匹配，直接 Enter 选高亮项
+        execSync(`tmux send-keys -t ${pane} Enter`)
+      }
+      await new Promise(r => setTimeout(r, 500))
       return
     }
   }
