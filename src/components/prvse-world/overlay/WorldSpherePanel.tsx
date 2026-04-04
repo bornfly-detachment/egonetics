@@ -534,10 +534,14 @@ export default function WorldSpherePanel({ node, onClose }: WorldSpherePanelProp
         </button>
       </div>
 
-      {/* Content — ResourcePanel for resources sphere, tree view for others */}
+      {/* Content — specialized panels per sphere, tree view as fallback */}
       {node.id === 'dim-resources' ? (
         <div className="overflow-y-auto shrink-0" style={{ maxHeight: '52%' }}>
           <ResourcePanel sphereColor={node.color} />
+        </div>
+      ) : node.id === 'dim-constitution' ? (
+        <div className="overflow-y-auto shrink-0" style={{ maxHeight: '52%' }}>
+          <CompilerPanel sphereColor={node.color} />
         </div>
       ) : (
         <div className="overflow-y-auto px-3 py-3 shrink-0" style={{ maxHeight: '52%' }}>
