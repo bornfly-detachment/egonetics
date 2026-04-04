@@ -105,10 +105,10 @@ export const SPHERE_PAGES: SphereEntry[] = [
   {
     id: 'dim-goals',
     name: '目标',
-    color: '#22c55e',
+    color: '#3366e6',
     pages: [
       // L1 客观层
-      { id: 'g-tasks',      name: '任务看板',             color: '#22c55e', layer: 'L1', component: 'objective-goals', desc: '可度量任务·执行中/队列/阻塞/完成' },
+      { id: 'g-tasks',      name: '任务看板',             color: '#3366e6', layer: 'L1', component: 'objective-goals', desc: '可度量任务·执行中/队列/阻塞/完成' },
       { id: 'g-lab',        name: '实验场 Lab',           color: '#06b6d4', layer: 'L1', component: 'lab',             desc: '探索性实验·沙盒测试·规则验证' },
       { id: 'g-chronicle',  name: 'Chronicle 历史',       color: '#fbbf24', layer: 'L1', component: 'chronicle',       desc: '哈希链式执行历史·不可篡改' },
       { id: 'g-memory',     name: '记忆 Memory',          color: '#60a5fa', layer: 'L1', component: 'memory',          desc: 'AI 对话记忆·目标相关上下文' },
