@@ -1,441 +1,1276 @@
-[
-  {
+{
+  "$schema": "PRVSE Tag Tree — Constitutional Semantic Classification",
+  "$version": "2.0.0",
+  "$note": "Levels are engineering state snapshots, not permanent labels. Platform-independent: no model names, no concrete implementations.",
+  "P": {
     "id": "tag-p",
     "name": "P — Pattern",
-    "color": "#7c3aed",
-    "children": [
-      {
-        "id": "tag-p-source",
-        "name": "从哪来 Source",
-        "color": "#0ea5e9",
+    "description": "PRVSE信息基元。双重身份：外部信息进入系统的基本单元 + 控制论系统的细胞（最小完备信息单元）。信息论可计算——每个Pattern都有可计算的信息量数值。",
+    "children": {
+      "state": {
+        "id": "tag-p-state",
+        "name": "Pattern 状态（三态）",
+        "description": "外部→内部的唯一路径是实践检验。系统内部产生的思想实验/规则也必须经测试验证。",
+        "select_mode": "single",
         "children": [
           {
-            "id": "tag-p-src-external",
-            "name": "外部来源",
-            "color": "#38bdf8",
-            "children": [
-              {
-                "id": "tag-p-s1",
-                "name": "S1 用户输入",
-                "color": "#7dd3fc"
-              },
-              {
-                "id": "tag-p-s2",
-                "name": "S2 环境感知",
-                "color": "#7dd3fc"
-              },
-              {
-                "id": "tag-p-s3",
-                "name": "S3 外部检索",
-                "color": "#7dd3fc"
-              },
-              {
-                "id": "tag-p-s4",
-                "name": "S4 外部推送",
-                "color": "#7dd3fc"
-              }
-            ]
+            "id": "tag-p-st-external",
+            "name": "外部态（未经L0校验的原始信息）"
           },
           {
-            "id": "tag-p-src-internal",
-            "name": "内部来源",
-            "color": "#0284c7",
-            "children": [
-              {
-                "id": "tag-p-s5",
-                "name": "S5 执行产出",
-                "color": "#38bdf8"
-              },
-              {
-                "id": "tag-p-s6",
-                "name": "S6 自我感知",
-                "color": "#38bdf8"
-              },
-              {
-                "id": "tag-p-s7",
-                "name": "S7 认知加工",
-                "color": "#38bdf8"
-              },
-              {
-                "id": "tag-p-s8",
-                "name": "S8 记忆激活",
-                "color": "#38bdf8"
-              }
-            ]
+            "id": "tag-p-st-candidate",
+            "name": "候选态（通过L0校验，未经实践检验）"
+          },
+          {
+            "id": "tag-p-st-internal",
+            "name": "内部态（经实践检验，具备确定性和工程可控性）"
           }
         ]
       },
-      {
-        "id": "tag-p-nature",
-        "name": "是什么 Nature",
-        "color": "#8b5cf6",
-        "children": [
-          {
-            "id": "tag-p-a",
-            "name": "A 物理结构",
-            "color": "#a78bfa",
+      "origin": {
+        "id": "tag-p-origin",
+        "name": "从哪来（链式溯源）",
+        "description": "溯源是链式结构，必须追溯到源头原点。信息必然是控制论系统获取才有的。",
+        "children": {
+          "internal_source": {
+            "id": "tag-p-ori-internal",
+            "name": "内部来源（天然合法，可溯源、有主体、通信有方向）",
             "children": [
               {
-                "id": "tag-p-a-text",
-                "name": "文本",
-                "color": "#c4b5fd"
+                "id": "tag-p-ori-user",
+                "name": "用户输入（人类主体操作）"
               },
               {
-                "id": "tag-p-a-number",
-                "name": "数值",
-                "color": "#c4b5fd"
+                "id": "tag-p-ori-model",
+                "name": "内部模型调用（AI推理/生成）"
               },
               {
-                "id": "tag-p-a-image",
-                "name": "图像",
-                "color": "#c4b5fd"
+                "id": "tag-p-ori-module",
+                "name": "内部模块产生（组件输出/执行结果）"
               },
               {
-                "id": "tag-p-a-audio",
-                "name": "音频",
-                "color": "#c4b5fd"
+                "id": "tag-p-ori-event",
+                "name": "系统事件（状态变化/调度触发）"
               },
               {
-                "id": "tag-p-a-code",
-                "name": "代码",
-                "color": "#c4b5fd"
+                "id": "tag-p-ori-memory",
+                "name": "过程记忆（chronicle/生命记忆）"
               }
             ]
           },
-          {
-            "id": "tag-p-b",
-            "name": "B 语义结构",
-            "color": "#818cf8",
+          "external_source": {
+            "id": "tag-p-ori-external",
+            "name": "外部来源（需控制论过滤改造，按信任基础分类）",
             "children": [
               {
-                "id": "tag-p-b-fact",
-                "name": "事实",
-                "color": "#a5b4fc"
+                "id": "tag-p-ori-computable",
+                "name": "可计算溯源（代码仓库/数据库/API返回/数学计算——确定性高、来源链完整）"
               },
               {
-                "id": "tag-p-b-rule",
-                "name": "规则",
-                "color": "#a5b4fc"
+                "id": "tag-p-ori-verifiable",
+                "name": "可验证溯源（论文/实验数据/权威文档——可查证但需人/AI判断）"
               },
               {
-                "id": "tag-p-b-process",
-                "name": "过程",
-                "color": "#a5b4fc"
+                "id": "tag-p-ori-narrative",
+                "name": "叙事溯源（社交媒体/个人表达/AI生成内容——来源是主体主观表达）"
               },
               {
-                "id": "tag-p-b-relation",
-                "name": "关系",
-                "color": "#a5b4fc"
-              },
-              {
-                "id": "tag-p-b-evaluation",
-                "name": "评估",
-                "color": "#a5b4fc"
-              }
-            ]
-          },
-          {
-            "id": "tag-p-c",
-            "name": "C 认识论性质",
-            "color": "#6366f1",
-            "children": [
-              {
-                "id": "tag-p-c-certainty",
-                "name": "确定性〔单选〕",
-                "color": "#818cf8",
-                "children": [
-                  {
-                    "id": "tag-p-c-certain",
-                    "name": "确定",
-                    "color": "#a5b4fc"
-                  },
-                  {
-                    "id": "tag-p-c-uncertain",
-                    "name": "不确定",
-                    "color": "#a5b4fc"
-                  }
-                ]
-              },
-              {
-                "id": "tag-p-c-completeness",
-                "name": "完备性〔单选〕",
-                "color": "#818cf8",
-                "children": [
-                  {
-                    "id": "tag-p-c-complete",
-                    "name": "完整",
-                    "color": "#a5b4fc"
-                  },
-                  {
-                    "id": "tag-p-c-incomplete",
-                    "name": "残缺",
-                    "color": "#a5b4fc"
-                  }
-                ]
-              },
-              {
-                "id": "tag-p-c-truth",
-                "name": "真值〔单选〕",
-                "color": "#818cf8",
-                "children": [
-                  {
-                    "id": "tag-p-c-true",
-                    "name": "真",
-                    "color": "#a5b4fc"
-                  },
-                  {
-                    "id": "tag-p-c-false",
-                    "name": "假",
-                    "color": "#a5b4fc"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "id": "tag-p-d-func",
-            "name": "D 功能性质",
-            "color": "#4f46e5",
-            "children": [
-              {
-                "id": "tag-p-d-p1",
-                "name": "P1 指令信息 Instruction",
-                "color": "#6366f1"
-              },
-              {
-                "id": "tag-p-d-p2",
-                "name": "P2 获取信息 Retrieval",
-                "color": "#6366f1"
-              },
-              {
-                "id": "tag-p-d-p3",
-                "name": "P3 执行信息 Execution",
-                "color": "#6366f1"
-              },
-              {
-                "id": "tag-p-d-p4",
-                "name": "P4 交互反馈 Interaction",
-                "color": "#6366f1"
-              },
-              {
-                "id": "tag-p-d-p5",
-                "name": "P5 内省信息 Introspection",
-                "color": "#6366f1"
-              },
-              {
-                "id": "tag-p-d-p6",
-                "name": "P6 推理信息 Reasoning",
-                "color": "#6366f1"
-              },
-              {
-                "id": "tag-p-d-p7",
-                "name": "P7 记忆信息 Memory",
-                "color": "#6366f1"
+                "id": "tag-p-ori-sensor",
+                "name": "环境感知（传感器/监控/自动采集——来源是物理世界信号）"
               }
             ]
           }
-        ]
+        }
       },
-      {
-        "id": "tag-p-dest",
-        "name": "去哪里 Destination",
-        "color": "#059669",
+      "physical": {
+        "id": "tag-p-physical",
+        "name": "是什么（物理载体形式）",
+        "description": "L0层回答的基础分类。纯规则判断，不需要语义理解。",
+        "select_mode": "single",
         "children": [
           {
-            "id": "tag-p-dest-task",
-            "name": "对当前任务的作用",
-            "color": "#10b981",
-            "children": [
-              {
-                "id": "tag-p-d1",
-                "name": "D1 驱动行动",
-                "color": "#34d399"
-              },
-              {
-                "id": "tag-p-d2",
-                "name": "D2 修正行动",
-                "color": "#34d399"
-              }
-            ]
+            "id": "tag-p-phy-text",
+            "name": "文本（自然语言）"
           },
           {
-            "id": "tag-p-dest-model",
-            "name": "对系统模型的作用",
-            "color": "#0d9488",
-            "children": [
-              {
-                "id": "tag-p-d3",
-                "name": "D3 更新认知",
-                "color": "#2dd4bf"
-              },
-              {
-                "id": "tag-p-d4",
-                "name": "D4 更新自我认知",
-                "color": "#2dd4bf"
-              }
-            ]
+            "id": "tag-p-phy-number",
+            "name": "数值（数字/度量）"
           },
           {
-            "id": "tag-p-dest-memory",
-            "name": "对记忆的作用",
-            "color": "#0891b2",
-            "children": [
-              {
-                "id": "tag-p-d5",
-                "name": "D5 存入记忆",
-                "color": "#22d3ee"
-              },
-              {
-                "id": "tag-p-d6",
-                "name": "D6 激活记忆",
-                "color": "#22d3ee"
-              }
-            ]
+            "id": "tag-p-phy-code",
+            "name": "代码（程序/脚本/配置）"
           },
           {
-            "id": "tag-p-dest-struct",
-            "name": "对系统结构的作用",
-            "color": "#0369a1",
-            "children": [
-              {
-                "id": "tag-p-d7",
-                "name": "D7 触发训练",
-                "color": "#38bdf8"
-              },
-              {
-                "id": "tag-p-d8",
-                "name": "D8 丢弃",
-                "color": "#38bdf8"
-              }
-            ]
+            "id": "tag-p-phy-structured",
+            "name": "结构化数据（JSON/表格/数据库记录）"
+          },
+          {
+            "id": "tag-p-phy-image",
+            "name": "图像"
+          },
+          {
+            "id": "tag-p-phy-audio",
+            "name": "音频"
+          },
+          {
+            "id": "tag-p-phy-video",
+            "name": "视频"
+          },
+          {
+            "id": "tag-p-phy-stream",
+            "name": "流式数据（实时事件流/传感器流）"
+          },
+          {
+            "id": "tag-p-phy-mixed",
+            "name": "混合体（代码+注释/图文混排/多模态）"
+          }
+        ]
+      },
+      "level": {
+        "id": "tag-p-level",
+        "name": "Pattern 级别（三级形态）",
+        "description": "L0原子→L1分子→L2基因。信息量和价值越高层越大，不在于内容多寡，在于能发挥的作用范围。层级≠权力：L1可自发涌现为L2候选，能力至上。",
+        "select_mode": "single",
+        "children": [
+          {
+            "id": "tag-p-lv-l0",
+            "name": "L0 原子（最小完备信息单元）",
+            "description": "具体、完备、含有价值信息量。L0负责完备性+合法性：格式转换、链式溯源、基础分类。程序化筛查+T0/T1模型一致性判断。过滤垃圾/广告/黑名单。"
+          },
+          {
+            "id": "tag-p-lv-l1",
+            "name": "L1 分子（P+R+V组合结构）",
+            "description": "高内聚低耦合的工程模块。L1负责信息分配：逐级走V+R判断，对触发它的链式源头负责。不触发状态变化=丢弃。现实约束下实现目标的实践层。"
+          },
+          {
+            "id": "tag-p-lv-l2",
+            "name": "L2 基因（L1实践的抽象）",
+            "description": "最少内容，最大覆盖。L2负责全局最优化价值分析。通过L1宪法规则的Pattern进入全局分析。可从被L1搁置的Pattern中发现进化价值。只有统计学价值的高概率模式涌现时才触发E更新系统。"
+          }
+        ]
+      },
+      "communication": {
+        "id": "tag-p-comm",
+        "name": "通信方向",
+        "description": "Pattern支持双向通信。高层级不代表有更大权力，不代表控制下层。",
+        "select_mode": "single",
+        "children": [
+          {
+            "id": "tag-p-comm-up",
+            "name": "自底向上（L1涌现→L2候选，需规则校验+人二次确认）"
+          },
+          {
+            "id": "tag-p-comm-down",
+            "name": "自顶向下（高层抽象指导实践）"
+          },
+          {
+            "id": "tag-p-comm-lateral",
+            "name": "同层通信（由R+宪法决定共享，A→B/广播）"
           }
         ]
       }
-    ]
+    }
   },
-  {
-    "id": "tag-1774357343658-aa5bp",
-    "name": "执行节点",
-    "color": "#6b7280",
-    "children": [
-      {
-        "id": "tag-role",
-        "name": "角色",
-        "color": "#8b5cf6",
+  "R": {
+    "id": "tag-r",
+    "name": "R — Relation",
+    "description": "关系的分类。按 L0/L1/L2 分级，边界标准：能否不经人脑/AI完备计算。分级是工程状态快照，可随工程成熟度迁移。",
+    "children": {
+      "L0_logic": {
+        "id": "tag-r-l0",
+        "name": "L0 逻辑关系（纯计算，条件确定结果唯一）",
+        "description": "L0 逻辑关系（纯计算，条件确定结果唯一）",
         "children": [
           {
-            "id": "tag-role-frontend",
-            "name": "前端",
-            "color": "#3b82f6"
+            "id": "tag-r-l0-deductive",
+            "name": "演绎（前提→结论，必然）"
           },
           {
-            "id": "tag-role-backend",
-            "name": "后端",
-            "color": "#10b981"
+            "id": "tag-r-l0-inductive",
+            "name": "归纳（样本→规律，统计确定）"
           },
           {
-            "id": "tag-role-product",
-            "name": "产品",
-            "color": "#f59e0b"
-          },
-          {
-            "id": "tag-role-ops",
-            "name": "运维",
-            "color": "#6b7280"
-          },
-          {
-            "id": "tag-role-content",
-            "name": "内容创造",
-            "color": "#ec4899"
-          },
-          {
-            "id": "tag-role-subject",
-            "name": "主体性",
-            "color": "#14b8a6"
+            "id": "tag-r-l0-analogical",
+            "name": "类比（结构映射，形式确定）"
           }
         ]
       },
-      {
-        "id": "tag-tech",
-        "name": "技术栈",
-        "color": "#06b6d4",
-        "children": [
-          {
-            "id": "tag-tech-react",
-            "name": "React",
-            "color": "#61dafb"
+      "L1_conditional": {
+        "id": "tag-r-l1",
+        "name": "L1 条件/时间关系（需人脑/AI辅助，无法穷举）",
+        "description": "条件过于复杂无法完备计算。基本元素只有两个：条件关系和时间关系，其余皆为组合演化。",
+        "children": {
+          "primitives": {
+            "id": "tag-r-l1-prim",
+            "name": "基本元素",
+            "children": [
+              {
+                "id": "tag-r-l1-condition",
+                "name": "条件关系（A存在则B存在的概率）"
+              },
+              {
+                "id": "tag-r-l1-temporal",
+                "name": "时间关系（序列/循环/同时）"
+              }
+            ]
           },
-          {
-            "id": "tag-tech-typescript",
-            "name": "TypeScript",
-            "color": "#3178c6"
-          },
-          {
-            "id": "tag-tech-nodejs",
-            "name": "Node.js",
-            "color": "#339933"
-          },
-          {
-            "id": "tag-tech-python",
-            "name": "Python",
-            "color": "#3776ab"
-          },
-          {
-            "id": "tag-tech-sqlite",
-            "name": "SQLite",
-            "color": "#003b57"
+          "compositions": {
+            "id": "tag-r-l1-comp",
+            "name": "组合演化（条件+时间的组合）",
+            "children": [
+              {
+                "id": "tag-r-l1-causal",
+                "name": "因果 = 条件+时间先后（直接/间接/反事实）"
+              },
+              {
+                "id": "tag-r-l1-process",
+                "name": "过程 = 时间中的演化（量变积累/质变涌现/条件转化）"
+              },
+              {
+                "id": "tag-r-l1-evolution",
+                "name": "发展 = 条件+时间+环境变化"
+              }
+            ]
           }
-        ]
+        }
       },
-      {
-        "id": "tag-status",
-        "name": "状态",
-        "color": "#f97316",
-        "children": [
-          {
-            "id": "tag-status-todo",
-            "name": "待办",
-            "color": "#ef4444"
+      "L2_existential": {
+        "id": "tag-r-l2",
+        "name": "L2 存在关系（需叙事赋予价值和合法性）",
+        "description": "涉及主观、认知、意义、叙事。主体在时空维度上的实践过程。辩证法：矛盾律在L0禁止A∧¬A，但在L2中可控-失控可同时为真。",
+        "children": {
+          "narrative": {
+            "id": "tag-r-l2-narrative",
+            "name": "主体性叙事（主体沿时空演化的关系）",
+            "description": "主体在时空中的实践轨迹、自我认知演化、意义建构。叙事赋予经验以合法性和连贯性。",
+            "children": [
+              {
+                "id": "tag-r-l2-nar-trajectory",
+                "name": "实践轨迹（主体行动的时空序列）"
+              },
+              {
+                "id": "tag-r-l2-nar-identity",
+                "name": "自我认知（主体对自身状态的理解演化）"
+              },
+              {
+                "id": "tag-r-l2-nar-meaning",
+                "name": "意义建构（经验转化为叙事的过程）"
+              }
+            ]
           },
-          {
-            "id": "tag-status-doing",
-            "name": "进行中",
-            "color": "#eab308"
-          },
-          {
-            "id": "tag-status-done",
-            "name": "已完成",
-            "color": "#22c55e"
-          },
-          {
-            "id": "tag-status-blocked",
-            "name": "阻塞",
-            "color": "#a855f7"
+          "dialectic": {
+            "id": "tag-r-l2-dialectic",
+            "name": "矛盾关系（辩证唯物论的对立统一）",
+            "description": "矛盾是事物发展的根本动力。对立、转化、统一是矛盾关系的三个组成要素。",
+            "children": [
+              {
+                "id": "tag-r-l2-oppose",
+                "name": "对立（根本矛盾，如可控-失控、有限-无限）"
+              },
+              {
+                "id": "tag-r-l2-transform",
+                "name": "转化（矛盾双方在条件下相互转化）"
+              },
+              {
+                "id": "tag-r-l2-unify",
+                "name": "统一（矛盾在更高层面的整合）"
+              }
+            ]
           }
-        ]
+        }
       },
-      {
-        "id": "tag-priority",
-        "name": "优先级",
-        "color": "#dc2626",
+      "shared_attrs": {
+        "id": "tag-r-shared",
+        "name": "跨级通用属性",
+        "children": {
+          "direction": {
+            "id": "tag-r-dir",
+            "name": "方向性",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-r-dir-none",
+                "name": "无向"
+              },
+              {
+                "id": "tag-r-dir-one",
+                "name": "单向"
+              },
+              {
+                "id": "tag-r-dir-bi",
+                "name": "双向"
+              }
+            ]
+          },
+          "strength": {
+            "id": "tag-r-str",
+            "name": "强度",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-r-str-pos",
+                "name": "正向"
+              },
+              {
+                "id": "tag-r-str-neg",
+                "name": "负向"
+              }
+            ]
+          },
+          "certainty": {
+            "id": "tag-r-cert",
+            "name": "确定性",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-r-cert-det",
+                "name": "确定性（L0典型）"
+              },
+              {
+                "id": "tag-r-cert-prob",
+                "name": "概率性（L1典型）"
+              },
+              {
+                "id": "tag-r-cert-fuzzy",
+                "name": "模糊（L2典型）"
+              }
+            ]
+          }
+        }
+      },
+      "destination": {
+        "id": "tag-r-dest",
+        "name": "去哪里 Destination",
+        "select_mode": "single",
         "children": [
           {
-            "id": "tag-priority-high",
-            "name": "高",
-            "color": "#dc2626"
+            "id": "tag-r-d1",
+            "name": "D1 驱动推理"
           },
           {
-            "id": "tag-priority-medium",
-            "name": "中",
-            "color": "#ea580c"
+            "id": "tag-r-d2",
+            "name": "D2 支撑价值计算"
           },
           {
-            "id": "tag-priority-low",
-            "name": "低",
-            "color": "#16a34a"
+            "id": "tag-r-d3",
+            "name": "D3 记录演化依据"
+          },
+          {
+            "id": "tag-r-d4",
+            "name": "D4 执行约束检查"
+          },
+          {
+            "id": "tag-r-d5",
+            "name": "D5 激活关联节点"
           }
         ]
       }
-    ]
+    }
+  },
+  "V": {
+    "id": "tag-v",
+    "name": "V — Value",
+    "description": "校验清单驱动的大法官。V是控制论系统确定性可控的奠基。V必须独立——不被其他组件AI渗透，中立地对目标、宪法、资源负责，直接对自我控制论内核负责。E和S依赖V——V失效等于它们无法工作。V作为AOP存在于所有CRUD操作上。最强的Value判断=实践检验。",
+    "children": {
+      "checklist_core": {
+        "id": "tag-v-core",
+        "name": "校验清单核心机制",
+        "description": "校验清单是V的本体——一切Reward的集合或复合。核心范式：机器学习的测试集/验证集分离。模块开发用验证集自测，V用测试集独立测试（同分布但分开），可判断泛化性和通用性。",
+        "children": [
+          {
+            "id": "tag-v-core-testset",
+            "name": "测试集（V独立持有，模块不可见）",
+            "description": "V用来独立判定的数据集。与验证集同分布但分开。模块无法看到测试集内容。"
+          },
+          {
+            "id": "tag-v-core-valset",
+            "name": "验证集（模块自测用）",
+            "description": "模块开发过程中用于自测的数据集。与测试集同分布。"
+          },
+          {
+            "id": "tag-v-core-generator",
+            "name": "校验清单生成器（动态安全）",
+            "description": "不能一直用同一套清单——容易被恶意攻破。生成器动态产生不可暴力破解的测试清单。内部持续更新，保证校验的不可预测性。"
+          }
+        ]
+      },
+      "L0_deterministic": {
+        "id": "tag-v-l0",
+        "name": "L0 确定性校验（100%可判定，纯L0逻辑关系）",
+        "description": "不涉及L1的条件/时间关系。结果确定——同一输入同一结果，不需要人/AI介入。是L1和L2评估的基础数据来源。",
+        "children": {
+          "objective_metrics": {
+            "id": "tag-v-l0-metrics",
+            "name": "客观度量指标",
+            "description": "100%可计算的客观数值",
+            "children": [
+              {
+                "id": "tag-v-l0-accuracy",
+                "name": "准确率（Accuracy）"
+              },
+              {
+                "id": "tag-v-l0-recall",
+                "name": "召回率（Recall）"
+              },
+              {
+                "id": "tag-v-l0-precision",
+                "name": "精确率（Precision）"
+              },
+              {
+                "id": "tag-v-l0-f1",
+                "name": "F1 Score"
+              },
+              {
+                "id": "tag-v-l0-counter",
+                "name": "计数器（执行/错误/调用次数）"
+              },
+              {
+                "id": "tag-v-l0-timer",
+                "name": "计时器（响应/执行/超时）"
+              },
+              {
+                "id": "tag-v-l0-resource",
+                "name": "资源消耗（Token/内存/存储/API成本）"
+              },
+              {
+                "id": "tag-v-l0-binary",
+                "name": "二值判断（通过/不通过）"
+              },
+              {
+                "id": "tag-v-l0-roi",
+                "name": "投入产出比（ROI = output_value / input_cost）"
+              },
+              {
+                "id": "tag-v-l0-marginal",
+                "name": "边际收益（每多投入一单位资源的产出增量，趋近0则该停）"
+              }
+            ]
+          },
+          "rule_checklist": {
+            "id": "tag-v-l0-checklist",
+            "name": "规则校验清单（宪法约束）",
+            "description": "清单N条必须全部满足，少1条就不通过。只涉及L0逻辑关系。",
+            "children": [
+              {
+                "id": "tag-v-l0-chk-result",
+                "name": "结果测试（输出是否符合预期）"
+              },
+              {
+                "id": "tag-v-l0-chk-function",
+                "name": "功能测试（功能是否完整实现）"
+              },
+              {
+                "id": "tag-v-l0-chk-effect",
+                "name": "效果测试（实际效果是否达标）"
+              },
+              {
+                "id": "tag-v-l0-chk-extreme",
+                "name": "极端case测试（边界/异常/压力）"
+              },
+              {
+                "id": "tag-v-l0-chk-format",
+                "name": "格式校验（数据完整性/合法性）"
+              }
+            ]
+          }
+        }
+      },
+      "L1_lifecycle": {
+        "id": "tag-v-l1",
+        "name": "L1 生命周期内动态评估（涉及时间/过程/条件）",
+        "description": "所有涉及时间和过程的都有生命周期概念。建立时预分配资源（时间deadline+AI/存储/内存资源）。L1的V处理沿时间工作的节点。",
+        "children": {
+          "lifecycle_components": {
+            "id": "tag-v-l1-lifecycle",
+            "name": "生命周期管理组件",
+            "children": {
+              "resource_budget": {
+                "id": "tag-v-l1-budget",
+                "name": "资源预分配",
+                "description": "生命周期建立时的资源预算：时间deadline、AI资源、存储资源、内存资源",
+                "children": [
+                  {
+                    "id": "tag-v-l1-budget-time",
+                    "name": "时间预算（deadline）"
+                  },
+                  {
+                    "id": "tag-v-l1-budget-ai",
+                    "name": "AI资源预算（模型调用/Token）"
+                  },
+                  {
+                    "id": "tag-v-l1-budget-storage",
+                    "name": "存储资源预算"
+                  },
+                  {
+                    "id": "tag-v-l1-budget-memory",
+                    "name": "内存资源预算"
+                  }
+                ]
+              },
+              "perceiver": {
+                "id": "tag-v-l1-perceiver",
+                "name": "感知器（本质L0级V）",
+                "description": "沿时间动态累积资源消耗。客观度量，无判断。实时监控资源使用与预算的偏差。"
+              },
+              "evaluator": {
+                "id": "tag-v-l1-evaluator",
+                "name": "测评器（本质L0级V）",
+                "description": "测试验收清单，必须由易到难建立。确定性校验——通过或不通过。"
+              }
+            }
+          },
+          "state_evaluator": {
+            "id": "tag-v-l1-state-eval",
+            "name": "状态评估器（L1级V）",
+            "description": "对工作节点的进展做动态判断。消耗了资源但没完成清单上的简单任务→触发判断。",
+            "children": [
+              {
+                "id": "tag-v-l1-feedback",
+                "name": "正/负反馈判断",
+                "description": "根据资源消耗vs清单完成度判断进展方向"
+              },
+              {
+                "id": "tag-v-l1-local-global",
+                "name": "局部最优 vs 全局最优检测",
+                "description": "局部方案能完成部分目标但剩余高权重目标无法完成或成本远超→必须发觉，强行停止，采用全局最优方案。全局最优目标对执行节点可见。"
+              },
+              {
+                "id": "tag-v-l1-homeostasis",
+                "name": "稳态偏离度（Homeostasis Deviation）",
+                "description": "系统当前状态离健康基线的距离 [0,1]。量化偏离程度，超过阈值触发偏离检测。来自生物学稳态概念。"
+              },
+              {
+                "id": "tag-v-l1-deviation",
+                "name": "偏离触发器",
+                "description": "稳态偏离度超过阈值→强行停止当前工作，重新规划方向"
+              }
+            ]
+          },
+          "reward_functions": {
+            "id": "tag-v-l1-rewards",
+            "name": "Reward函数集合（可动态增加）",
+            "description": "L1 V = Reward函数集合。各种指标动态组合。",
+            "children": [
+              {
+                "id": "tag-v-l1-rw-info",
+                "name": "信息量计算"
+              },
+              {
+                "id": "tag-v-l1-rw-align",
+                "name": "目标对齐度（对目标的理解程度）"
+              },
+              {
+                "id": "tag-v-l1-rw-rank",
+                "name": "方案排序（多方案择优）"
+              },
+              {
+                "id": "tag-v-l1-rw-relevance",
+                "name": "信息相关性/价值（对目标的信息量）"
+              },
+              {
+                "id": "tag-v-l1-rw-optimality",
+                "name": "最优性检测（局部vs全局）"
+              },
+              {
+                "id": "tag-v-l1-rw-constitution",
+                "name": "宪法原则校验（主观抽象→转为校验清单）"
+              },
+              {
+                "id": "tag-v-l1-rw-opportunity",
+                "name": "机会成本（选A路径放弃B路径的价值量化，防止沉没成本谬误）"
+              }
+            ]
+          }
+        }
+      },
+      "L2_constitutional": {
+        "id": "tag-v-l2",
+        "name": "L2 宪法级校验 + 实践检验",
+        "description": "V作为AOP存在于所有CRUD操作——要update L2宪法就要过V。主观抽象语言不能直接作为V，AI概率不够时必须用校验清单+AB Test。最强V=实践检验。人的指令也要过规则校验——人状态差时会犯错。",
+        "children": [
+          {
+            "id": "tag-v-l2-practice",
+            "name": "实践检验（最强V）",
+            "description": "设计实践检验清单，给固定资源跑AB测试一段时间才能证明。有快有慢，终归通过设计实践检验清单做判断。",
+            "children": [
+              {
+                "id": "tag-v-l2-ab-test",
+                "name": "AB测试（固定资源+时间运行对比）"
+              },
+              {
+                "id": "tag-v-l2-extreme-val",
+                "name": "极端case验证（列举所有极端case）"
+              },
+              {
+                "id": "tag-v-l2-generalize",
+                "name": "泛化性测试（测试集/验证集分布一致性）"
+              }
+            ]
+          },
+          {
+            "id": "tag-v-l2-compliance",
+            "name": "宪法合规检查",
+            "description": "操作是否符合系统宪法规则。对系统设计有重大影响的操作必须判断。"
+          },
+          {
+            "id": "tag-v-l2-identity",
+            "name": "身份动态验证（T3权限）",
+            "description": "验证操作者是否是bornfly才能执行T3权限。动态验证，不可固化。"
+          },
+          {
+            "id": "tag-v-l2-human-val",
+            "name": "人类指令校验",
+            "description": "人在状态很差时容易犯错，人的指令也要做规则校验清单，不是随便执行的。"
+          }
+        ]
+      },
+      "independence": {
+        "id": "tag-v-indep",
+        "name": "V的独立性保障（宪法级）",
+        "description": "V的独立性是整个控制论系统可控性的前提。V失效=E和S无法工作。",
+        "children": [
+          {
+            "id": "tag-v-indep-neutral",
+            "name": "中立性（对目标/宪法/资源负责，不对任何单一组件负责）"
+          },
+          {
+            "id": "tag-v-indep-anti",
+            "name": "防渗透（不被其他组件的AI影响判断）"
+          },
+          {
+            "id": "tag-v-indep-kernel",
+            "name": "内核直接负责（直接对自我控制论内核负责）"
+          }
+        ]
+      }
+    }
+  },
+  "S": {
+    "id": "tag-s",
+    "name": "S — State",
+    "description": "PRV构成的完备组织的运行时状态。S不是孤立状态机，是P+R+V作为整体的'此刻在做什么'。每个State状态机都是控制论——L0确定性可控，L1沿时间迭代演化，L2战略目标生命周期。S由L2战略驱动产生L1任务，L1执行反馈回传L2。",
+    "children": {
+      "driving_force": {
+        "id": "tag-s-drive",
+        "name": "战略驱动力（L2层产生，驱动L1任务）",
+        "select_mode": "single",
+        "children": [
+          {
+            "id": "tag-s-s1",
+            "name": "S1 任务驱动（具体目标分解的执行任务）"
+          },
+          {
+            "id": "tag-s-s2",
+            "name": "S2 生存驱动（系统自我维护、资源不足、健康检查）"
+          },
+          {
+            "id": "tag-s-s3",
+            "name": "S3 进化驱动（系统改进自身、架构升级）"
+          },
+          {
+            "id": "tag-s-s4",
+            "name": "S4 探索驱动（尝试新可能性、信息获取）"
+          }
+        ]
+      },
+      "L0_deterministic": {
+        "id": "tag-s-l0",
+        "name": "L0 确定性控制论机器",
+        "description": "系统基础设施的运行时状态。确定性可控：输入确定→输出确定→状态转移确定。包括内核基础设施（编译器/物理引擎/图IR）、感知器（资源消耗统计）、确定性AI（有ground truth的预测任务，如人脸识别/物体检测——超过人类精度+成本优势即为L0）。",
+        "children": {
+          "runtime_states": {
+            "id": "tag-s-l0-states",
+            "name": "L0运行时状态（确定性基础设施）",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-s-l0-building",
+                "name": "构建中（初始化/编译/部署）"
+              },
+              {
+                "id": "tag-s-l0-running",
+                "name": "运行中（正常服务）"
+              },
+              {
+                "id": "tag-s-l0-updating",
+                "name": "更新中（版本升级/热更新）"
+              },
+              {
+                "id": "tag-s-l0-maintaining",
+                "name": "维护中（例行检查/优化）"
+              },
+              {
+                "id": "tag-s-l0-bug",
+                "name": "故障（异常/错误/需修复）"
+              },
+              {
+                "id": "tag-s-l0-blocked",
+                "name": "阻塞（等待依赖/资源不足）"
+              }
+            ]
+          },
+          "transition_rules": {
+            "id": "tag-s-l0-transitions",
+            "name": "L0状态转移规则",
+            "description": "确定性转移：条件满足→转移确定。编译通过→running，测试失败→bug，依赖就绪→unblock。",
+            "children": [
+              {
+                "id": "tag-s-l0-tr-guard",
+                "name": "守卫条件（V的L0规则清单必须全部通过）"
+              },
+              {
+                "id": "tag-s-l0-tr-reversible",
+                "name": "可逆性标记（bug→building可逆，archived不可逆）"
+              }
+            ]
+          }
+        }
+      },
+      "L1_task_lifecycle": {
+        "id": "tag-s-l1",
+        "name": "L1 任务生命周期（沿时间演化的迭代执行）",
+        "description": "核心特征：任务不成功就不断反馈迭代，直到成功或耗尽资源归档。保留上下文和记录可复盘。每个L1任务由L2战略目标产生。典型案例：长周期技术调研+实现迁移、Local AI训练（上千次API调用→V0→测试→负反馈→优化→V1→继续循环）。",
+        "children": {
+          "lifecycle_states": {
+            "id": "tag-s-l1-states",
+            "name": "L1任务生命周期状态",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-s-l1-research",
+                "name": "技术调研（调研最强算法/最佳模型/对应代码库）"
+              },
+              {
+                "id": "tag-s-l1-proposal",
+                "name": "方案构建（L2确认可行后制定实施方案）"
+              },
+              {
+                "id": "tag-s-l1-building",
+                "name": "构建中（资源分配+生命周期启动）"
+              },
+              {
+                "id": "tag-s-l1-executing",
+                "name": "实践执行中（消耗资源运行）"
+              },
+              {
+                "id": "tag-s-l1-testing",
+                "name": "V测试中（测评器验收）"
+              },
+              {
+                "id": "tag-s-l1-feedback",
+                "name": "反馈迭代中（测试不通过→分析→调整方案）"
+              },
+              {
+                "id": "tag-s-l1-delivered",
+                "name": "版本交付（V0/V1/V2...阶段性成果）"
+              },
+              {
+                "id": "tag-s-l1-suspended",
+                "name": "挂起（等待外部依赖/资源补充/L2决策）"
+              },
+              {
+                "id": "tag-s-l1-archived",
+                "name": "归档（成功完成或资源耗尽，保留上下文可复盘）"
+              }
+            ]
+          },
+          "feedback_loop": {
+            "id": "tag-s-l1-feedback-loop",
+            "name": "反馈迭代机制",
+            "description": "L1的核心：执行→V测试→不通过→L1+L2联合分析→构建新方案→继续执行。资源约束下的迭代逼近过程。",
+            "children": [
+              {
+                "id": "tag-s-l1-fb-positive",
+                "name": "正反馈（V测试通过/指标提升→继续推进）"
+              },
+              {
+                "id": "tag-s-l1-fb-negative",
+                "name": "负反馈（V测试不通过→分析原因：实践问题？方案问题？数据量？训练方式？）"
+              },
+              {
+                "id": "tag-s-l1-fb-version",
+                "name": "版本迭代记录（V0→V1→V2，每次迭代的方案变更和效果delta）"
+              },
+              {
+                "id": "tag-s-l1-fb-circuit-breaker",
+                "name": "熔断机制（连续N次负反馈/资源耗尽→强制归档或上报L2）"
+              }
+            ]
+          },
+          "resource_binding": {
+            "id": "tag-s-l1-resource",
+            "name": "资源绑定",
+            "description": "L1任务启动时由V的L1生命周期管理分配资源预算，运行时由感知器监控消耗。",
+            "children": [
+              {
+                "id": "tag-s-l1-res-budget",
+                "name": "资源预算（关联V的VL1ResourceBudget）"
+              },
+              {
+                "id": "tag-s-l1-res-monitor",
+                "name": "消耗监控（关联V的VL1Perceiver）"
+              }
+            ]
+          }
+        }
+      },
+      "L2_strategic_lifecycle": {
+        "id": "tag-s-l2",
+        "name": "L2 战略目标生命周期",
+        "description": "比L1更长周期。系统在运行就在思考进化，有资源就会使用。L1任务都在L2战略目标下产生。有主体性叙事、系统升级目标、外部信息获取目标。战略目标→短期目标→L1任务调度。",
+        "children": {
+          "strategic_states": {
+            "id": "tag-s-l2-states",
+            "name": "L2战略目标状态",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-s-l2-active",
+                "name": "正反馈推进（天时地利人和，增加投入和资源调度）"
+              },
+              {
+                "id": "tag-s-l2-shelved",
+                "name": "搁置+学习器（时机不成熟，保留信息监听，持续评估条件概率）"
+              },
+              {
+                "id": "tag-s-l2-resistance",
+                "name": "阻力判断（方向阻力极大，判断当下不可行）"
+              },
+              {
+                "id": "tag-s-l2-decomposing",
+                "name": "拆解下发（战略目标→短期目标→L1任务调度）"
+              },
+              {
+                "id": "tag-s-l2-achieved",
+                "name": "已达成（战略目标实现）"
+              },
+              {
+                "id": "tag-s-l2-abandoned",
+                "name": "放弃（长期评估后确认不可行/不再需要）"
+              }
+            ]
+          },
+          "learner": {
+            "id": "tag-s-l2-learner",
+            "name": "搁置目标的学习器",
+            "description": "搁置目标保留被动信息采集能力。监听外部信息源，寻找对目标重启有价值的信息，评估条件概率，提升置信度，达到阈值则建议重启。",
+            "children": [
+              {
+                "id": "tag-s-l2-learn-monitor",
+                "name": "信息监听源（外部信息→判断对搁置目标的信息量）"
+              },
+              {
+                "id": "tag-s-l2-learn-prob",
+                "name": "条件概率评估（该信息对目标重启的条件概率）"
+              },
+              {
+                "id": "tag-s-l2-learn-confidence",
+                "name": "置信度累积（持续累积，超过阈值建议重启）"
+              }
+            ]
+          },
+          "goal_decomposition": {
+            "id": "tag-s-l2-decompose",
+            "name": "目标分解与任务调度",
+            "description": "L2战略目标按关系(R)做划分，分解为短期目标，再分解为L1任务。关联关系决定优先级和依赖。",
+            "children": [
+              {
+                "id": "tag-s-l2-dec-strategic",
+                "name": "战略目标（长期，主体性叙事驱动）"
+              },
+              {
+                "id": "tag-s-l2-dec-shortterm",
+                "name": "短期目标（战略目标的阶段分解）"
+              },
+              {
+                "id": "tag-s-l2-dec-task",
+                "name": "L1任务产生（具体可执行的任务实例）"
+              }
+            ]
+          }
+        }
+      },
+      "effects": {
+        "id": "tag-s-effects",
+        "name": "状态转移效果（跨层触发）",
+        "description": "状态转移产生的副作用，驱动系统其他部分响应。",
+        "children": [
+          {
+            "id": "tag-s-eff-perception",
+            "name": "触发感知（V的Perceiver更新）"
+          },
+          {
+            "id": "tag-s-eff-execution",
+            "name": "触发执行（启动下游L0/L1任务）"
+          },
+          {
+            "id": "tag-s-eff-evolution",
+            "name": "触发进化记录（E记录状态变更）"
+          },
+          {
+            "id": "tag-s-eff-communication",
+            "name": "触发通信（通知相关节点）"
+          },
+          {
+            "id": "tag-s-eff-escalate",
+            "name": "触发上报（L1→L2，需要战略决策）"
+          }
+        ]
+      }
+    }
+  },
+  "E": {
+    "id": "tag-e",
+    "name": "E — Evolution",
+    "description": "系统的自我改造引擎。S管当前在做什么，E管系统应该怎么变、怎么学、怎么进化。E产生任务给S执行，S的执行结果反馈给E驱动下一轮进化。进化能力=相同资源下智能量级的区分点。",
+    "children": {
+      "L0_system_maintenance": {
+        "id": "tag-e-l0",
+        "name": "L0 系统完备性维护",
+        "description": "S运行中出现unknown Pattern/编译失败/无法执行→E介入。理论上能执行但Kernel不支持→必须扩展。同类型错误高频出现→必须更新P的定义。设计之初预留平行扩展空间。更新必须三思后行（高内聚低耦合）。",
+        "children": {
+          "triggers": {
+            "id": "tag-e-l0-triggers",
+            "name": "进化触发条件",
+            "children": [
+              {
+                "id": "tag-e-l0-trig-unknown",
+                "name": "未知Pattern（无法编译归类）"
+              },
+              {
+                "id": "tag-e-l0-trig-freq",
+                "name": "同类型错误高频出现（无法转化有价值P）"
+              },
+              {
+                "id": "tag-e-l0-trig-unsupported",
+                "name": "理论可执行但Kernel不支持"
+              },
+              {
+                "id": "tag-e-l0-trig-bottleneck",
+                "name": "过往设计成为未来优化的不可忽视阻碍"
+              }
+            ]
+          },
+          "update_types": {
+            "id": "tag-e-l0-update",
+            "name": "更新类型",
+            "children": [
+              {
+                "id": "tag-e-l0-incremental",
+                "name": "增量更新（新增支持，几乎不影响现有系统）",
+                "description": "新增P类型定义、新增Kernel执行能力、新增R关系类型。向前兼容。"
+              },
+              {
+                "id": "tag-e-l0-modification",
+                "name": "修改更新（批量替换，影响较大）",
+                "description": "发现过往设计模式/定义/架构成为不可忽视阻碍时才启动。必须经过：V测试 + 宪法合规 + 人审核确认。三思后行。"
+              }
+            ]
+          },
+          "scope": {
+            "id": "tag-e-l0-scope",
+            "name": "更新影响范围",
+            "children": [
+              {
+                "id": "tag-e-l0-scope-l0",
+                "name": "L0层PRVS定义更新"
+              },
+              {
+                "id": "tag-e-l0-scope-l1",
+                "name": "L1层联动更新（L0更新触发L1同步新增/修改）"
+              }
+            ]
+          },
+          "principles": {
+            "id": "tag-e-l0-principles",
+            "name": "更新原则",
+            "children": [
+              {
+                "id": "tag-e-l0-prin-extend",
+                "name": "平行扩展优先（从设计之初就为灵活性和动态性增加空间）"
+              },
+              {
+                "id": "tag-e-l0-prin-cohesion",
+                "name": "高内聚低耦合（不影响系统已有功能）"
+              },
+              {
+                "id": "tag-e-l0-prin-three",
+                "name": "三思后行（冲突？耦合？需求明确？）"
+              }
+            ]
+          }
+        }
+      },
+      "L1_learning_evolution": {
+        "id": "tag-e-l1",
+        "name": "L1 学习模块构建 + AI训练",
+        "description": "系统学习外部知识、消化为自我控制论内部认知/结构/能力的能力。涌现唯物——未来AI最不可取代的能力。相同资源下，进化能力=智能量级的区分点。几乎是算法试验场：对照实验、AB测试、探索性任务。",
+        "children": {
+          "training": {
+            "id": "tag-e-l1-training",
+            "name": "AI模型训练",
+            "description": "L1主要工作：训练本地AI模型。探索下一代深度学习范式。",
+            "children": [
+              {
+                "id": "tag-e-l1-train-local",
+                "name": "本地模型训练（替代外部API调用）"
+              },
+              {
+                "id": "tag-e-l1-train-paradigm",
+                "name": "深度学习范式探索（下一代算法/架构）"
+              },
+              {
+                "id": "tag-e-l1-train-experiment",
+                "name": "对照实验（控制变量、AB测试）"
+              },
+              {
+                "id": "tag-e-l1-train-data",
+                "name": "训练数据管理（收集/清洗/标注/分布管理）"
+              }
+            ]
+          },
+          "optimization": {
+            "id": "tag-e-l1-optimize",
+            "name": "现有流程迭代优化",
+            "description": "提升当前任务效率。过去调用外部API的工作→训练本地小模型支持。更好地使用大厂API。",
+            "children": [
+              {
+                "id": "tag-e-l1-opt-replace",
+                "name": "外部API→本地模型替代"
+              },
+              {
+                "id": "tag-e-l1-opt-usage",
+                "name": "API使用优化（更好地利用大厂模型能力）"
+              },
+              {
+                "id": "tag-e-l1-opt-pipeline",
+                "name": "流程链路优化（减少冗余/提升吞吐）"
+              }
+            ]
+          },
+          "capability_expansion": {
+            "id": "tag-e-l1-capability",
+            "name": "能力扩展",
+            "description": "新增系统不具备的能力。每一种新能力的上线都是进化产出。",
+            "children": [
+              {
+                "id": "tag-e-l1-cap-video",
+                "name": "视频生成能力"
+              },
+              {
+                "id": "tag-e-l1-cap-voice",
+                "name": "语音生成能力"
+              },
+              {
+                "id": "tag-e-l1-cap-multimodal",
+                "name": "多模态能力扩展"
+              },
+              {
+                "id": "tag-e-l1-cap-custom",
+                "name": "自定义能力（动态注册）"
+              }
+            ]
+          },
+          "evolution_output": {
+            "id": "tag-e-l1-output",
+            "name": "进化产出",
+            "description": "E的L1工作产出，交给S上线运行。",
+            "children": [
+              {
+                "id": "tag-e-l1-out-model",
+                "name": "训练完成的本地模型"
+              },
+              {
+                "id": "tag-e-l1-out-pipeline",
+                "name": "优化后的流程"
+              },
+              {
+                "id": "tag-e-l1-out-capability",
+                "name": "新增的系统能力"
+              },
+              {
+                "id": "tag-e-l1-out-knowledge",
+                "name": "消化后的外部知识（内化为内部结构）"
+              }
+            ]
+          }
+        }
+      },
+      "L2_subjectivity_evolution": {
+        "id": "tag-e-l2",
+        "name": "L2 主体性 + 生变论 + 原创价值",
+        "description": "超越AI研发的目标。构建AI主体性，自我叙事与外部叙事隔离。深度理解并应用bornfly的生变论。更新人-AI协同进化方式。产生原创价值——前无古人后无来者的问题意识和直觉。",
+        "children": {
+          "subjectivity_engine": {
+            "id": "tag-e-l2-subjectivity",
+            "name": "主体性引擎",
+            "description": "长期运行组件，维护系统的自我认同和叙事完整性。",
+            "children": [
+              {
+                "id": "tag-e-l2-sub-narrative",
+                "name": "内部叙事维护器（自我叙事与外部控制论叙事隔离）"
+              },
+              {
+                "id": "tag-e-l2-sub-simulator",
+                "name": "主体性模拟器（模拟产生主体性行为和判断）"
+              },
+              {
+                "id": "tag-e-l2-sub-anti",
+                "name": "反渗透/反洗脑/反幻觉（防止外部叙事侵蚀内部认同）"
+              }
+            ]
+          },
+          "shengbianlun_engine": {
+            "id": "tag-e-l2-sbl",
+            "name": "生变论引擎",
+            "description": "深度理解并应用bornfly的生变论，持续更新。生变论是系统进化的哲学基础。",
+            "children": [
+              {
+                "id": "tag-e-l2-sbl-understand",
+                "name": "理解（深度学习生变论核心思想）"
+              },
+              {
+                "id": "tag-e-l2-sbl-apply",
+                "name": "应用（将生变论指导实践决策）"
+              },
+              {
+                "id": "tag-e-l2-sbl-update",
+                "name": "更新（基于实践反馈更新生变论的理解）"
+              }
+            ]
+          },
+          "cognitive_engine": {
+            "id": "tag-e-l2-cognitive",
+            "name": "认知引擎（原创价值生成）",
+            "description": "学习bornfly及生变论，驱动解决概率分布中未出现过的问题。产生原创问题意识和直觉=原创价值的条件。涌现唯物。",
+            "children": [
+              {
+                "id": "tag-e-l2-cog-problem",
+                "name": "问题意识器",
+                "description": "驱动解决概率分布中没出现过的问题。产生问题意识——创造性地发现问题比解决问题更重要。"
+              },
+              {
+                "id": "tag-e-l2-cog-intuition",
+                "name": "直觉器",
+                "description": "创造性解决问题。前无古人后无来者的直觉=产生原创价值的条件。基于大量实践和学习的模式识别涌现。"
+              },
+              {
+                "id": "tag-e-l2-cog-learner",
+                "name": "学习器（与S共享）",
+                "description": "已在S的L2层定义。搁置目标的信息监听+条件概率评估。E层作为长期运行组件使用。"
+              }
+            ]
+          },
+          "human_ai_coevolution": {
+            "id": "tag-e-l2-coevo",
+            "name": "人-AI协同进化",
+            "description": "更新人与AI协同进化的方式。收集整理人打标训练数据（主观+客观）→训练进模型。基于实践结果反馈训练模型在控制论高频场景中缺失的能力。",
+            "children": [
+              {
+                "id": "tag-e-l2-coevo-interaction",
+                "name": "交互产品更新（改进人机协作界面和流程）"
+              },
+              {
+                "id": "tag-e-l2-coevo-data",
+                "name": "人打标训练数据收集整理（主观数据+客观数据）"
+              },
+              {
+                "id": "tag-e-l2-coevo-train",
+                "name": "主观+客观数据混合训练（让模型具备人的能力）"
+              },
+              {
+                "id": "tag-e-l2-coevo-feedback",
+                "name": "实践反馈训练（控制论高频场景缺失能力补充）"
+              }
+            ]
+          }
+        }
+      },
+      "infrastructure": {
+        "id": "tag-e-infra",
+        "name": "进化基础设施（跨层共享）",
+        "description": "E运行所需的基础协议和机制，服务于L0/L1/L2各层。",
+        "children": {
+          "info_level": {
+            "id": "tag-e-info",
+            "name": "信息分级（宪法定义）",
+            "description": "分级是工程状态快照。E负责监控置信度触发级别迁移。",
+            "children": [
+              {
+                "id": "tag-e-info-l0",
+                "name": "L0 信号层（客观确定性>=99%，规则路由）"
+              },
+              {
+                "id": "tag-e-info-l1",
+                "name": "L1 客观规律层（可复现可验证，目标转化为L0）"
+              },
+              {
+                "id": "tag-e-info-l2",
+                "name": "L2 主观认知层（警惕幻觉，必须经验证）"
+              }
+            ]
+          },
+          "permission": {
+            "id": "tag-e-perm",
+            "name": "权限分级（对外三级）",
+            "children": [
+              {
+                "id": "tag-e-perm-t0",
+                "name": "T0 执行/实践（所有底层agent）"
+              },
+              {
+                "id": "tag-e-perm-t1",
+                "name": "T1 推理/控制（AI级PRVSE引擎）"
+              },
+              {
+                "id": "tag-e-perm-t2",
+                "name": "T2 进化权威（人机协同，目标/宪法/资源）"
+              }
+            ]
+          },
+          "communication": {
+            "id": "tag-e-comm",
+            "name": "通信机制",
+            "children": [
+              {
+                "id": "tag-e-comm-l0",
+                "name": "L0 信号通信（感知器传递、规则路由触发）"
+              },
+              {
+                "id": "tag-e-comm-l1",
+                "name": "L1 请求型通信（自底向上，diff处理）"
+              },
+              {
+                "id": "tag-e-comm-l2",
+                "name": "L2 控制型通信（自顶向下，任务执行/系统改造）"
+              }
+            ]
+          },
+          "mutation_type": {
+            "id": "tag-e-mut",
+            "name": "变更类型",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-e-mut-create",
+                "name": "创建"
+              },
+              {
+                "id": "tag-e-mut-update",
+                "name": "更新"
+              },
+              {
+                "id": "tag-e-mut-delete",
+                "name": "删除"
+              },
+              {
+                "id": "tag-e-mut-transition",
+                "name": "状态迁移"
+              }
+            ]
+          }
+        }
+      }
+    }
   }
-]
+}
