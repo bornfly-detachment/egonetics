@@ -497,36 +497,15 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
 
   return (
     <div
-      className="absolute top-0 right-0 h-full z-40 flex"
-      style={{ width: `${width}px` }}
+      className="absolute top-0 right-0 h-full z-40 flex flex-col transition-all duration-300"
+      style={{
+        width: isFullscreen ? '100%' : '380px',
+        background: 'rgba(4,5,10,0.96)',
+        backdropFilter: 'blur(28px)',
+        borderLeft: isFullscreen ? 'none' : `1px solid ${node.color}22`,
+        boxShadow: isFullscreen ? 'none' : `-8px 0 32px rgba(0,0,0,0.6)`,
+      }}
     >
-      {/* ── Drag Handle (left edge) ── */}
-      <div
-        className="relative shrink-0 flex items-center justify-center cursor-col-resize group"
-        style={{ width: '8px' }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-      >
-        <div
-          className="absolute inset-y-0 left-0 w-[1px] transition-colors"
-          style={{ background: dragRef.current ? `${node.color}55` : `${node.color}22` }}
-        />
-        <GripVertical
-          size={10}
-          className="text-white/10 group-hover:text-white/30 transition-colors"
-        />
-      </div>
-
-      {/* ── Panel Body ── */}
-      <div
-        className="flex-1 flex flex-col min-w-0"
-        style={{
-          background: 'rgba(4,5,10,0.96)',
-          backdropFilter: 'blur(28px)',
-          boxShadow: `-8px 0 32px rgba(0,0,0,0.6)`,
-        }}
-      >
       {/* Header */}
       <div
         className="flex items-center gap-2.5 px-4 py-3.5 shrink-0"
@@ -549,12 +528,21 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
         >
           AI 持久上下文
         </span>
-        <button
-          onClick={onClose}
-          className="ml-auto p-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
-        >
-          <X size={13} />
-        </button>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={onToggleFullscreen}
+            className="p-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+            title={isFullscreen ? '退出全屏' : '全屏'}
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+          >
+            <X size={13} />
+          </button>
+        </div>
       </div>
 
       {/* Content — specialized panels per sphere, tree view as fallback */}
