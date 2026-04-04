@@ -72,7 +72,7 @@ function initTC(): { sessions: TCSession[]; activeKey: string } {
 
 const SPHERE_META: Record<string, { name: string; color: string; sessionNode: string; systemPrompt: string }> = {
   'dim-constitution': {
-    name: '宪法', color: '#ef4444',
+    name: '宪法', color: '#e63333',
     sessionNode: 'sphere-constitution',
     systemPrompt: '你是 Egonetics 的宪法守护者 AI，维护约束框架。解释宪法规则、识别冲突、建议修正。铁律：先设计后编码 / 积累≥3再行动 / 三思而后行 / CRUD铁律。简洁专业。',
   },
