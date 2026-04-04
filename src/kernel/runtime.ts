@@ -59,6 +59,8 @@ export interface RuntimeConfig {
   readonly selectionInterval: number
   /** Pre-patch constitutional hooks — applied before every applyPatches() call */
   readonly hooks?: HookRegistry
+  /** Number of past States to retain for rollback (default: 10) */
+  readonly historySize?: number
 }
 
 export interface Runtime {
