@@ -129,13 +129,10 @@ ${tagTreeText}
 }`
 
   try {
-    const msg = await client.messages.create({
-      model,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
-    const text = msg.content?.[0]?.text ?? '{}'
+    const { content: text } = await engine.call(
+      [{ role: 'user', content: userPrompt }],
+      { maxTokens: 1024, system: systemPrompt }
+    )
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('T1 返回非 JSON')
     return { ok: true, result: JSON.parse(jsonMatch[0]), model }
