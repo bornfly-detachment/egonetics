@@ -20,20 +20,50 @@ interface ProtocolEntry {
 
 // category → anchor_tag_id 默认映射（与 migration 脚本一致）
 const CATEGORY_ANCHOR_MAP: Record<string, string> = {
+  // ── PRVSE 核心层 ─────────────────────────────────
   'P':              'tag-p',
-  'V':              'tag-v',
   'R':              'tag-r',
+  'V':              'tag-v',
   'S':              'tag-s',
-  'interaction':    'tag-1774859312423-vicym',
-  'communication':  'tag-1774862243393-6np0u',
-  'resource-tier':  'tag-1774862651534-yzhzl',
-  'layer':          'tag-1774561713452-bzfga',
-  'lifecycle':      'tag-s',
+  // ── P 子分类 ─────────────────────────────────────
+  'P-state':        'tag-p-state',
+  'P-origin':       'tag-p-origin',
+  'P-level':        'tag-p-level',
+  'P-physical':     'tag-p-physical',
+  'P-comm':         'tag-p-comm',
+  'interaction':    'tag-p-ori-user',
+  // ── R 子分类 ─────────────────────────────────────
+  'R-l0':           'tag-r-l0',
+  'R-l1':           'tag-r-l1',
+  'R-l2':           'tag-r-l2',
+  'R-edge':         'tag-r-shared',
+  'graph-node':     'tag-r-shared',
   'AOP':            'tag-r',
-  'ui-component':   'tag-e-ui-components',
-  'kernel-comp':    'tag-e-system-roles',
-  'graph-node':     'tag-e-system-roles',
-  'permission-layer': 'tag-1774561713452-bzfga',
+  // ── V 子分类 ─────────────────────────────────────
+  'V-l0':           'tag-v-l0',
+  'V-l1':           'tag-v-l1',
+  'V-l2':           'tag-v-l2',
+  'V-core':         'tag-v-core',
+  // ── S 子分类 ─────────────────────────────────────
+  'lifecycle':      'tag-s-l0',
+  'S-l0':           'tag-s-l0',
+  'S-l1':           'tag-s-l1',
+  'S-l2':           'tag-s-l2',
+  // ── E 子分类 ─────────────────────────────────────
+  'E-l0':           'tag-e-l0',
+  'E-l1':           'tag-e-l1',
+  'E-l2':           'tag-e-l2',
+  'E-info':         'tag-e-info',
+  'E-comm':         'tag-e-comm',
+  'E-perm':         'tag-e-perm',
+  'E-ui':           'tag-e-infra',
+  // ── 遗留兼容（旧 category 名保留显示） ───────────
+  'communication':  'tag-e-comm',
+  'resource-tier':  'tag-e-perm',
+  'layer':          'tag-e-info',
+  'permission-layer': 'tag-e-perm',
+  'ui-component':   'tag-e-infra',
+  'kernel-comp':    'tag-e-infra',
 }
 
 // ── 配色系统 ──────────────────────────────────────────────────
