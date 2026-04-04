@@ -97,9 +97,6 @@ ${tagTreeText}
 // ── T1：校验 T0 输出 ──────────────────────────────────────────────────
 
 async function t1Verify(content, t0Result, tagTreeText) {
-  const engine = createLLMEngine('T1')
-  const model = engine._model
-
   const systemPrompt = `你是 PRVSE 三问分类校验器（T1 校验层）。
 验证 T0 模型的分类是否正确，指出错误或冲突。
 输出合法 JSON，不要多余文字。`
@@ -127,15 +124,15 @@ ${tagTreeText}
 }`
 
   try {
-    const { content: text } = await engine.call(
+    const { content: text } = await t1.call(
       [{ role: 'user', content: userPrompt }],
       { maxTokens: 1024, system: systemPrompt }
     )
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('T1 返回非 JSON')
-    return { ok: true, result: JSON.parse(jsonMatch[0]), model }
+    return { ok: true, result: JSON.parse(jsonMatch[0]), model: t1.MODEL }
   } catch (err) {
-    return { ok: false, error: err.message, result: null, model }
+    return { ok: false, error: err.message, result: null, model: t1.MODEL }
   }
 }
 
