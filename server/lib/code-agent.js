@@ -104,7 +104,10 @@ function spherePane(sphere) {
   return `${TMUX}:${win}`
 }
 
-async function ensureClaudeRunning(sphere = 'main') {
+// 记录每个 sphere 当前运行的 model
+const _runningModel = {}
+
+async function ensureClaudeRunning(sphere = 'main', model) {
   const pane = spherePane(sphere)
   const workdir = SPHERE_WORKDIR[sphere] ?? SPHERE_WORKDIR.main
 
@@ -132,16 +135,34 @@ async function ensureClaudeRunning(sphere = 'main') {
     } catch { return '' }
   })()
 
-  if (cmd === 'claude') return  // 已在运行
+  // 如果 claude 已在运行，检查 model 是否匹配
+  if (cmd === 'claude') {
+    const currentModel = _runningModel[sphere]
+    if (model && currentModel && model !== currentModel) {
+      // model 不匹配，退出当前 claude 重启
+      execSync(`tmux send-keys -t ${pane} "/exit" Enter`)
+      await new Promise(r => setTimeout(r, 1500))
+      delete _runningModel[sphere]
+    } else {
+      return  // model 匹配或未指定，直接复用
+    }
+  }
 
   // 有其他进程先 Ctrl+C
-  if (cmd && cmd !== 'zsh' && cmd !== 'bash' && cmd !== 'sh') {
+  const cmd2 = (() => {
+    try {
+      return execSync(`tmux display-message -t ${pane} -p '#{pane_current_command}'`, { encoding: 'utf8' }).trim()
+    } catch { return '' }
+  })()
+  if (cmd2 && cmd2 !== 'zsh' && cmd2 !== 'bash' && cmd2 !== 'sh' && cmd2 !== 'claude') {
     execSync(`tmux send-keys -t ${pane} C-c`)
     await new Promise(r => setTimeout(r, 800))
   }
 
-  // 在对应工作目录启动 claude（相对路径，不含绝对机器路径）
-  execSync(`tmux send-keys -t ${pane} "cd ${workdir} && env -u ANTHROPIC_API_KEY claude --dangerously-skip-permissions" Enter`)
+  // 构建启动命令 — 带 model 参数
+  const modelFlag = model ? ` --model ${model}` : ''
+  execSync(`tmux send-keys -t ${pane} "cd ${workdir} && env -u ANTHROPIC_API_KEY claude --dangerously-skip-permissions${modelFlag}" Enter`)
+  _runningModel[sphere] = model || 'default'
 
   // 等待 claude 初始化（最多 20s），自动回应确认框
   const deadline = Date.now() + 20000
