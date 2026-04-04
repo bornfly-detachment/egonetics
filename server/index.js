@@ -195,10 +195,7 @@ Promise.all([kernelRuntime.init(), mq.init(kernelRuntime)]).then(async () => {
     console.log(`🔌 SEAI WebSocket: ws://localhost:${PORT}/ws/seai`);
     console.log(`⚙️ Kernel Runtime: active (tick=${kernelRuntime.getState().tick})`);
 
-    // 异步预热 coding agent daemon（tmux 常驻服务）
-    codeAgent.ensureDaemon()
-      .then(() => console.log(`🤖 Coding Agent Daemon: ready  (socket=${codeAgent.SOCKET_PATH})`))
-      .catch(err => console.warn(`⚠️  Coding Agent Daemon 预热失败（首次请求时重试）: ${err.message}`));
+    console.log(`🤖 Coding Agent: tmux session "egonetics-coding-agent" (按需启动)`);
   });
 }).catch(err => {
   console.error('Init failed, starting with fallback:', err.message);
