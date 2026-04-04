@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import { ChevronRight, ArrowLeft, MessageSquare } from 'lucide-react'
+import { ChevronRight, ArrowLeft, MessageSquare, Bookmark } from 'lucide-react'
 import { useControlTree, type ControlNode } from './useControlTree'
 import { solveLayout, getNodePath } from './engine/layout-solver'
 import { createScene, type SceneContext } from './engine/scene'
