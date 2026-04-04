@@ -442,4 +442,7 @@ function getHistory(_ctx)   { return [] }
 function listContexts()     { return [] }
 function resetContext()     {}
 
-module.exports = { runQuery, getSessionId, getHistory, listContexts, resetContext, respondToPrompt }
+// ensureDaemon: 旧接口 stub，tmux 方式不需要 daemon 预热
+async function ensureDaemon() {}
+
+module.exports = { runQuery, getSessionId, getHistory, listContexts, resetContext, respondToPrompt, ensureDaemon }
