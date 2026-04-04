@@ -83,13 +83,10 @@ ${tagTreeText}
 }`
 
   try {
-    const msg = await client.messages.create({
-      model,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
-    const text = msg.content?.[0]?.text ?? '{}'
+    const { content: text } = await engine.call(
+      [{ role: 'user', content: userPrompt }],
+      { maxTokens: 1024, system: systemPrompt }
+    )
     // 提取 JSON（T0 可能输出带注释的文本）
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('T0 返回非 JSON: ' + text.slice(0, 200))
