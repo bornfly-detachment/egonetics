@@ -14,6 +14,12 @@ import {
   // R layer icons
   Zap, Clock, TrendingUp, RefreshCw, Link, Sparkles,
   BookOpen, Route, Fingerprint, Lightbulb, Swords, Merge,
+  // V layer icons
+  Target, Crosshair, Focus, Gauge, Timer, Coins, BarChart2, CheckCircle,
+  ClipboardCheck, Puzzle, AlertOctagon, FileCheck,
+  Cpu, HardDrive, ListOrdered, Crown, Scale,
+  TrendingDown, OctagonX,
+  Expand, Eye, EyeOff, Wand2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SliderWidget } from '@/design/components/SliderWidget'
