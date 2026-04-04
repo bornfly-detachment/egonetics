@@ -11,8 +11,12 @@ import {
   Type, Hash, Code2, Table2, ImageIcon, Volume2, Film, Activity, Layers,
   ArrowUp, ArrowDown, ArrowLeftRight,
   Atom, GitBranch, Dna,
+  // R layer icons
+  Zap, Clock, TrendingUp, RefreshCw, Link, Sparkles,
+  BookOpen, Route, Fingerprint, Lightbulb, Swords, Merge,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { SliderWidget } from '@/design/components/SliderWidget'
 
 // ── 共用工具 ─────────────────────────────────────────────────────────
 
@@ -21,6 +25,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Type, Hash, Code2, Table2, Image: ImageIcon, Volume2, Film, Activity, Layers,
   ArrowUp, ArrowDown, ArrowLeftRight,
   Atom, GitBranch, Dna,
+  // R layer
+  Zap, Clock, TrendingUp, RefreshCw, Link, Sparkles,
+  BookOpen, Route, Fingerprint, Lightbulb, Swords, Merge,
 }
 
 function Icon({ name, size = 14, className, style }: {
