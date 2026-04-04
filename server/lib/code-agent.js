@@ -51,9 +51,9 @@ function tmuxHasSession() {
 }
 
 /**
- * 判断指定 pane 是否有 claude 在运行（不论是否在处理中）。
+ * 判断指定 pane 是否有 claude 进程在运行（不论是否在处理中）。
  * claude CLI 是 Node.js 进程，#{pane_current_command} 返回 'node'，不是 'claude'。
- * 只检查进程名 — 不检查 ╭─（claude 处理中时没有提示符，但仍在运行）。
+ * 只检查进程名，不检查 ╭─ —— claude 处理任务时没有提示符，但进程仍在运行。
  */
 function isClaudeRunningInPane(pane) {
   try {
@@ -62,6 +62,20 @@ function isClaudeRunningInPane(pane) {
       { encoding: 'utf8' }
     ).trim()
     return cmd === 'claude' || cmd === 'node' || cmd === 'claude-cli'
+  } catch { return false }
+}
+
+/**
+ * 判断 claude 是否已完成初始化并在等待输入（有 ╭─ 提示符）。
+ * 仅用于启动等待循环，不用于"是否在运行"判断。
+ */
+function isClaudeReadyInPane(pane) {
+  if (!isClaudeRunningInPane(pane)) return false
+  try {
+    const out = stripAnsi(
+      execSync(`tmux capture-pane -t ${pane} -p -S -8 2>/dev/null || true`, { encoding: 'utf8' })
+    )
+    return /╭─/.test(out)
   } catch { return false }
 }
 
