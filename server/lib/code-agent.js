@@ -158,10 +158,8 @@ async function ensureClaudeRunning(sphere = 'main', model) {
     await new Promise(r => setTimeout(r, 800))
   }
 
-  // 构建启动命令 — 带 model 参数
-  const modelFlag = model ? ` --model ${model}` : ''
-  execSync(`tmux send-keys -t ${pane} "cd ${workdir} && env -u ANTHROPIC_API_KEY claude --dangerously-skip-permissions${modelFlag}" Enter`)
-  _runningModel[sphere] = model || 'default'
+  // 启动 claude — 不带 --model，只执行一次
+  execSync(`tmux send-keys -t ${pane} "cd ${workdir} && env -u ANTHROPIC_API_KEY claude --dangerously-skip-permissions" Enter`)
 
   // 等待 claude 初始化（最多 20s），自动回应确认框
   const deadline = Date.now() + 20000
