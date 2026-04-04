@@ -44,13 +44,6 @@ function stripAnsi(str) {
 
 // ── tmux 工具 ─────────────────────────────────────────────────
 
-function tmuxHasSession() {
-  try {
-    execSync(`tmux has-session -t ${TMUX} 2>/dev/null`)
-    return true
-  } catch { return false }
-}
-
 /**
  * 判断指定 pane 是否有 claude 进程在运行（不论是否在处理中）。
  * claude 以二进制运行在 tmux pane 中，#{pane_current_command} 返回 'claude'。
