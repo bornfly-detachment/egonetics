@@ -88,6 +88,12 @@ export interface Runtime {
   // ── Inspection ──
   getFitnessRates(): readonly FitnessRates[]
   getConstitutionCheck(contract: Contract): ConstitutionResult
+
+  // ── Rollback ──
+  /** Restore state to N ticks ago. Returns the restored State. */
+  rollback(n?: number): State
+  /** Number of states currently retained in the ring buffer */
+  readonly historyLength: number
 }
 
 // ── Runtime Factory ────────────────────────────────────────────
