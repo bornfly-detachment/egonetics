@@ -528,7 +528,10 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
       {/* Header */}
       <div
         className="flex items-center gap-2.5 px-4 py-3.5 shrink-0"
-        style={{ borderBottom: `1px solid ${node.color}18` }}
+        style={{
+          borderBottom: `1px solid ${node.color}40`,
+          background: `linear-gradient(90deg, rgba(${rgb},0.08) 0%, transparent 100%)`,
+        }}
       >
         <span
           className="w-2.5 h-2.5 rounded-full animate-pulse"
