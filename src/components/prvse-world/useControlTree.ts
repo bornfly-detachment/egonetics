@@ -31,9 +31,9 @@ export interface ControlNode {
 // ── Colors ─────────────────────────────────────────────────────
 
 const C = {
-  constitution: '#ff3333',  // Red (三原色)
-  resources: '#33cc33',    // Green (三原色)
-  goals: '#3366ff',        // Blue (三原色)
+  constitution: '#e63333',  // 红 (红黄蓝三原色)
+  resources: '#e6c833',    // 黄 (红黄蓝三原色)
+  goals: '#3366e6',        // 蓝 (红黄蓝三原色)
   kernel: '#8b5cf6',
   controller: '#3b82f6',
   sensor: '#06b6d4',
