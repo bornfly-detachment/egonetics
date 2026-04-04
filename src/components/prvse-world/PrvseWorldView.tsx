@@ -411,9 +411,9 @@ export default function PrvseWorldView() {
         )
       )}
 
-      {/* ── Fullscreen mode: bookmark tabs on left edge ── */}
+      {/* ── Fullscreen mode: bookmark icons on left edge ── */}
       {spherePanel && panelFullscreen && !l1Panel && (
-        <div className="absolute top-1/2 -translate-y-1/2 left-0 z-50 flex flex-col gap-1">
+        <div className="absolute top-1/2 -translate-y-1/2 left-1 z-50 flex flex-col gap-2">
           {tree.map(root => {
             const isActive = spherePanel?.id === root.id
             return (
@@ -422,33 +422,28 @@ export default function PrvseWorldView() {
                 onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
                 className="group relative flex items-center transition-all duration-200"
               >
-                {/* Bookmark tab — like a browser side tab */}
+                {/* Bookmark icon — always visible */}
                 <div
-                  className="flex items-center gap-1.5 py-2 pl-1.5 pr-1 rounded-r-lg transition-all duration-200
-                    group-hover:pr-3 group-hover:pl-2"
+                  className="flex items-center justify-center w-8 h-9 rounded-r-md transition-all duration-200
+                    group-hover:w-auto group-hover:px-2.5 group-hover:gap-2"
                   style={{
-                    background: isActive
-                      ? `${root.color}20`
-                      : 'rgba(15,15,20,0.85)',
-                    borderTop: `1px solid ${isActive ? `${root.color}35` : 'rgba(255,255,255,0.06)'}`,
-                    borderRight: `1px solid ${isActive ? `${root.color}35` : 'rgba(255,255,255,0.06)'}`,
-                    borderBottom: `1px solid ${isActive ? `${root.color}35` : 'rgba(255,255,255,0.06)'}`,
-                    boxShadow: isActive ? `2px 0 16px ${root.color}25` : '2px 0 8px rgba(0,0,0,0.3)',
+                    background: isActive ? `${root.color}22` : 'rgba(10,10,15,0.88)',
+                    border: `1px solid ${isActive ? `${root.color}40` : 'rgba(255,255,255,0.08)'}`,
+                    borderLeft: 'none',
+                    boxShadow: isActive ? `2px 0 12px ${root.color}20` : '2px 0 6px rgba(0,0,0,0.3)',
                   }}
                 >
-                  {/* Color dot — always visible */}
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0 transition-shadow"
-                    style={{
-                      background: root.color,
-                      boxShadow: isActive ? `0 0 8px ${root.color}` : `0 0 4px ${root.color}40`,
-                    }}
+                  <Bookmark
+                    size={15}
+                    fill={isActive ? root.color : 'none'}
+                    className="shrink-0 transition-colors"
+                    style={{ color: isActive ? root.color : `${root.color}80` }}
                   />
-                  {/* Label — expands on hover */}
+                  {/* Label — slides out on hover */}
                   <span
-                    className="text-[10px] font-mono whitespace-nowrap overflow-hidden transition-all duration-200
-                      max-w-0 opacity-0 group-hover:max-w-[80px] group-hover:opacity-100 group-hover:ml-1"
-                    style={{ color: isActive ? root.color : 'rgba(255,255,255,0.5)' }}
+                    className="text-[10px] font-mono font-semibold whitespace-nowrap overflow-hidden transition-all duration-200
+                      max-w-0 opacity-0 group-hover:max-w-[80px] group-hover:opacity-100"
+                    style={{ color: isActive ? root.color : 'rgba(255,255,255,0.55)' }}
                   >
                     {root.name}
                   </span>
