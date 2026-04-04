@@ -22,7 +22,8 @@
  * Design: "编译不通过就不运行" — blocked = no execution, period.
  */
 
-const { getClientForTier, DEFAULT_MAX_TOKENS } = require('./llm')
+const { createLLMEngine } = require('./llm-engine')
+const { getClientForTier } = require('./llm')
 const crypto = require('crypto')
 
 // ── LLM Lexer System Prompt ─────────────────────────────────
