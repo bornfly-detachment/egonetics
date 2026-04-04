@@ -56,7 +56,8 @@ function loadProtocolRules(pagesDb) {
 // ── T0：本地模型三问分类 ──────────────────────────────────────────────
 
 async function t0Classify(content, tagTreeText, sourceMeta) {
-  const { client, model } = getClientForTier('T0')
+  const engine = createLLMEngine('T0')
+  const model = engine._model
 
   const systemPrompt = `你是 PRVSE 三问分类器（T0 感知层）。
 给定内容，从提供的标签树中选择标签，完成三问分类。
