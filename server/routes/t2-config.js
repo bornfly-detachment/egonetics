@@ -33,18 +33,17 @@ router.get('/t2-config', (_req, res) => {
 
 // POST /api/t2-config
 router.post('/t2-config', (req, res) => {
-  const { tmux_session, sphere, workdir, default_model = 'claude-sonnet-4-6', active = true } = req.body
-  if (!tmux_session || !sphere || !workdir) {
-    return res.status(400).json({ error: 'tmux_session, sphere, workdir 必填' })
+  const { sphere, workdir, default_model = 'claude-sonnet-4-6', active = true } = req.body
+  if (!sphere || !workdir) {
+    return res.status(400).json({ error: 'sphere, workdir 必填' })
   }
   const data = read()
-  if (data.some(e => e.tmux_session === tmux_session && e.sphere === sphere)) {
-    return res.status(409).json({ error: 'tmux_session + sphere 组合已存在' })
+  if (data.some(e => e.sphere === sphere)) {
+    return res.status(409).json({ error: 'sphere 已存在' })
   }
-  const entry = { id: Date.now(), tmux_session, sphere, workdir, default_model, active }
+  const entry = { id: Date.now(), sphere, workdir, default_model, active }
   data.push(entry)
   write(data)
-  try { require('../lib/code-agent').reloadConfig() } catch { /* ignore */ }
   res.status(201).json(entry)
 })
 
@@ -55,22 +54,19 @@ router.patch('/t2-config/:id', (req, res) => {
   const idx = data.findIndex(e => e.id === id)
   if (idx === -1) return res.status(404).json({ error: '未找到' })
 
-  const { tmux_session, sphere, workdir, default_model, active } = req.body
+  const { sphere, workdir, default_model, active } = req.body
   const next = { ...data[idx] }
-  if (tmux_session !== undefined) next.tmux_session = tmux_session
-  if (sphere       !== undefined) next.sphere        = sphere
-  if (workdir      !== undefined) next.workdir       = workdir
+  if (sphere        !== undefined) next.sphere        = sphere
+  if (workdir       !== undefined) next.workdir       = workdir
   if (default_model !== undefined) next.default_model = default_model
-  if (active       !== undefined) next.active        = active
+  if (active        !== undefined) next.active        = active
 
-  // 唯一性检查
-  if (data.some((e, i) => i !== idx && e.tmux_session === next.tmux_session && e.sphere === next.sphere)) {
-    return res.status(409).json({ error: 'tmux_session + sphere 组合已存在' })
+  if (data.some((e, i) => i !== idx && e.sphere === next.sphere)) {
+    return res.status(409).json({ error: 'sphere 已存在' })
   }
 
   data[idx] = next
   write(data)
-  try { require('../lib/code-agent').reloadConfig() } catch { /* ignore */ }
   res.json(next)
 })
 
@@ -82,7 +78,6 @@ router.delete('/t2-config/:id', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: '未找到' })
   data.splice(idx, 1)
   write(data)
-  try { require('../lib/code-agent').reloadConfig() } catch { /* ignore */ }
   res.json({ ok: true })
 })
 
