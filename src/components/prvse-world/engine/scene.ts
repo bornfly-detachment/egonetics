@@ -45,15 +45,15 @@ export function createScene(canvas: HTMLCanvasElement): SceneContext {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
-  // Ambient light — slightly blue-tinted for cyberpunk feel
-  const ambient = new THREE.AmbientLight(0x8899bb, 0.5)
+  // Ambient — dim, preserve dark side for 3D depth
+  const ambient = new THREE.AmbientLight(0x111122, 0.3)
   scene.add(ambient)
-  // Directional — warm key light from top-right
-  const directional = new THREE.DirectionalLight(0xffffff, 0.5)
+  // Directional — warm key light, strong enough for specular highlights on metallic surfaces
+  const directional = new THREE.DirectionalLight(0xffeedd, 0.9)
   directional.position.set(100, 200, 300)
   scene.add(directional)
-  // Subtle fill from below — neon bounce
-  const fill = new THREE.DirectionalLight(0x4466ff, 0.15)
+  // Subtle fill from below — cool bounce for contrast
+  const fill = new THREE.DirectionalLight(0x2244ff, 0.15)
   fill.position.set(-50, -100, 100)
   scene.add(fill)
 
