@@ -15,6 +15,7 @@ import { UIComponentVisual } from '@/design/components/UIComponentVisual'
 import { ResourceTierVisual } from '@/design/components/ResourceTierVisual'
 import { CommunicationVisual } from '@/design/components/CommunicationVisual'
 import { KernelComponentCard, LifecycleStateCard, GraphNodeCard } from '@/design/components/KernelVisual'
+import { PrvseTypeRouter } from '@/design/components/PrvseVisuals'
 
 interface VisualProps {
   category: string
