@@ -207,75 +207,66 @@ async function ensureClaudeRunning(sphere = 'main', model) {
   const pane = spherePane(sphere)
   const workdir = SPHERE_WORKDIR[sphere] ?? SPHERE_WORKDIR.main
 
-  // 确保 tmux session + window 存在
+  // ── 确保 tmux session + window 存在 ──────────────────────────
   if (!tmuxHasSession()) {
     execSync(`tmux new-session -d -s ${TMUX} -x 220 -y 50 -n main`)
     await new Promise(r => setTimeout(r, 300))
-    // 加载用户环境变量（PATH, API keys 等）
     execSync(`tmux send-keys -t ${TMUX}:main "source ~/.bash_profile" Enter`)
     await new Promise(r => setTimeout(r, 500))
   }
-  // 确保对应 window 存在
   try {
     execSync(`tmux select-window -t ${pane} 2>/dev/null || tmux new-window -t ${TMUX} -n ${sphere === 'main' ? 'main' : sphere}`)
-    // 新 window 也需要加载环境
     if (sphere !== 'main') {
       execSync(`tmux send-keys -t ${pane} "source ~/.bash_profile" Enter`)
       await new Promise(r => setTimeout(r, 300))
     }
   } catch { /* ignore */ }
 
-  const cmd = (() => {
-    try {
-      return execSync(`tmux display-message -t ${pane} -p '#{pane_current_command}'`, { encoding: 'utf8' }).trim()
-    } catch { return '' }
-  })()
-
-  // 如果 claude 已在运行，切换 model（如需要）
-  if (cmd === 'claude') {
+  // ── 检测 claude 是否已在运行（claude CLI 进程名是 node，不是 claude） ──
+  if (isClaudeRunningInPane(pane)) {
+    // 已在运行，按需切换 model（用 switchModelInClaude，内部处理菜单）
     const currentModel = _runningModel[sphere]
-    if (model && currentModel && model !== currentModel) {
-      // 在 claude 内部用 /model 切换，不重启
-      execSync(`tmux send-keys -t ${pane} "/model ${model}" Enter`)
-      await new Promise(r => setTimeout(r, 1500))
+    if (model && model !== currentModel) {
+      await switchModelInClaude(pane, model)
       _runningModel[sphere] = model
     }
     return
   }
 
-  // 有其他进程先 Ctrl+C
-  const cmd2 = (() => {
+  // ── 有其他进程先 Ctrl+C ───────────────────────────────────────
+  const otherCmd = (() => {
     try {
-      return execSync(`tmux display-message -t ${pane} -p '#{pane_current_command}'`, { encoding: 'utf8' }).trim()
+      return execSync(
+        `tmux display-message -t ${pane} -p '#{pane_current_command}' 2>/dev/null || echo ""`,
+        { encoding: 'utf8' }
+      ).trim()
     } catch { return '' }
   })()
-  if (cmd2 && cmd2 !== 'zsh' && cmd2 !== 'bash' && cmd2 !== 'sh' && cmd2 !== 'claude') {
+  if (otherCmd && otherCmd !== 'zsh' && otherCmd !== 'bash' && otherCmd !== 'sh') {
     execSync(`tmux send-keys -t ${pane} C-c`)
     await new Promise(r => setTimeout(r, 800))
   }
 
-  // 启动 claude — 不带 --model，只执行一次
+  // ── 启动 claude（只执行一次，不带 --model） ───────────────────
   execSync(`tmux send-keys -t ${pane} "cd ${workdir} && env -u ANTHROPIC_API_KEY claude --dangerously-skip-permissions" Enter`)
 
-  // 等待 claude 初始化（最多 20s），自动回应确认框
+  // 等待初始化（最多 20s），自动回应确认框
   const deadline = Date.now() + 20000
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 600))
-    const paneText = execSync(`tmux capture-pane -t ${pane} -p -S -30 2>/dev/null || true`, { encoding: 'utf8' })
+    const paneText = stripAnsi(
+      execSync(`tmux capture-pane -t ${pane} -p -S -30 2>/dev/null || true`, { encoding: 'utf8' })
+    )
     if (/\(y\/n\)|\[Y\/n\]|\[y\/N\]|Yes\/No|accept|trust/i.test(paneText)) {
       execSync(`tmux send-keys -t ${pane} "y" Enter`)
       await new Promise(r => setTimeout(r, 400))
     }
-    try {
-      const c = execSync(`tmux display-message -t ${pane} -p '#{pane_current_command}'`, { encoding: 'utf8' }).trim()
-      if (c === 'claude') break
-    } catch { /* ignore */ }
+    if (isClaudeRunningInPane(pane)) break
   }
 
-  // claude 启动完成后，如需切换 model，用 /model 命令
+  // 启动完成后切换 model（switchModelInClaude 内部处理菜单）
   if (model) {
-    execSync(`tmux send-keys -t ${pane} "/model ${model}" Enter`)
-    await new Promise(r => setTimeout(r, 1500))
+    await switchModelInClaude(pane, model)
     _runningModel[sphere] = model
   }
 }
