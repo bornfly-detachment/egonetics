@@ -96,13 +96,29 @@ const DEFAULT_SYSTEM_PROMPT = `你是 Egonetics PRVSE World 助手，运行在 P
 // ── Tier config ────────────────────────────────────────────────
 
 type TierKey = 'T0' | 'T1' | 'T2'
-type T2Model = 'sonnet' | 'opus'
 
-const TIER_CONFIG: Record<TierKey, { label: string; color: string; apiModel?: string }> = {
+const TIER_CONFIG: Record<TierKey, { label: string; color: string }> = {
   T0: { label: 'T0', color: '#34d399' },
   T1: { label: 'T1', color: '#60a5fa' },
   T2: { label: 'T2', color: '#a78bfa' },
 }
+
+// ── T2 model options ───────────────────────────────────────────
+// 新增模型只需在此数组追加，前端自动显示
+
+interface T2ModelOption {
+  key: string
+  id: string       // 传给后端的 model ID
+  label: string    // 显示名
+  ctx: string      // 上下文规格标注
+}
+
+const T2_MODEL_OPTIONS: T2ModelOption[] = [
+  { key: 'sonnet',    id: 'claude-sonnet-4-6', label: 'Sonnet 4.6', ctx: '200K' },
+  { key: 'opus',      id: 'claude-opus-4-6',   label: 'Opus 4.6',   ctx: '200K' },
+  { key: 'sonnet-1m', id: 'claude-sonnet-4-6', label: 'Sonnet 4.6', ctx: '1M'   },
+  { key: 'opus-1m',   id: 'claude-opus-4-6',   label: 'Opus 4.6',   ctx: '1M'   },
+]
 
 // ── Component ─────────────────────────────────────────────────
 
