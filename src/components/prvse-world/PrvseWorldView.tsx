@@ -411,42 +411,45 @@ export default function PrvseWorldView() {
         )
       )}
 
-      {/* ── Fullscreen mode: sphere bookmarks on left edge, hover to expand ── */}
+      {/* ── Fullscreen mode: bookmark tabs on left edge ── */}
       {spherePanel && panelFullscreen && !l1Panel && (
-        <div className="absolute top-1/2 -translate-y-1/2 left-0 z-50 flex flex-col">
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 z-50 flex flex-col gap-1">
           {tree.map(root => {
             const isActive = spherePanel?.id === root.id
             return (
               <button
                 key={root.id}
                 onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
-                className="group relative flex items-center h-12 transition-all duration-200"
+                className="group relative flex items-center transition-all duration-200"
               >
-                {/* Bookmark tab — colored bar always visible */}
+                {/* Bookmark tab — like a browser side tab */}
                 <div
-                  className="w-[5px] h-12 transition-all"
+                  className="flex items-center gap-1.5 py-2 pl-1.5 pr-1 rounded-r-lg transition-all duration-200
+                    group-hover:pr-3 group-hover:pl-2"
                   style={{
-                    background: isActive ? root.color : `${root.color}50`,
-                    boxShadow: isActive ? `2px 0 12px ${root.color}40` : 'none',
-                  }}
-                />
-                {/* Hover popup — name label slides out */}
-                <div
-                  className="absolute left-[5px] flex items-center gap-2 px-3 py-1.5 rounded-r-lg
-                    opacity-0 scale-95 pointer-events-none
-                    group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto
-                    transition-all duration-150 origin-left"
-                  style={{
-                    background: 'rgba(4,5,10,0.95)',
-                    border: `1px solid ${root.color}30`,
-                    borderLeft: 'none',
+                    background: isActive
+                      ? `${root.color}20`
+                      : 'rgba(15,15,20,0.85)',
+                    borderTop: `1px solid ${isActive ? `${root.color}35` : 'rgba(255,255,255,0.06)'}`,
+                    borderRight: `1px solid ${isActive ? `${root.color}35` : 'rgba(255,255,255,0.06)'}`,
+                    borderBottom: `1px solid ${isActive ? `${root.color}35` : 'rgba(255,255,255,0.06)'}`,
+                    boxShadow: isActive ? `2px 0 16px ${root.color}25` : '2px 0 8px rgba(0,0,0,0.3)',
                   }}
                 >
+                  {/* Color dot — always visible */}
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ background: root.color, boxShadow: `0 0 8px ${root.color}60` }}
+                    className="w-2.5 h-2.5 rounded-full shrink-0 transition-shadow"
+                    style={{
+                      background: root.color,
+                      boxShadow: isActive ? `0 0 8px ${root.color}` : `0 0 4px ${root.color}40`,
+                    }}
                   />
-                  <span className="text-[11px] font-mono whitespace-nowrap font-semibold" style={{ color: root.color }}>
+                  {/* Label — expands on hover */}
+                  <span
+                    className="text-[10px] font-mono whitespace-nowrap overflow-hidden transition-all duration-200
+                      max-w-0 opacity-0 group-hover:max-w-[80px] group-hover:opacity-100 group-hover:ml-1"
+                    style={{ color: isActive ? root.color : 'rgba(255,255,255,0.5)' }}
+                  >
                     {root.name}
                   </span>
                 </div>
