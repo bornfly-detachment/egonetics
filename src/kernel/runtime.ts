@@ -168,6 +168,11 @@ export function createRuntime(config?: Partial<RuntimeConfig>): Runtime {
 
     tick(): RuntimeTickResult {
       const prevState = state
+
+      // Ring buffer: save state before tick for rollback
+      stateHistory.push(prevState)
+      if (stateHistory.length > HISTORY_SIZE) stateHistory.shift()
+
       const tickResult = kernelTick(state, buffer, cfg.hooks)
       const nextState = tickResult.state
 
