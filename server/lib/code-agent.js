@@ -14,6 +14,7 @@
 const { execSync } = require('child_process')
 const fss  = require('fs')
 const path = require('path')
+const os   = require('os')
 
 const TMUX = 'egonetics-coding-agent'
 const PANE = `${TMUX}:0`
