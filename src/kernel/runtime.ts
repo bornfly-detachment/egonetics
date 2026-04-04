@@ -216,6 +216,23 @@ export function createRuntime(config?: Partial<RuntimeConfig>): Runtime {
       return results
     },
 
+    // ── Rollback ──
+
+    rollback(n = 1): State {
+      if (n < 1 || n > stateHistory.length) {
+        throw new Error(
+          `rollback(${n}) out of range — history has ${stateHistory.length} entries`,
+        )
+      }
+      const targetIdx = stateHistory.length - n
+      const restored = stateHistory[targetIdx]
+      // Trim history: everything after the rollback point is discarded
+      stateHistory.length = targetIdx
+      tickCount = Math.max(0, tickCount - n)
+      state = restored
+      return restored
+    },
+
     // ── Inspection ──
 
     getFitnessRates(): readonly FitnessRates[] {

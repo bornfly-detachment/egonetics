@@ -18,17 +18,28 @@ const fss  = require('fs')
 const path = require('path')
 const os   = require('os')
 
-const TMUX = 'egonetics-coding-agent'
+// ── T2 Agent 配置（从文件读取，支持 CRUD）────────────────────
+const T2_CONFIG_PATH = path.resolve(__dirname, '../config/t2-agents.json')
 
-// agent-spaces 软链接：egonetics/agent-spaces → ../prvse_world_workspace/L2/ai-resources
-// __dirname = egonetics/server/lib/  →  ../../agent-spaces = egonetics/agent-spaces
-const AGENT_SPACES = path.resolve(__dirname, '../../agent-spaces')
+let _t2Config = null
 
-const SPHERE_WORKDIR = {
-  constitution: path.join(AGENT_SPACES, 'constitution'),
-  goals:        path.join(AGENT_SPACES, 'goals'),
-  resources:    path.join(AGENT_SPACES, 'resources'),
-  main:         path.resolve(__dirname, '../../..'),  // egonetics 根目录
+function loadT2Config() {
+  try {
+    const raw = JSON.parse(fss.readFileSync(T2_CONFIG_PATH, 'utf-8'))
+    _t2Config = raw.filter(e => e.active !== false)
+  } catch {
+    _t2Config = []
+  }
+}
+
+function getT2Config() {
+  if (!_t2Config) loadT2Config()
+  return _t2Config
+}
+
+/** 路由层在 CRUD 后调用此函数使配置立即生效 */
+function reloadConfig() {
+  loadT2Config()
 }
 
 // ── ANSI + 终端控制序列脱色 ───────────────────────────────────
@@ -46,16 +57,24 @@ function stripAnsi(str) {
 
 /**
  * 判断指定 pane 是否有 claude 进程在运行（不论是否在处理中）。
- * claude 以二进制运行在 tmux pane 中，#{pane_current_command} 返回 'claude'。
- * 只检查进程名，不检查 ╭─ —— claude 处理任务时没有提示符，但进程仍在运行。
+ *
+ * 检测策略：通过 #{pane_pid} 获取 pane shell 的 PID，
+ * 再检查其直接子进程中是否有名为 'claude' 的进程。
+ * （#{pane_current_command} 在 claude CLI 场景下返回 'node'，不可靠）
  */
 function isClaudeRunningInPane(pane) {
   try {
-    const cmd = execSync(
-      `tmux display-message -t ${pane} -p '#{pane_current_command}' 2>/dev/null || echo ""`,
+    const panePid = execSync(
+      `tmux display-message -t ${pane} -p '#{pane_pid}' 2>/dev/null || echo ""`,
       { encoding: 'utf8' }
     ).trim()
-    return cmd === 'claude'
+    if (!panePid) return false
+    // 检查 pane shell 的直接子进程中是否有 claude
+    const children = execSync(
+      `ps axo pid,ppid,command 2>/dev/null | awk -v ppid=${panePid} '$2==ppid {print $3}'`,
+      { encoding: 'utf8' }
+    ).trim()
+    return children.split('\n').some(cmd => cmd.trim() === 'claude')
   } catch { return false }
 }
 
@@ -143,7 +162,7 @@ function workdirToProjectKey(workdir) {
 }
 
 function getProjectsDir(sphere) {
-  const workdir = SPHERE_WORKDIR[sphere] ?? SPHERE_WORKDIR.main
+  const workdir = getWorkdir(sphere)
   const key = workdirToProjectKey(workdir)
   return path.join(os.homedir(), '.claude', 'projects', key)
 }
@@ -195,10 +214,18 @@ function extractDisplayContent(entries) {
 
 // ── 确保 claude 在 tmux 中运行（幂等）────────────────────────
 
-// sphere → tmux window 名
+// sphere → tmux pane 目标（从配置读取 session 名）
 function spherePane(sphere) {
+  const cfg = getT2Config().find(e => e.sphere === sphere) ?? getT2Config()[0]
+  const session = cfg?.tmux_session ?? 'egonetics-coding-agent'
   const win = sphere && sphere !== 'main' ? sphere : 'main'
-  return `${TMUX}:${win}`
+  return `${session}:${win}`
+}
+
+// sphere → workdir（从配置读取）
+function getWorkdir(sphere) {
+  const cfg = getT2Config().find(e => e.sphere === sphere)
+  return cfg?.workdir ?? path.resolve(__dirname, '../../..')
 }
 
 // 记录每个 sphere 当前运行的 model
@@ -209,10 +236,12 @@ async function ensureClaudeRunning(sphere = 'main', model) {
 
   // ── claude 必须由用户手动启动，后端无权执行 claude --dangerously-skip-permissions ──
   if (!isClaudeRunningInPane(pane)) {
+    const cfg = getT2Config().find(e => e.sphere === (sphere ?? 'main')) ?? getT2Config()[0]
+    const session = cfg?.tmux_session ?? 'egonetics-coding-agent'
     throw new Error(
       `Claude 未在 tmux pane "${pane}" 中运行。\n` +
-      `请手动执行：tmux new-session -d -s ${TMUX} -n main && ` +
-      `tmux send-keys -t ${TMUX}:main "claude --dangerously-skip-permissions" Enter`
+      `请手动执行：tmux new-session -d -s ${session} -n main && ` +
+      `tmux send-keys -t ${session}:main "claude --dangerously-skip-permissions" Enter`
     )
   }
 
@@ -389,4 +418,4 @@ function getHistory(_ctx)   { return [] }
 function listContexts()     { return [] }
 function resetContext()     {}
 
-module.exports = { runQuery, getSessionId, getHistory, listContexts, resetContext, respondToPrompt }
+module.exports = { runQuery, getSessionId, getHistory, listContexts, resetContext, respondToPrompt, reloadConfig }

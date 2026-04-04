@@ -57,7 +57,8 @@ const resourcePerceiver  = require('./lib/resource-perceiver');
 const schedulerRouter    = require('./routes/scheduler');
 const controllerModule   = require('./routes/controller');
 const controllerLib      = require('./lib/controller');
-const codeAgentRouter    = require('./routes/code-agent');
+const codeAgentRouter    = require('./routes/code-agent')
+const t2ConfigRouter     = require('./routes/t2-config');
 const acpGatewayRouter   = require('./routes/acp-gateway')
 const signalsRouter      = require('./routes/signals');
 const compilerModule     = require('./routes/compiler');
@@ -166,6 +167,7 @@ app.use('/api', perceiverRouter);
 app.use('/api', schedulerRouter);
 app.use('/api', controllerModule.init(kernelRuntime));
 app.use('/api', codeAgentRouter);
+app.use('/api', t2ConfigRouter);
 app.use('/api/acp', acpGatewayRouter);
 app.use('/api/signals', signalsRouter.init(signalsDb));
 app.use('/api', compilerModule.init());

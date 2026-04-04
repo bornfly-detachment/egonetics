@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "tmux_session": "egonetics-coding-agent",
+    "sphere": "main",
+    "workdir": "/Users/bornfly/Desktop/claude_code_learn",
+    "default_model": "claude-sonnet-4-6",
+    "active": true
+  },
+  {
+    "id": 2,
+    "tmux_session": "egonetics-coding-agent",
+    "sphere": "constitution",
+    "workdir": "/Users/bornfly/Desktop/claude_code_learn/egonetics/agent-spaces/constitution",
+    "default_model": "claude-sonnet-4-6",
+    "active": true
+  },
+  {
+    "id": 3,
+    "tmux_session": "egonetics-coding-agent",
+    "sphere": "goals",
+    "workdir": "/Users/bornfly/Desktop/claude_code_learn/egonetics/agent-spaces/goals",
+    "default_model": "claude-sonnet-4-6",
+    "active": true
+  },
+  {
+    "id": 4,
+    "tmux_session": "egonetics-coding-agent",
+    "sphere": "resources",
+    "workdir": "/Users/bornfly/Desktop/claude_code_learn/egonetics/agent-spaces/resources",
+    "default_model": "claude-sonnet-4-6",
+    "active": true
+  }
+]

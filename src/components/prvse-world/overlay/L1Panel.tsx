@@ -17,7 +17,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArrowLeft, RefreshCw, CheckCircle, Clock, AlertTriangle,
-         Zap, GitBranch, Loader, Play } from 'lucide-react'
+         Zap, GitBranch, Loader, Play, Pencil, Trash2, Plus, X, Check } from 'lucide-react'
 import { authFetch, getToken } from '@/lib/http'
 import type { ControlNode } from '../useControlTree'
 
@@ -440,32 +440,157 @@ function ConflictView() {
 
 // ── AITierView — T0/T1/T2 资源节点 ────────────────────────────
 
+interface T2Agent {
+  id: number
+  tmux_session: string
+  sphere: string
+  workdir: string
+  default_model: string
+  active: boolean
+}
+
+const BLANK_AGENT: Omit<T2Agent, 'id'> = {
+  tmux_session: '', sphere: '', workdir: '', default_model: 'claude-sonnet-4-6', active: true,
+}
+
 function AITierView({ tier, node }: { tier: string; node: ControlNode }) {
   const meta = node.meta ?? {}
   const tierDefs: Record<string, { label: string; color: string; desc: string; proto: string }> = {
     T0: { label: 'T0 本地模型', color: '#10b981', desc: '零延迟 · 完全离线 · 最高隐私', proto: 'L0 内存调用' },
     T1: { label: 'T1 私有部署', color: '#3b82f6', desc: '局域网 · 可信环境 · 低延迟',  proto: 'L1 IPC' },
-    T2: { label: 'T2 云端 API', color: '#8b5cf6', desc: '互联网 · 最强能力 · 需鉴权',   proto: 'L2 HTTPS/SSE' },
+    T2: { label: 'T2 Claude (tmux)', color: '#8b5cf6', desc: '本机 tmux · Claude Code CLI · 审批制', proto: 'L2 tmux/JSONL' },
   }
   const def = tierDefs[tier] ?? { label: tier, color: '#888', desc: '', proto: '' }
 
-  return (
-    <div className="h-full overflow-y-auto p-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <Zap size={14} style={{ color: def.color }} />
-        <h2 className="text-[15px] text-white/70 font-medium">{def.label}</h2>
-        <span className="text-[9px] font-mono px-2 py-0.5 rounded" style={{ background: def.color + '15', color: def.color + 'bb' }}>{def.proto}</span>
-      </div>
-      <p className="text-[12px] text-white/35">{def.desc}</p>
+  // T2 专属：config CRUD
+  const [agents, setAgents]       = useState<T2Agent[]>([])
+  const [editId, setEditId]       = useState<number | null>(null)
+  const [editBuf, setEditBuf]     = useState<Partial<T2Agent>>({})
+  const [adding, setAdding]       = useState(false)
+  const [newBuf, setNewBuf]       = useState<Omit<T2Agent, 'id'>>(BLANK_AGENT)
+  const [loading, setLoading]     = useState(false)
+  const [err, setErr]             = useState('')
 
-      <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-4 space-y-2">
-        {Object.entries(meta).map(([k, v]) => (
-          <div key={k} className="flex items-center gap-3">
-            <span className="text-[10px] text-white/25 font-mono w-24 shrink-0">{k}</span>
-            <span className="text-[10px] text-white/50 truncate">{String(v)}</span>
-          </div>
-        ))}
+  const fetchAgents = useCallback(async () => {
+    if (tier !== 'T2') return
+    setLoading(true)
+    try {
+      const r = await authFetch('/t2-config')
+      setAgents(await r.json())
+    } catch { setErr('加载失败') }
+    finally { setLoading(false) }
+  }, [tier])
+
+  useEffect(() => { fetchAgents() }, [fetchAgents])
+
+  async function saveEdit(id: number) {
+    await authFetch(`/t2-config/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editBuf) })
+    setEditId(null); setEditBuf({}); fetchAgents()
+  }
+
+  async function deleteAgent(id: number) {
+    await authFetch(`/t2-config/${id}`, { method: 'DELETE' })
+    fetchAgents()
+  }
+
+  async function addAgent() {
+    if (!newBuf.tmux_session || !newBuf.sphere || !newBuf.workdir) { setErr('tmux_session / sphere / workdir 必填'); return }
+    await authFetch('/t2-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newBuf) })
+    setAdding(false); setNewBuf(BLANK_AGENT); setErr(''); fetchAgents()
+  }
+
+  const inputCls = 'bg-white/[0.04] border border-white/[0.08] rounded px-2 py-0.5 text-[10px] font-mono text-white/70 outline-none focus:border-white/20 w-full'
+
+  return (
+    <div className="h-full overflow-y-auto p-5 space-y-4">
+      {/* 标题行 */}
+      <div className="flex items-center gap-3">
+        <Zap size={13} style={{ color: def.color }} />
+        <h2 className="text-[14px] text-white/70 font-medium">{def.label}</h2>
+        <span className="text-[9px] font-mono px-2 py-0.5 rounded" style={{ background: def.color + '15', color: def.color + 'bb' }}>{def.proto}</span>
+        <span className="flex-1" />
+        <button onClick={fetchAgents} className="text-white/20 hover:text-white/50 transition-colors"><RefreshCw size={11} /></button>
       </div>
+      <p className="text-[11px] text-white/30">{def.desc}</p>
+
+      {tier !== 'T2' ? (
+        // T0 / T1：只读 meta
+        <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-4 space-y-2">
+          {Object.entries(meta).map(([k, v]) => (
+            <div key={k} className="flex items-center gap-3">
+              <span className="text-[10px] text-white/25 font-mono w-24 shrink-0">{k}</span>
+              <span className="text-[10px] text-white/50 truncate">{String(v)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // T2：CRUD 配置表
+        <div className="space-y-3">
+          {err && <p className="text-[10px] text-red-400/80">{err}</p>}
+          {loading ? (
+            <div className="flex items-center gap-2 text-white/20 text-[11px]"><Loader size={11} className="animate-spin" />加载中…</div>
+          ) : (
+            <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+              {/* 表头 */}
+              <div className="grid grid-cols-[1fr_80px_1.5fr_120px_60px_52px] gap-2 px-3 py-2 bg-white/[0.03] border-b border-white/[0.05]">
+                {['session', 'sphere', 'workdir', 'model', 'active', ''].map(h => (
+                  <span key={h} className="text-[9px] font-mono text-white/20 uppercase tracking-wider">{h}</span>
+                ))}
+              </div>
+
+              {/* 数据行 */}
+              {agents.map(a => editId === a.id ? (
+                <div key={a.id} className="grid grid-cols-[1fr_80px_1.5fr_120px_60px_52px] gap-2 px-3 py-2 border-b border-white/[0.04] bg-white/[0.02] items-center">
+                  <input className={inputCls} value={editBuf.tmux_session ?? a.tmux_session} onChange={e => setEditBuf(b => ({ ...b, tmux_session: e.target.value }))} />
+                  <input className={inputCls} value={editBuf.sphere ?? a.sphere} onChange={e => setEditBuf(b => ({ ...b, sphere: e.target.value }))} />
+                  <input className={inputCls} value={editBuf.workdir ?? a.workdir} onChange={e => setEditBuf(b => ({ ...b, workdir: e.target.value }))} />
+                  <input className={inputCls} value={editBuf.default_model ?? a.default_model} onChange={e => setEditBuf(b => ({ ...b, default_model: e.target.value }))} />
+                  <select className={inputCls} value={String(editBuf.active ?? a.active)} onChange={e => setEditBuf(b => ({ ...b, active: e.target.value === 'true' }))}>
+                    <option value="true">on</option><option value="false">off</option>
+                  </select>
+                  <div className="flex gap-1">
+                    <button onClick={() => saveEdit(a.id)} className="text-green-400/70 hover:text-green-400 transition-colors"><Check size={11} /></button>
+                    <button onClick={() => { setEditId(null); setEditBuf({}) }} className="text-white/20 hover:text-white/50 transition-colors"><X size={11} /></button>
+                  </div>
+                </div>
+              ) : (
+                <div key={a.id} className="grid grid-cols-[1fr_80px_1.5fr_120px_60px_52px] gap-2 px-3 py-2 border-b border-white/[0.04] items-center group hover:bg-white/[0.01]">
+                  <span className="text-[10px] font-mono text-white/50 truncate">{a.tmux_session}</span>
+                  <span className="text-[10px] font-mono text-white/60 truncate">{a.sphere}</span>
+                  <span className="text-[9px] font-mono text-white/30 truncate" title={a.workdir}>{a.workdir.split('/').slice(-2).join('/')}</span>
+                  <span className="text-[9px] font-mono text-white/40 truncate">{a.default_model}</span>
+                  <span className={`text-[9px] font-mono ${a.active ? 'text-green-400/60' : 'text-white/20'}`}>{a.active ? 'on' : 'off'}</span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => { setEditId(a.id); setEditBuf({}) }} className="text-white/30 hover:text-white/70 transition-colors"><Pencil size={10} /></button>
+                    <button onClick={() => deleteAgent(a.id)} className="text-red-400/40 hover:text-red-400/80 transition-colors"><Trash2 size={10} /></button>
+                  </div>
+                </div>
+              ))}
+
+              {/* 新增行 */}
+              {adding ? (
+                <div className="grid grid-cols-[1fr_80px_1.5fr_120px_60px_52px] gap-2 px-3 py-2 bg-white/[0.02] items-center">
+                  <input className={inputCls} placeholder="session" value={newBuf.tmux_session} onChange={e => setNewBuf(b => ({ ...b, tmux_session: e.target.value }))} />
+                  <input className={inputCls} placeholder="sphere" value={newBuf.sphere} onChange={e => setNewBuf(b => ({ ...b, sphere: e.target.value }))} />
+                  <input className={inputCls} placeholder="workdir" value={newBuf.workdir} onChange={e => setNewBuf(b => ({ ...b, workdir: e.target.value }))} />
+                  <input className={inputCls} placeholder="model" value={newBuf.default_model} onChange={e => setNewBuf(b => ({ ...b, default_model: e.target.value }))} />
+                  <select className={inputCls} value={String(newBuf.active)} onChange={e => setNewBuf(b => ({ ...b, active: e.target.value === 'true' }))}>
+                    <option value="true">on</option><option value="false">off</option>
+                  </select>
+                  <div className="flex gap-1">
+                    <button onClick={addAgent} className="text-green-400/70 hover:text-green-400 transition-colors"><Check size={11} /></button>
+                    <button onClick={() => { setAdding(false); setNewBuf(BLANK_AGENT); setErr('') }} className="text-white/20 hover:text-white/50 transition-colors"><X size={11} /></button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setAdding(true)} className="w-full flex items-center gap-2 px-3 py-2 text-white/20 hover:text-white/50 hover:bg-white/[0.02] transition-colors text-[10px]">
+                  <Plus size={10} /> 新增 T2 Agent
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
