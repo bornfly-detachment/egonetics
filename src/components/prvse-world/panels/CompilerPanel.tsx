@@ -187,7 +187,7 @@ function ViolationCard({ violation }: { violation: ConstitutionViolation }) {
             {cfg.label}
           </span>
           <span className="text-[9px] font-mono text-white/30">
-            {violation.rule}
+            {violation.ruleId}
           </span>
         </div>
         <div className="text-[10px] font-mono text-white/50 mt-0.5">
