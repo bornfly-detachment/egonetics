@@ -99,7 +99,8 @@ ${tagTreeText}
 // ── T1：校验 T0 输出 ──────────────────────────────────────────────────
 
 async function t1Verify(content, t0Result, tagTreeText) {
-  const { client, model } = getClientForTier('T1')
+  const engine = createLLMEngine('T1')
+  const model = engine._model
 
   const systemPrompt = `你是 PRVSE 三问分类校验器（T1 校验层）。
 验证 T0 模型的分类是否正确，指出错误或冲突。
