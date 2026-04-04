@@ -357,17 +357,24 @@ async function* runQuery(prompt, opts = {}) {
     // 发 prompt
     execSync(`tmux send-keys -t ${pane} -- ${JSON.stringify(prompt)} Enter`)
 
-    // 等待 claude 开始响应
-    await new Promise(r => setTimeout(r, 1000))
+    // 短暂等待 claude 开始处理
+    await new Promise(r => setTimeout(r, 300))
 
     const deadline = Date.now() + 90000
     while (Date.now() < deadline) {
-      await new Promise(r => setTimeout(r, 500))
+      await new Promise(r => setTimeout(r, 400))
       try {
         const raw = execSync(`tmux capture-pane -t ${pane} -p -S -30 2>/dev/null || true`, { encoding: 'utf8' })
         const out = stripAnsi(raw)
 
-        // 检测交互式 prompt，relay 到前端
+        // 模型选择菜单 — 后端自动处理，绝不转发前端
+        if (isModelSelectionMenu(out)) {
+          await switchModelInClaude(pane, opts.model ?? null)
+          await new Promise(r => setTimeout(r, 400))
+          continue
+        }
+
+        // 其他交互式 prompt（非模型菜单）— relay 到前端
         const interactive = detectInteractivePrompt(out)
         if (interactive) {
           yield { type: 'interactive_prompt', content: interactive.content, options: interactive.options, pane }
