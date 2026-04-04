@@ -1,12 +1,14 @@
 /**
  * server/lib/code-agent.js
  *
- * tmux-based claude 通信：
- *   - tmux session `egonetics-coding-agent` 里保持一个 claude --dangerously-skip-permissions
- *   - send-keys 发 prompt
- *   - 等 claude 提示符恢复后，capture-pane 取截面，过滤工具调用 UI，提取纯文字响应
+ * tmux-based Claude Code Agent 通信层：
+ *   1. 确保 tmux session `egonetics-coding-agent` 中有 claude --dangerously-skip-permissions 在跑
+ *   2. tmux send-keys 发 prompt
+ *   3. 轮询 pane 等 ╭─ 提示符（response done）
+ *   4. 读 ~/.claude/projects/<key>/<session>.jsonl，按 timestamp 过滤新 assistant 条目
+ *   5. 只返回 text + thinking block，跳过 tool_use / tool_result
  *
- * 不 spawn claude，不用 socket，不用 pipe-pane。
+ * 架构约束：不 spawn 新进程，不用 socket，不用 pipe-pane。
  */
 
 'use strict'
