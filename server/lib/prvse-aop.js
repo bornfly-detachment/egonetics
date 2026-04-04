@@ -57,9 +57,6 @@ function loadProtocolRules(pagesDb) {
 // ── T0：本地模型三问分类 ──────────────────────────────────────────────
 
 async function t0Classify(content, tagTreeText, sourceMeta) {
-  const engine = createLLMEngine('T0')
-  const model = engine._model
-
   const systemPrompt = `你是 PRVSE 三问分类器（T0 感知层）。
 给定内容，从提供的标签树中选择标签，完成三问分类。
 输出格式必须是合法 JSON，不要添加任何多余文字。`
@@ -84,16 +81,16 @@ ${tagTreeText}
 }`
 
   try {
-    const { content: text } = await engine.call(
+    const { content: text } = await t0.call(
       [{ role: 'user', content: userPrompt }],
       { maxTokens: 1024, system: systemPrompt }
     )
     // 提取 JSON（T0 可能输出带注释的文本）
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('T0 返回非 JSON: ' + text.slice(0, 200))
-    return { ok: true, result: JSON.parse(jsonMatch[0]), model }
+    return { ok: true, result: JSON.parse(jsonMatch[0]), model: 'qwen3.5-0.8b' }
   } catch (err) {
-    return { ok: false, error: err.message, result: null, model }
+    return { ok: false, error: err.message, result: null, model: 'qwen3.5-0.8b' }
   }
 }
 
