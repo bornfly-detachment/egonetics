@@ -13,20 +13,20 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { ChevronRight, ArrowLeft, MessageSquare } from 'lucide-react'
 
-/** 书签矢量图标 — 标签形 + 顶部圆环 */
-function BookmarkTag({ size = 15, color = '#fff', filled = false }: { size?: number; color?: string; filled?: boolean }) {
+/** 书签吊牌图标 — 五边形标签 + 小圆孔 */
+function BookmarkTag({ size = 16, color = '#fff', filled = false }: { size?: number; color?: string; filled?: boolean }) {
   return (
-    <svg width={size} height={size * 1.4} viewBox="0 0 1024 1434" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* 圆环 */}
-      <circle cx="512" cy="200" r="140" stroke={color} strokeWidth={filled ? 0 : 70} fill={filled ? color : 'none'} />
-      {filled && <circle cx="512" cy="200" r="80" fill="rgba(0,0,0,0.6)" />}
-      {/* 书签体 */}
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
-        d={`M300 340 L300 1300 L512 1130 L724 1300 L724 340 A200 200 0 0 0 300 340Z`}
+        d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8 8a2 2 0 0 0 2.828 0l7.172-7.172a2 2 0 0 0 0-2.828l-8-8Z"
         fill={filled ? color : 'none'}
         stroke={color}
-        strokeWidth={filled ? 0 : 55}
+        strokeWidth="1.8"
+        strokeLinecap="round"
         strokeLinejoin="round"
+      />
+      <circle cx="7.5" cy="7.5" r="1.5"
+        fill={filled ? 'rgba(0,0,0,0.5)' : color}
       />
     </svg>
   )
