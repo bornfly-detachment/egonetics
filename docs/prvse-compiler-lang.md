@@ -1,826 +1,748 @@
-# PRVSE Compiler Language Specification
+# PRVSE Compiler — TypeScript Language Specification
 
-> Source of truth: `pages.db → tag_trees` (278 nodes) + `hm_protocol` (120 entries)
-> Generated: 2026-04-02
-> Purpose: 将 Tag Tree 语义树形式化为编译器可执行的类型系统
+> Version: 2.0.0
+> Last sync: 2026-04-04
+> Source of truth: `docs/prvse-compiler-design.md`
+> Purpose: 将 design.md 的语言无关规范转化为 TypeScript 可执行的类型系统
 
 ---
 
 ## 0. 总览
 
 ```
-任意信息输入
-    │
-    ▼ Lexer: 切分为 Token（P 分类）
-    ▼ Parser: 组装为 AST（R 连接 + 结构校验）
-    ▼ Semantic Analysis: 宪法裁决（V gate + 权限检查）
-    ▼ IR Generation: PRVSE Graph Node + Edge
-    ▼ Codegen: S 状态转移指令 → E 演化事件
-    │
-    ▼ Kernel Runtime (Tick Loop)
+Raw Input → [Scanner] → PatternToken (High-IR)
+                            ↓
+         → [Binder]  → MidIR (narrowed tokens + edges + gates + constitution bindings)
+                            ↓
+         → [Checker] → LowIR (validated instructions + violations + permission level)
+                            ↓
+         → [Emitter] → Kernel Patches + Effects + Evolution Events
 ```
 
-五根（Root Primitives）:
+核心原则：**编译不通过就不运行** — blocked = no execution, period.
+
+五根（Root Primitives）在流水线中的角色：
 
 | 根 | ID | 编译器角色 |
 |----|-----|-----------|
-| **P** Pattern | `tag-p` | Lexer — 信息的物理/语义/价值分类 |
-| **R** Relation | `tag-r` | Parser — 节点间连接的合法性与性质 |
-| **V** Value | `tag-v` | Semantic Analysis — 约束门/奖励函数 |
-| **S** State | `tag-s` | Codegen Target — 状态转移指令 |
-| **E** Evolution | `tag-e` | Runtime — 演化事件/系统进化 |
-
-每根的三问结构（Source / Nature / Destination）= 编译器的输入/处理/输出。
+| **P** Pattern | `tag-p` | Scanner 输入 — 信息原语，三态驱动 |
+| **R** Relation | `tag-r` | Binder — 节点连接的合法性与性质 |
+| **V** Value | `tag-v` | Checker — 校验清单驱动的大法官 |
+| **S** State | `tag-s` | Emitter Target — 状态转移指令 |
+| **E** Evolution | `tag-e` | Emitter Output — 演化事件/系统进化 |
 
 ---
 
-## 1. P — Pattern（Lexer 层：信息分类）
+## 1. P — Pattern（信息原语）
 
-> 编译器第一步：任何输入信息必须被分类为一个 Pattern Token
-
-### 1.1 Source — 从哪来（输入源声明，必填）
+### 1.1 三态（State）
 
 ```typescript
-type P_Source =
-  | P_External   // 外部来源——需给出明确信息源
-  | P_Internal   // 内部来源——需给出组件连接
+type PState =
+  | 'external'   // 原始信息，尚未经过 L0 验证
+  | 'candidate'  // 通过 L0 验证，尚未经过实践验证
+  | 'internal'   // 实践验证通过，确定性，工程可控
+
+// 宪法规则：external → internal 无捷径
+// 即使内部生成的假设/规则，也必须经过实践验证才能成为 internal
 ```
 
-#### 1.1.1 外部来源
+### 1.2 Origin（链式溯源）
 
 ```typescript
-type P_External =
-  | 'user_input'       // P-S1 用户输入
-  | 'env_perception'   // P-S2 环境感知
-  | 'external_search'  // P-S3 外部检索
-  | 'external_push'    // P-S4 外部推送
-  | 'external_api'     // P-S5 外部信息接口
-  | 'llm_api_call'     // 大模型API调用
-```
+type POriginDomain = 'internal' | 'external'
 
-#### 1.1.2 内部来源
+// 内部来源 — 天然合法
+type PInternalSource =
+  | 'user_input'      // 人类主体操作
+  | 'model_call'      // 内部 AI 推理/生成
+  | 'module_output'   // 组件输出 / 执行结果
+  | 'system_event'    // 状态变化 / 调度触发
+  | 'process_memory'  // 年鉴 / 生命记忆
 
-```typescript
-type P_Internal =
-  | 'execution_result'   // P-S5 执行结果
-  | 'component_output'   // P-S6 系统组件输出
-  | 'process_memory'     // P-S8 过程记忆
-```
+// 外部来源 — 需控制论过滤改造
+type PExternalSource =
+  | 'computable'   // 代码仓库、数据库、API 返回、数学计算（高确定性，完整溯源链）
+  | 'verifiable'   // 论文、实验数据、权威文档（可验证但需人/AI 判断）
+  | 'narrative'    // 社交媒体、个人表达、AI 生成内容（主观表达）
+  | 'sensor'       // 传感器、监控、自动采集（物理世界信号）
 
-### 1.2 Nature — 是什么（类型声明）
-
-#### 1.2.1 A 物理结构（静态标签，数据载体形式）
-
-```typescript
-type P_PhysicalType =
-  | 'text'     // 文本
-  | 'number'   // 数值
-  | 'image'    // 图像
-  | 'audio'    // 音频
-  | 'code'     // 代码
-```
-
-#### 1.2.2 B 语义结构（对功能性、实践的提前定性）
-
-```typescript
-type P_SemanticType =
-  | 'fact'        // 事实
-  | 'rule'        // 规则
-  | 'process'     // 过程
-  | 'relation'    // 关系
-  | 'evaluation'  // 评估
-  | 'narrative'   // 叙事
-  | 'goal_task'   // 目标任务
-```
-
-#### 1.2.3 C 价值属性（V 层前置标记）
-
-```typescript
-// 确定性〔单选〕
-type P_Certainty = 'certain' | 'uncertain'
-
-// 完备性〔单选〕
-type P_Completeness = 'complete' | 'incomplete'
-
-// 真值〔单选〕
-type P_Truth = 'true' | 'false'
-```
-
-#### 1.2.4 实践属性——S（运行时动态标签）
-
-```typescript
-type P_PracticeAttr = {
-  requirement: string          // 需求
-  global_flow: string          // 全局流程图
-  test_checklist: string[]     // 测试清单
-  evaluation_system: string    // 评价体系
-  conflict: string             // 冲突矛盾
-  process_record: string       // 过程记录
+interface POrigin {
+  domain: POriginDomain
+  source: PInternalSource | PExternalSource
+  // 链式结构：每条信息必须能追溯到其起始点
+  chain?: POrigin[]
 }
 ```
 
-### 1.3 Destination — 去哪里（输出路由，必填）
-
-> 认识论性质：推动 PRVSE 的改造和实践
+### 1.3 Physical Type（物理载体）
 
 ```typescript
-type P_Destination =
-  | 'P1_instruction'     // 指令信息 Instruction
-  | 'P2_retrieval'       // 获取信息 Retrieval
-  | 'P3_execution'       // 执行信息 Execution
-  | 'P4_interaction'     // 交互反馈 Interaction
-  | 'P5_introspection'   // 内省信息 Introspection
-  | 'P6_reasoning'       // 推理信息 Reasoning
-  | 'P7_memory'          // 记忆信息 Memory
+// L0 级分类，纯规则，无需语义理解
+type PPhysicalType =
+  | 'text'       // 自然语言
+  | 'number'     // 数值 / 度量
+  | 'code'       // 程序 / 脚本 / 配置
+  | 'structured' // JSON / 表格 / 数据库记录
+  | 'image'      // 图像
+  | 'audio'      // 音频
+  | 'video'      // 视频
+  | 'stream'     // 实时事件流 / 传感器流
+  | 'mixed'      // 代码+注释 / 图像+文字 / 多模态
 ```
 
-### 1.4 Pattern Token 完整类型
+### 1.4 Level（三级形态）
+
+```typescript
+type PLevel =
+  | 'L0_atom'     // 最小完备信息单元：具体、完整，必须含有价值信息
+  | 'L1_molecule' // P+R+V 组合结构：高内聚低耦合工程模块
+  | 'L2_gene'     // L1 实践的抽象：最少内容，最大覆盖
+
+// 宪法规则：Level ≠ Power
+// L1 可以自升为 L2 候选（需要规则验证 + 人类确认）
+// "谁最强谁最好就是谁" — 能力决定权威，而非层级
+```
+
+### 1.5 Communication Direction（通信方向）
+
+```typescript
+type PCommunication =
+  | 'bottom_up'  // L1 涌现 → L2 候选（需规则验证 + 人类二次确认）
+  | 'top_down'   // 高层抽象指导实践
+  | 'lateral'    // 同级通信（由 R + 宪法规则决定，A→B / 广播）
+```
+
+### 1.6 Narrowable 渐进定型原语
+
+```typescript
+type Narrowable<T> =
+  | { resolved: true;  value: T }   // 字段已分类
+  | { resolved: false }             // 仍未知 → 触发权限降级
+```
+
+### 1.7 PatternToken（Scanner 输出）
 
 ```typescript
 interface PatternToken {
-  // === 必填 ===
-  source: P_Source                    // 从哪来
-  physical_type: P_PhysicalType       // A 物理结构
-  semantic_type: P_SemanticType       // B 语义结构
-  destination: P_Destination          // 去哪里
+  // === 必填（Scanner 阶段确定）===
+  id: string                          // 唯一 Token 标识符
+  timestamp: number                   // 创建时间（epoch ms）
+  rawContent: string                  // 原始内容（审计用，不可篡改）
+  origin: POrigin                     // 链式溯源 — 入口时必须声明
+  state: PState                       // 外部来源 → 'external'；内部 → 'candidate'
 
-  // === 价值前置标记 ===
-  certainty: P_Certainty              // 确定/不确定
-  completeness: P_Completeness        // 完整/残缺
-  truth: P_Truth                      // 真/假
+  // === Narrowable 字段（通过流水线逐步收窄）===
+  physical: Narrowable<PPhysicalType>
+  level: Narrowable<PLevel>
+  communication: Narrowable<PCommunication>
+}
 
-  // === 元数据 ===
-  timestamp: number
-  raw_content: string                 // 原始输入内容
+// Narrowing Level（决定最大权限）
+type NarrowingLevel =
+  | 'full'    // 3 个 Narrowable 字段全部 resolved → 最大 T2
+  | 'partial' // 1-2 个 resolved → 最大 T1
+  | 'minimal' // 0 个 resolved → 最大 T0，severity = downgrade
+```
+
+---
+
+## 2. Scanner（Lexer）
+
+```typescript
+interface ScannerInput {
+  content: string
+  origin: POrigin
+  hints?: Partial<{
+    physical: PPhysicalType
+    level: PLevel
+  }>
+}
+
+// 分类规则（启发式，生产环境由 LLM 替换）
+const SCANNER_RULES = {
+  physical: {
+    // 数字模式 → 'number'
+    // 代码信号（括号/关键字/箭头）≥2 个 → 'code'
+    // 以 { 或 [ 开头且合法 JSON → 'structured'
+    // 默认非空 → 'text'
+    // 空 → unresolved
+  },
+  state: {
+    // external origin → 'external'
+    // internal origin → 'candidate'（已过系统边界，等待实践）
+  },
+  level: {
+    // 数值 / 结构化 / 来自 computable 的代码 → 'L0_atom'
+    // 内容引用多个组件或系统 → 'L1_molecule'
+    // 默认 → unresolved（留给 Binder）
+  },
+  communication: 'always_unresolved_at_scanner' // 需要上下文
 }
 ```
 
 ---
 
-## 2. R — Relation（Parser 层：连接合法性）
+## 3. Binder
 
-> 编译器第二步：Pattern Token 之间通过 Relation 组装为 AST
+### 3.1 Purpose
 
-### 2.1 Source — 关系从哪来（因果来源）
+确定性推断 — 无 LLM 调用。收窄未解析字段 + 绑定宪法规则 + 构造 MidIR。
 
-```typescript
-type R_Source =
-  | R_SystemInternal   // 系统元组件内在逻辑
-  | R_Communication    // 通信（信息流向）
-  | R_TimeFlow         // 时间流向
-
-type R_SystemInternal =
-  | 'pattern'      // 来自 Pattern
-  | 'state'        // 来自 State
-  | 'evolution'    // 来自 Evolution
-  | 'value'        // 来自 Value
-
-type R_Communication =
-  | 'human'        // 人
-  | 'ai'           // AI
-  | 'env'          // 环境信息
-  | 'system'       // 系统内部通信机制
-
-type R_TimeFlow =
-  | 'irreversible_flow'    // 不可逆单向时间流
-  | 'data_timeline'        // 系统数据时间线
-```
-
-### 2.2 Nature — 关系是什么（边的属性系统）
-
-#### A 基本属性（物理特征）
+### 3.2 Narrowing Rules
 
 ```typescript
-// A1 方向性〔单选〕
-type R_Direction = 'none' | 'one_way' | 'bidirectional'
+// Level 推断（从 physical + origin）
+const BINDER_LEVEL_RULES = {
+  'code + internal module_output': 'L0_atom',       // 执行产物
+  'internal system_event/module_output result': 'L0_atom', // 确定性输出
+  'external narrative origin': 'L0_atom',           // 原始输入，最低形态
+  'content with P+R+V references': 'L1_molecule',
+  'content referencing constitution/goals': 'L2_gene'
+}
 
-// A2 确定性〔单选〕
-type R_Certainty = 'deterministic' | 'probabilistic' | 'fuzzy'
-
-// A3 时间性〔单选〕
-type R_Temporal = 'simultaneous' | 'sequential' | 'cyclic'
+// Communication 推断（从 origin + level）
+const BINDER_COMM_RULES = {
+  'internal module_output or system_event': 'lateral', // 同级信号
+  'external': 'bottom_up',                            // 从外部进入，向上
+  'level L2': 'top_down'                              // 抽象指导实践
+}
 ```
 
-#### B 关系性质（语义分类）
+### 3.3 Constitution Bindings
 
 ```typescript
-// B1 逻辑关系
-type R_Logic = 'deductive' | 'inductive' | 'analogical'
+interface ConstitutionRule {
+  id: string
+  rule: string
+  permission: PermissionTier
+  appliesWhen: (token: PatternToken) => boolean
+}
 
-// B2 因果关系
-type R_Causal = 'direct' | 'indirect' | 'counterfactual'
-
-// B3 过程关系
-type R_Process = 'conditional_transform' | 'quantitative_accumulation' | 'qualitative_emergence'
-
-// B4 辩证关系（三要素）
-type R_Dialectic = 'oppose' | 'transform' | 'unify'
-  // oppose: 根本对立
-  // transform: 转化条件
-  // unify: 高层统一
-
-// B5 关系强度〔单选〕
-type R_Strength = 'positive' | 'negative'
+const CONSTITUTION_RULES: ConstitutionRule[] = [
+  { id: 'const-001', rule: 'L0 atoms: 任意执行节点可读写', permission: 'T0',
+    appliesWhen: t => t.level.resolved && t.level.value === 'L0_atom' },
+  { id: 'const-002', rule: 'L1 molecules 需要推理权限', permission: 'T1',
+    appliesWhen: t => t.level.resolved && t.level.value === 'L1_molecule' },
+  { id: 'const-003', rule: 'L2 genes 需要演化权限', permission: 'T2',
+    appliesWhen: t => t.level.resolved && t.level.value === 'L2_gene' },
+  { id: 'const-004', rule: '外部来源必须声明溯源链', permission: 'T0',
+    appliesWhen: t => t.origin.domain === 'external' },
+  { id: 'const-005', rule: 'external→candidate 需要 L0 验证', permission: 'T0',
+    appliesWhen: t => t.state === 'external' },
+  { id: 'const-006', rule: 'candidate→internal 需要实践验证', permission: 'T1',
+    appliesWhen: t => t.state === 'candidate' },
+  { id: 'const-007', rule: '禁止 external 直接变为 internal', permission: 'BLOCK',
+    appliesWhen: () => false /* Checker 阶段独立检测 */ },
+]
 ```
 
-### 2.3 Destination — 关系去哪里（边的功能）
-
-```typescript
-type R_Destination =
-  | 'R_D1_drive_reasoning'       // 驱动推理
-  | 'R_D2_support_value_calc'    // 支撑价值计算
-  | 'R_D3_record_evolution'      // 记录演化依据
-  | 'R_D4_execute_constraint'    // 执行约束检查
-  | 'R_D5_activate_related'      // 激活关联节点
-```
-
-### 2.4 Relation Edge 完整类型
+### 3.4 MidIR
 
 ```typescript
 interface RelationEdge {
-  // === 端点 ===
-  source_node: NodeRef         // 起点（P|R|V|S|E）
-  target_node: NodeRef         // 终点（P|R|V|S|E）
+  id: string
+  sourceNode: string
+  targetNode: string
+  infoLevel: 'L0_logic' | 'L1_conditional' | 'L2_existential'
+  direction: 'none' | 'one_way' | 'bidirectional'
+  certainty: 'deterministic' | 'probabilistic' | 'fuzzy'
+  temporal: 'simultaneous' | 'sequential' | 'cyclic'
+  logic?: 'deductive' | 'inductive' | 'analogical'            // L0
+  causal?: 'condition' | 'temporal' | 'causal' | 'process'    // L1
+  dialectic?: 'oppose' | 'transform' | 'unify'                // L2
+  strength: 'positive' | 'negative'
+  edgeType: 'contains' | 'constraint' | 'mutual_constraint' | 'signal' | 'derives' | 'directed'
+  propagation: 'forward' | 'backward' | 'bidirectional'
+  priority: number
+  destination: 'R_D1' | 'R_D2' | 'R_D3' | 'R_D4' | 'R_D5'
+}
 
-  // === 来源声明 ===
-  origin: R_Source
+interface ValueGate {
+  l0?: VL0Assessment
+  l1?: VL1Assessment
+  l2?: VL2Assessment
+  onFail: 'reject' | 'escalate' | 'downgrade'
+}
 
-  // === 基本属性 A ===
-  direction: R_Direction       // A1
-  certainty: R_Certainty       // A2
-  temporal: R_Temporal         // A3
-
-  // === 关系性质 B（至少选一类）===
-  logic?: R_Logic              // B1
-  causal?: R_Causal            // B2
-  process?: R_Process          // B3
-  dialectic?: R_Dialectic      // B4
-  strength: R_Strength         // B5
-
-  // === 功能目标 ===
-  destination: R_Destination
-
-  // === 编译器需要的（Tag Tree 缺失，需补充）===
-  // propagation: 'forward' | 'backward' | 'bidirectional'
-  // priority: number
-  // edge_type: 'contains' | 'constraint' | 'mutual_constraint'
-  //          | 'signal' | 'derives' | 'directed'
+interface MidIR {
+  tokens: PatternToken[]
+  edges: RelationEdge[]
+  gates: ValueGate[]
+  constitutionBindings: Map<string, ConstitutionRule[]> // tokenId → rules
 }
 ```
 
 ---
 
-## 3. V — Value / Reward（Semantic Analysis 层：约束门）
+## 4. Checker
 
-> 编译器第三步：任何操作通过 V gate 才允许执行
-
-### 3.1 Source — 价值条件从哪来
+### 4.1 Permission Hierarchy
 
 ```typescript
-type V_Source =
-  | 'computer_system'    // 计算机系统（客观可计算）
-  | 'ai_model'           // AI 模型（概率性输出）
-  | 'human_narrative'    // 人 → 主体叙事（V-H1）
-  | 'external_narrative' // 人 → 外部叙事（V-H2）
+type PermissionTier = 'T0' | 'T1' | 'T2' | 'T3' | 'BLOCK'
+
+// T3（生变论，bornfly creator）> T2（演化）> T1（推理）> T0（执行）
+// 对外展示永远是三级（T0/T1/T2），T3 仅内部
+// 低层不可修改高层
 ```
 
-### 3.2 Nature — 价值维度
+### 4.2 State Transition Rules
 
 ```typescript
-// 时间性〔单选〕
-type V_Temporal = 'static' | 'dynamic'
+type StateTransitionRule = {
+  from: PState
+  to: PState
+  condition: string
+  allowed: boolean
+}
 
-// 优化范围〔单选〕
-type V_Scope = 'local' | 'global'
-
-// 确定性〔单选〕
-type V_Certainty = 'deterministic' | 'uncertain'
-
-// 可控性〔单选〕
-type V_Control = 'controllable' | 'uncontrollable'
-
-// 基线关系〔单选〕
-type V_Baseline = 'maintain' | 'challenge'
+const STATE_TRANSITIONS: StateTransitionRule[] = [
+  { from: 'external',   to: 'candidate', condition: 'L0 验证通过（格式+溯源+基本分类）', allowed: true },
+  { from: 'candidate',  to: 'internal',  condition: '实践验证确认（测试+工程确定性）', allowed: true },
+  { from: 'internal',   to: 'internal',  condition: '正常运行', allowed: true },
+  { from: 'external',   to: 'internal',  condition: '禁止！无捷径', allowed: false }, // BLOCK
+  { from: 'any' as PState, to: 'external', condition: '失效（发现错误，撤销信任）', allowed: true },
+]
 ```
 
-### 3.3 Destination — 价值对谁负责
+### 4.3 Edge Legality Matrix（PRVSE 循环：P→R→V→S→E→P）
 
 ```typescript
-type V_Destination =
-  | 'V_D1_align_human_preference'   // 对齐人的价值偏好
-  | 'V_D2_task_completion'          // 对完成任务负责
-  | 'V_D3_system_evolution'         // 对系统进化负责
+type EdgeAllowedTypes = {
+  [key: string]: RelationEdge['edgeType'][]
+}
+
+const EDGE_LEGALITY: EdgeAllowedTypes = {
+  'P→R': ['directed', 'signal', 'derives'],
+  'R→V': ['constraint', 'directed'],
+  'V→S': ['directed', 'constraint'],
+  'S→E': ['directed', 'signal'],
+  'E→P': ['directed', 'derives'],
+  'P→P': ['contains'],
+  'V→V': ['mutual_constraint'],
+  'R→R': ['mutual_constraint', 'derives'],
+  'S→R': ['signal'],   // 反馈
+  'E→V': ['directed'],
+  'E→S': ['directed'],
+  // 禁止：'V→P', 'S→P', 'P→S'（必须走完整循环）
+}
 ```
 
-### 3.4 V Metric Types（来自 hm_protocol）
+### 4.4 Info Level Policies
 
 ```typescript
-// V1 客观指标 — 确定性度量
-type V1_Metric =
-  | { type: 'counter';           data: uint;   aggregation: 'sum' | 'max' | 'last' }
-  | { type: 'timer';             data: float;  unit: 's' }
-  | { type: 'token_consumption'; data: { input: number; output: number }; scale: 'K' | 'M' | 'B' }
-  | { type: 'probability';       data: float;  range: [0, 1]; precision: 2 }
-  | { type: 'binary';            data: 0 | 1 }
+interface InfoLevelPolicy {
+  canModifyConstitution: boolean
+  canCreateNodes: boolean
+  canDelete: boolean
+  maxPermission: PermissionTier
+  requiresVerification: boolean
+}
 
-// V2 外部概率 — AI/外部评估
-type V2_Metric =
-  | 'confidence'
-  | 'relevance_prob'
-  | 'causal_prob'
-  | 'prediction_prob'
-  | 'narrative_legitimacy'
-  | 'narrative_completeness'
-  | 'narrative_logic'
-// 全部: output ∈ [0, 1], precision = 2
-
-// V3 内部评价 — 主观/宪法评估
-type V3_Metric =
-  | 'constitutional_rule'       // template=true, instantiable
-  | 'value_alignment'
-  | 'cognitive_eval'
-  | 'narrative_consistency'
-  | 'prediction_prob_internal'
-// 全部: output ∈ [0, 1], precision = 2
-
-// φ 因子 — 独立定义，运行时组合
-type Phi =
-  | { id: 'φ_causal';       r_edges: ['derives', 'signal'];            formula: 'P(B|do(A)) · C(E)' }
-  | { id: 'φ_temporal';     r_edges: ['directed'];                     formula: 'P(B|A) · I(t_A < t_B)' }
-  | { id: 'φ_contradiction'; r_edges: ['mutual_constraint'];           formula: '1 - |P(A)-P(B)| · tension(E)' }
-  | { id: 'φ_dependency';   r_edges: ['constraint', 'contains'];       formula: 'P(B|A) · I(A→B, graph)' }
-
-// 运行时: P(G) = ∏ φ(Node, Edge, Constraint)  — factor graph
+const INFO_LEVEL_POLICIES: Record<string, InfoLevelPolicy> = {
+  L0_signal:       { canModifyConstitution: false, canCreateNodes: false, canDelete: false, maxPermission: 'T0', requiresVerification: false },
+  L1_objective_law:{ canModifyConstitution: false, canCreateNodes: true,  canDelete: false, maxPermission: 'T1', requiresVerification: false },
+  L2_subjective:   { canModifyConstitution: false, canCreateNodes: true,  canDelete: true,  maxPermission: 'T2', requiresVerification: true  },
+}
 ```
 
-### 3.5 Value Gate 完整类型
+### 4.5 Violation
+
+```typescript
+type ViolationSeverity = 'block' | 'downgrade' | 'warn'
+
+interface Violation {
+  ruleId: string
+  severity: ViolationSeverity
+  tokenId?: string
+  message: string
+}
+```
+
+### 4.6 LowIR
+
+```typescript
+interface LowIR {
+  instructions: StateInstruction[]  // blocked 时为空
+  violations: Violation[]
+  permissionLevel: PermissionTier   // 所有检查后的有效权限
+}
+
+// 核心函数签名
+function isConstitutionSatisfiedBy(midIR: MidIR, context: CheckerContext): LowIR
+```
+
+---
+
+## 5. V — Value（校验清单驱动的大法官）
+
+V 必须独立 — 不被其他组件 AI 渗透，对目标/宪法/资源中立负责，直接对自我控制论内核负责。
+**最强 V = 实践验证。**
+
+### 5.1 L0 — 确定性验证（100% 可判定，纯 L0 逻辑）
+
+```typescript
+// 客观指标（8 类）
+type VL0Metric =
+  | { type: 'accuracy';        value: number }              // 准确率
+  | { type: 'recall';          value: number }              // 召回率
+  | { type: 'precision';       value: number }              // 精确率
+  | { type: 'f1';              value: number }              // F1 Score
+  | { type: 'counter';         value: number; aggregation: 'sum' | 'max' | 'last' }
+  | { type: 'timer';           value: number; unit: 's' }   // 响应/执行/超时
+  | { type: 'resource';        value: number; unit: 'token' | 'memory' | 'storage' | 'api_cost' }
+  | { type: 'binary';          value: 0 | 1 }               // pass/fail
+  | { type: 'roi';             value: number }              // 投入产出比
+  | { type: 'marginal_return'; value: number }              // 边际收益
+
+// 规则清单（宪法约束，全部必须通过）
+type VL0RuleCheck = 'result' | 'function' | 'effect' | 'extreme' | 'format'
+
+interface VL0Assessment {
+  metrics: VL0Metric[]
+  ruleChecks: VL0RuleCheck[]
+  testSet: unknown[]    // V 独立持有，模块不可见
+}
+```
+
+### 5.2 L1 — 生命周期动态评估（时间/过程/条件）
+
+```typescript
+interface VL1ResourceBudget {
+  timeDeadline: number    // epoch ms
+  aiTokens: number
+  storage: number
+  memory: number
+}
+
+interface VL1Perceiver {
+  resourceConsumed: Partial<VL1ResourceBudget>
+  checklistProgress: number  // 0-1
+}
+
+type VL1RewardFunction =
+  | 'information'        // 信息量计算
+  | 'alignment'          // 目标对齐度
+  | 'ranking'            // 方案排名
+  | 'relevance'          // 信息相关性/价值
+  | 'optimality'         // 最优性检测（局部 vs 全局）
+  | 'constitution'       // 宪法原则验证
+  | 'opportunity_cost'   // 机会成本
+
+interface VL1Assessment {
+  budget: VL1ResourceBudget
+  perceiver: VL1Perceiver
+  rewardFunctions: VL1RewardFunction[]
+  homeostasisDeviation: number  // [0,1]，超过阈值触发偏离检测
+  isLocalOptima: boolean        // 是否陷入局部最优
+}
+```
+
+### 5.3 L2 — 宪法验证 + 实践测试
+
+```typescript
+interface VL2Assessment {
+  practiceVerification?: {
+    abTest: boolean           // AB 测试（固定资源+时间对比）
+    extremeCase: boolean      // 极端情况验证
+    generalizationTest: boolean // 泛化测试（测试/验证集分布一致性）
+  }
+  constitutionalCompliance: boolean
+  humanCommandValidation: boolean  // 人类指令也需规则清单验证
+  identityVerification?: boolean   // T3 权限：bornfly 身份动态验证
+}
+```
+
+### 5.4 ValueGate 完整类型
 
 ```typescript
 interface ValueGate {
-  source: V_Source
-  temporal: V_Temporal
-  scope: V_Scope
-  certainty: V_Certainty
-  control: V_Control
-  baseline: V_Baseline
-  destination: V_Destination
-
-  // 具体度量（至少一个）
-  v1?: V1_Metric       // 客观
-  v2?: V2_Metric[]     // 外部概率
-  v3?: V3_Metric[]     // 内部评价
-  phi?: Phi[]          // φ 因子
-
-  // 门控阈值
-  threshold: number    // 通过条件
-  on_fail: 'reject' | 'escalate' | 'evolve'
+  l0?: VL0Assessment
+  l1?: VL1Assessment
+  l2?: VL2Assessment
+  // 所有清单必须通过 + 所有指标必须达到阈值
+  threshold: number
+  onFail: 'reject' | 'escalate' | 'downgrade'
 }
 ```
 
 ---
 
-## 4. S — State（Codegen Target：状态转移指令）
+## 6. S — State（PRV 构成的完备组织的运行时状态）
 
-> 编译器第四步：通过 V gate 后产出状态转移指令
+S 不是孤立的状态机 — 是「P+R+V 现在在做什么」的整体。
+L2 战略目标生成 L1 任务；L1 执行反馈流回 L2。
 
-### 4.1 Source — 状态变化的驱动力
+### 6.1 Driving Force
 
 ```typescript
-type S_Source =
-  | 'S1_task_driven'        // 完成任务驱动
-  | 'S2_survival_driven'    // 生存驱动
-  | 'S3_evolution_driven'   // 系统进化驱动
-  | 'S4_exploration_driven' // 探索驱动
+type SDrivingForce =
+  | 'S1_task_driven'        // 具体目标分解为可执行任务
+  | 'S2_survival_driven'    // 系统自维护、资源不足、健康检查
+  | 'S3_evolution_driven'   // 系统改造自身、架构升级
+  | 'S4_exploration_driven' // 探索新可能、信息获取
 ```
 
-### 4.2 Nature — 状态属性
-
-#### A 节点分级〔单选〕
+### 6.2 L0 — 确定性控制论机器
 
 ```typescript
-type S_NodeTier =
-  | 'execution'    // 执行节点
-  | 'research'     // 认知节点
-  | 'update'       // 更新节点
+type SL0State =
+  | 'building'    // 初始化/编译/部署
+  | 'running'     // 正常服务
+  | 'updating'    // 版本升级/热更新
+  | 'maintaining' // 例行检查/优化
+  | 'bug'         // 故障/错误/需修复
+  | 'blocked'     // 等待依赖/资源不足
+
+// 每次转移有 reversible 标记（bug→building 可逆，archived 不可逆）
 ```
 
-#### B 节点状态机〔单选〕— 生命周期
+### 6.3 L1 — 任务生命周期（时间演进迭代执行）
 
 ```typescript
-type S_StateMachine =
-  | 'building'          // 构建中
-  | 'trial'             // 试运行
-  | 'stable'            // 稳定运行
-  | 'bug_suspended'     // Bug 挂起
-  | 'waiting'           // 等待指令挂起
-  | 'positive_loop'     // 正反馈迭代
-  | 'negative_loop'     // 负反馈预警
-  | 'archived'          // 归档
-```
+type SL1State =
+  | 'research'   // 技术调研（最佳算法/模型/代码库）
+  | 'proposal'   // 方案构建（L2 确认可行性，再做实施计划）
+  | 'building'   // 构建中（资源分配+生命周期启动）
+  | 'executing'  // 实践中（消耗资源）
+  | 'testing'    // V 测试（测评器验收）
+  | 'feedback'   // 反馈迭代（测试失败→分析→调整方案）
+  | 'delivered'  // 版本交付（V0/V1/V2... 里程碑成果）
+  | 'suspended'  // 挂起（等待外部依赖/资源补充/L2 决策）
+  | 'archived'   // 归档（完成或资源耗尽，保留上下文供复盘）
 
-#### XState 兼容定义（来自 hm_protocol）
-
-```typescript
-// 三维并行状态机
-type S_Machines = {
-  lifecycle: 'building' | 'running' | 'waiting' | 'suspended' | 'archived'
-  feedback:  'positive_loop' | 'negative_loop'
-  execution: 'retrying' | 'success' | 'failure'
-}
-
-// 状态转移 = V gate 守卫
-interface StateTransition {
-  from: string
-  to: string
-  trigger: string               // 事件名
-  guard: ValueGate[]            // 必须全部通过
+interface SL1FeedbackLoop {
+  positiveFeedback: boolean   // V 测试通过 / 指标改善 → 继续推进
+  negativeFeedback: boolean   // V 测试失败 → 分析根因
+  consecutiveFailures: number
+  circuitBreakerThreshold: number  // N 次连续失败 → 强制归档或上报 L2
+  versionRecord: Array<{ version: string; planDelta: string; effectDelta: string }>
 }
 ```
 
-### 4.3 Destination — 状态变化的影响
+### 6.4 L2 — 战略目标生命周期
 
 ```typescript
-// C 更新权属〔单选〕
-type S_Owner = 'auto' | 'passive'
-  // auto: 自主状态更新
-  // passive: 被动状态更新
+type SL2State =
+  | 'active'      // 正反馈推进（有利条件，增加投入）
+  | 'shelved'     // 搁置+学习者（时机不到，持续监控条件概率）
+  | 'resistance'  // 阻力判断（高阻力，当前判定不可行）
+  | 'decomposing' // 分解中（战略→短期→L1 任务调度）
+  | 'achieved'    // 目标达成
+  | 'abandoned'   // 放弃（长期评估确认不可行/不再需要）
 
-// D 更新影响
-type S_Effect =
-  | 'S_D_E1_trigger_perception'   // 触发上层感知
-  | 'S_D_E2_trigger_execution'    // 触发执行计划
-  | 'S_D_E3_trigger_evolution'    // 触发进化记录
-  | 'S_D_E4_trigger_communication' // 触发通信
+interface SL2ShelvedLearner {
+  monitoringSources: string[]
+  conditionalProbability: number  // [0,1]，超过阈值 → 推荐重启
+  confidenceAccumulated: number
+}
 ```
 
-### 4.4 State Instruction 完整类型
+### 6.5 State Effects
+
+```typescript
+type SEffect =
+  | 'trigger_perception'    // V 的 Perceiver 更新
+  | 'trigger_execution'     // 启动下游 L0/L1 任务
+  | 'trigger_evolution'     // E 记录状态变化
+  | 'trigger_communication' // 通知相关节点
+  | 'trigger_escalate'      // L1→L2，需要战略决策
+```
+
+### 6.6 StateInstruction
 
 ```typescript
 interface StateInstruction {
-  source: S_Source
-  node_tier: S_NodeTier
-  current_state: S_StateMachine
-  owner: S_Owner
-
-  transition: StateTransition     // 要执行的转移
-  effects: S_Effect[]             // 转移成功后触发
+  source: SDrivingForce
+  level: 'L0' | 'L1' | 'L2'
+  currentState: SL0State | SL1State | SL2State
+  targetState:  SL0State | SL1State | SL2State
+  guards: ValueGate[]          // 全部通过才允许转移
+  preconditions: string[]      // 其他节点必须先到达某状态
+  effects: SEffect[]           // 转移成功后触发
+  reversible: boolean
+  feedbackLoop?: SL1FeedbackLoop  // L1 任务专用
+  learner?: SL2ShelvedLearner     // L2 搁置目标专用
 }
 ```
 
 ---
 
-## 5. E — Evolution（Runtime：演化事件）
+## 7. E — Evolution（系统的自我改造引擎）
 
-> 编译器最终产物：状态转移执行后的系统变化记录
+S 管理「现在发生什么」；E 管理「系统如何改变、学习、进化」。
+演化能力 = 同等资源下智能水平的分水岭。
 
-### 5.1 E 的子树结构（来自 Tag Tree）
-
-```
-E — Evolution
-├── 信息分级
-│   ├── L0 信号层
-│   │   ├── 特征：不以人的意志为转移，客观事实
-│   │   ├── 实践：直接处理，无需上升到高层次
-│   │   │   ├── 一 无需思考和分析，直接走规则路由逻辑
-│   │   │   ├── 二 通信、信息压缩表示、信息处理，以提高效率为第一目的
-│   │   │   └── 三 用更少的代价处理更高的信息量
-│   │   └── 边界：必须是客观世界的计算机化
-│   ├── L1 客观规律层
-│   │   ├── 特征：理论上遵循客观规律，实践上可复现可验证
-│   │   ├── 实践：有限的，存在环境条件制约
-│   │   │   ├── 有限性——适用范围
-│   │   │   │   └── 明确系统的理论上限和下限
-│   │   │   └── 约束条件
-│   │   │       └── 需要建模，转化为客观规律的可计算模式
-│   │   └── 边界：科学已实验论证，理工科广泛实践验证过
-│   └── L2 主观认知层
-│       ├── 特征：人类大脑产物，主观、情绪化、叙事
-│       ├── 实践：无限的，AI幻觉来源，爽文意淫，消费主义
-│       │   ├── 叙事包装的半虚构
-│       │   │   ├── 一 任何叙事都是半虚构，警惕外部叙事控制
-│       │   │   └── 二 唯一价值是了解客观环境信息和外部主流认知
-│       │   └── 虚构
-│       │       ├── 一 必须警惕爽文化标签，毒害系统，产生幻觉
-│       │       ├── 二 好的作品，只可学习想象力和抽象认知
-│       │       └── 三 唯一价值是转化为更好的自我叙事
-│       └── 边界：必须经科学实验验证和人类社会中广泛论证
-│
-├── 人机交互协议
-│   ├── 资源权限通信层
-│   │   └── 通信机制
-│   │       ├── 信号通信
-│   │       │   ├── 感知器信号传递
-│   │       │   └── 系统规则路由触发
-│   │       ├── 自底向上—请求型通信
-│   │       │   └── diff处理
-│   │       │       ├── 全局最优VS局部最优
-│   │       │       └── 客观VS主观
-│   │       └── 自顶向下—控制型通信
-│   │           ├── 任务执行
-│   │           └── 系统结构改造
-│   ├── 分级约束控制层-控制论单元
-│   │   └── PRVSE规则流图
-│   ├── 实践层
-│   │   └── 自我控制论系统组件
-│   │       ├── 构造器
-│   │       ├── 控制器
-│   │       ├── 感知器
-│   │       │   ├── 计时器
-│   │       │   ├── 状态监控器
-│   │       │   └── 资源计算器
-│   │       ├── 测评器
-│   │       │   └── reward
-│   │       ├── 执行节点
-│   │       │   ├── 角色（前端/后端/产品/运维/内容创造/主体性）
-│   │       │   ├── 技术栈（React/TypeScript/Node.js/Python/SQLite）
-│   │       │   ├── 状态（待办/进行中/已完成/阻塞）
-│   │       │   ├── 优先级（高/中/低）
-│   │       │   └── 执行节点操作单元
-│   │       │       ├── P1 指令信息（→ 认知类）
-│   │       │       ├── P2 获取信息
-│   │       │       ├── P3 执行信息
-│   │       │       ├── P4 交互反馈
-│   │       │       ├── P5 内省信息
-│   │       │       ├── P6 推理信息
-│   │       │       └── P7 记忆信息
-│   │       ├── 通信器
-│   │       └── 过程记录器
-│   ├── 智能资源分级
-│   │   ├── T2级智能：最强AI—全局优化、构建
-│   │   │   └── claude code + opus4.6
-│   │   ├── T1级智能：执行节点模型—局部最优
-│   │   │   └── claude code + sonnet4.6 > minimax2.7
-│   │   └── T0级智能：本地小模型，感知AI
-│   │       └── Qwen3.5-0.8B（可RL训练，感知器/编译器/L0+部分L1控制器）
-│   ├── UI 组件库
-│   └── 系统角色
-```
-
-### 5.2 信息分级（编译器的信息可信度判定）
+### 7.1 L0 — 系统完整性维护
 
 ```typescript
-// 任何信息进入编译器，首先判定信息层级
-type InfoLevel =
-  | 'L0_signal'        // 不以人的意志为转移，客观事实
-  | 'L1_objective_law' // 遵循客观规律，可复现可验证
-  | 'L2_subjective'    // 人类大脑产物，主观，需验证
+type EL0Trigger =
+  | 'unknown_pattern'    // Pattern 无法编译/分类
+  | 'high_freq_error'    // 同类错误高频出现
+  | 'unsupported_exec'   // 理论可执行但 Kernel 不支持
+  | 'design_bottleneck'  // 过去的设计成为未来优化的瓶颈
 
-// 编译器行为随层级不同
-interface InfoLevelPolicy {
-  L0_signal: {
-    action: 'direct_route'   // 直接走规则路由，不需思考
-    trust: 'full'
-    processing: 'compress_and_transmit'
-  }
-  L1_objective_law: {
-    action: 'model_and_compute'  // 需要建模，转化为可计算模式
-    trust: 'verified'            // 科学实验论证过的理论边界内
-    boundary: 'finite'           // 有限的，存在环境条件制约
-    goal: 'approach_theoretical_upper_bound'
-  }
-  L2_subjective: {
-    action: 'verify_before_use'  // 必须经验证才具备可信度
-    trust: 'skeptical'           // 避免情绪化、虚构化、爽文化
-    boundary: 'infinite_but_dangerous'  // AI幻觉来源
-    guards: [
-      'reject_entertainment_as_fact',      // 警惕爽文化标签
-      'external_narrative_for_context_only', // 外部叙事仅供了解
-      'convert_to_self_narrative_if_valuable' // 好的转化为自我叙事
-    ]
-  }
+type EL0UpdateType = 'incremental' | 'modification'
+// incremental：添加新支持，对现有系统影响最小
+// modification：批量替换，需要 V 测试 + 宪法合规 + 人类审查
+```
+
+### 7.2 L1 — 学习模块构建 + AI 训练
+
+```typescript
+interface EL1LearningOutput {
+  trainedModels?: string[]        // 训练好的本地模型
+  optimizedPipelines?: string[]   // 优化的流水线
+  newCapabilities?: string[]      // 新系统能力
+  internalizedKnowledge?: string[] // 外部→内部结构化知识
+}
+
+type EL1ActivityType =
+  | 'training'              // 本地模型训练、深度学习范式探索
+  | 'optimization'          // 外部 API → 本地模型替换
+  | 'capability_expansion'  // 视频生成、语音、多模态、自定义能力
+```
+
+### 7.3 L2 — 主体性 + 生变论 + 原创价值
+
+```typescript
+interface EL2SubjectivityEngine {
+  internalNarrativeMaintained: boolean  // 内部叙事（与外部控制论叙事隔离）
+  antiInfiltration: boolean
+}
+
+interface EL2CognitiveEngine {
+  problemAwareness: string[]  // 发现概率分布之外的问题
+  intuitionStrength: number   // [0,1]，大量实践+学习后的涌现直觉
 }
 ```
 
-### 5.3 通信机制（编译器的 I/O 协议）
+### 7.4 EvolutionEvent
 
 ```typescript
-// 来自 hm_protocol: comm-l0, comm-l1, comm-l2
-type CommunicationLevel =
-  | { level: 'L0_descriptive';  risk: 'low';      policy: 'lenient' }
-  | { level: 'L1_request';      risk: 'high';     policy: 'policy_engine_verdict' }
-  | { level: 'L2_control';      risk: 'critical'; policy: 'dual_verification' }
+type ECommLevel =
+  | { level: 'L0_descriptive'; risk: 'low';      policy: 'lenient' }
+  | { level: 'L1_request';     risk: 'high';     policy: 'policy_engine_verdict' }
+  | { level: 'L2_control';     risk: 'critical'; policy: 'dual_verification' }
 
-// 信号通信 — 底层
-interface SignalComm {
-  perceiver_signal: 'passive_sense'    // 感知器信号传递
-  rule_route: 'trigger_on_match'       // 系统规则路由触发
-}
-
-// 请求型通信 — 自底向上
-interface RequestComm {
-  diff_handling: {
-    global_vs_local: 'optimize'        // 全局最优VS局部最优
-    objective_vs_subjective: 'arbitrate' // 客观VS主观
-  }
-  verdict: 'allow' | 'deny' | 'modify_and_retry'
-}
-
-// 控制型通信 — 自顶向下
-interface ControlComm {
-  task_execution: 'dispatch'           // 任务执行
-  structure_change: 'requires_t2_review' // 系统结构改造
-}
-```
-
-### 5.4 智能资源分级（编译器的执行资源路由）
-
-```typescript
-// 来自 hm_protocol: tier-t0, tier-t1, tier-t2
-interface ResourceTier {
-  T0: {
-    model: 'Qwen3.5-0.8B'
-    type: 'local'
-    capability: 'perception | signal_sense | fast_response'
-    rl_trainable: true
-    escalate_if: 'confidence < 0.6'
-    escalate_to: 'T1'
-  }
-  T1: {
-    model: 'MiniMax-M2.7'
-    type: 'api'
-    capability: 'task_execution | skills_extend | local_optimization'
-    escalate_if: 'complexity > 0.8 || requires_expert'
-    escalate_to: 'T2'
-    fallback_to: 'T0'
-  }
-  T2: {
-    model: 'claude-opus-4-6 | claude-sonnet-4-6'
-    type: 'api'
-    capability: 'global_optimization | construction | complex_reasoning'
-    escalate_if: null  // 顶层，无法升级
-    fallback_to: 'T1'
-    budget: '50 calls/day'
-  }
-}
-```
-
-### 5.5 权限层级（编译器的权限裁决）
-
-```typescript
-// 来自 hm_protocol: perm-t0 ~ perm-t3
-interface PermissionLayer {
-  T3_creator: {
-    subject: 'human:bornfly'
-    can: ['constitutional_crud', 'system_admin', 'agent_control', 'data_export']
-    cannot: []  // 无限制
-  }
-  T2_claude: {
-    subject: 'model:claude-*'
-    can: ['project_crud', 'plan_generation', 'complex_reasoning']
-    cannot: ['constitutional_modify', 'system_admin']
-  }
-  T1_minimax: {
-    subject: 'model:minimax-*'
-    can: ['task_execution', 'skills_extend']
-    cannot: ['plan_generation', 'constitutional_read']
-  }
-  T0_qwen: {
-    subject: 'local_model:qwen3.5-0.8b'
-    can: ['perception', 'signal_sense', 'fast_response', 'rl_trainable']
-    cannot: ['complex_reasoning']
-    escalate: 'to T1 for R and E operations'
-  }
-}
-
-// 核心裁决规则
-// 低层不可见高层信息: if viewer.permission < layer.level → hidden
-// 低层不可修改高层节点: if mutator.permission < target.permission → REJECT
-```
-
-### 5.6 Evolution Event 完整类型
-
-```typescript
 interface EvolutionEvent {
-  // === 触发 ===
-  trigger: StateInstruction       // 来自 S 层的状态转移
-  info_level: InfoLevel           // L0/L1/L2 信息分级
-  comm_level: CommunicationLevel  // 通信等级
-
-  // === 变更 ===
-  mutation_type: 'create' | 'update' | 'delete' | 'transition'
-  affected_nodes: NodeRef[]       // 波及的 PRVSE 节点
-  diff: {
-    before: any
-    after: any
-    conflict?: 'global_vs_local' | 'objective_vs_subjective'
-  }
-
-  // === 裁决 ===
-  permission_check: {
-    actor: PermissionLayer
-    target_level: number
-    verdict: 'allow' | 'deny' | 'escalate'
-  }
-
-  // === 资源 ===
-  executor: ResourceTier          // T0/T1/T2 谁来执行
-  
-  // === 记录 ===
+  id: string
   timestamp: number
-  chronicle_entry_id?: string     // 写入 Chronicle
+  trigger: StateInstruction              // 触发此事件的 S 层状态转移
+  infoLevel: 'L0_signal' | 'L1_objective_law' | 'L2_subjective'
+  commLevel: ECommLevel
+  mutationType: 'create' | 'update' | 'delete' | 'transition'
+  affectedNodes: string[]
+  actor: PermissionTier                  // 操作者的权限层级
+  executor: 'T0' | 'T1' | 'T2'          // 资源层级决定谁来执行
+  diff: { before: unknown; after: unknown }
+  levelTransition?: { from: PLevel; to: PLevel }  // 若触发信息层级升迁
+
+  // L0 专属
+  systemMaintenance?: { trigger: EL0Trigger; updateType: EL0UpdateType }
+  // L1 专属
+  learningModule?: EL1ActivityType
+  evolutionOutput?: EL1LearningOutput
+  // L2 专属
+  subjectivity?: EL2SubjectivityEngine
+  cognitive?: EL2CognitiveEngine
 }
 ```
 
 ---
 
-## 6. 系统组件（Kernel Components）
-
-> 来自 hm_protocol: kernel-comp + Tag Tree 实践层
+## 8. Emitter（Codegen）
 
 ```typescript
-// 来自 hm_protocol: kc-perception, kc-evaluator, kc-recorder, kc-controller
-interface KernelComponents {
-  perception_v1: {
-    role: '感知器'
-    inputs: ['env_signal', 'task_event', 'execution_error']
-    outputs: ['perception_result', 'bottom_up_trigger', 'state_snapshot']
-    trigger: 'continuous | event'
-    sub_components: ['timer', 'status_monitor', 'resource_calculator']
-  }
-  evaluator_v2: {
-    role: '测评器'
-    inputs: ['execution_result', 'expected_target', 'eval_criteria']
-    outputs: ['eval_form', 'feedback_signal', 'achievement_score']
-    trigger: 'post_execution'
-    sub_components: ['reward']
-  }
-  recorder_e: {
-    role: '记录器'
-    inputs: ['system_event', 'resource_consumption', 'state_transition']
-    outputs: ['structured_log', 'cost_report', 'audit_trail']
-    trigger: 'always_on'
-  }
-  controller: {
-    role: '控制器'
-    inputs: ['perception_signal', 'eval_result', 'human_t2_command']
-    outputs: ['state_transition', 'graph_dispatch', 'resource_schedule']
-    trigger: 'state_event | external'
-  }
-  constructor: {
-    role: '构造器'
-    inputs: ['plan', 'blueprint']
-    outputs: ['new_nodes', 'new_edges', 'structure_change']
-    trigger: 'on_demand'
-  }
-  communicator: {
-    role: '通信器'
-    inputs: ['any_message']
-    outputs: ['routed_message']
-    trigger: 'on_message'
-  }
+interface EmitterOutput {
+  patches: KernelPatch[]         // StateInstructions → 内核状态变更
+  effects: KernelEffect[]        // StateInstructions + EvolutionEvents → 副作用描述
+  events: EvolutionEvent[]       // Token 处理的审计记录
 }
+
+// 规则
+// 1. 任何 violation.severity = 'block' → 只输出 violation log，patches/effects 为空
+// 2. 每条 StateInstruction → 状态转移 patch + 转移记录 patch
+// 3. 每个处理的 token → EvolutionEvent（审计追踪）
+// 4. EvolutionEvent 永远产生 log effect（年鉴）+ 级联触发 effect
+// 5. 资源层级 = 权限级别 × 信息层级
 ```
 
 ---
 
-## 7. 图执行节点（Graph Nodes）
-
-> 来自 hm_protocol: graph-node
+## 9. Permission Tiers
 
 ```typescript
-// 执行图中的节点类型
-type GraphNode =
-  | { type: 'sense';   executor: 'local_ai';   component: 'perception_v1' }
-  | { type: 'plan';    executor: 'global_ai';  component: 'controller' }
-  | { type: 'execute'; executor: 'local_ai';   component: 'controller' }
-  | { type: 'test';    executor: 'local_ai';   component: 'evaluator_v2' }
-  | { type: 'archive'; executor: 'controller'; component: 'recorder_e' }
+interface PermissionTierDef {
+  tier: PermissionTier
+  name: string
+  scope: string
+  subjects: string[]
+}
 
-// 执行流: sense → plan → execute → test → archive
-//                                    ↓ fail
-//                              negative_loop → replan
+const PERMISSION_TIERS: PermissionTierDef[] = [
+  {
+    tier: 'T0',
+    name: '执行/实践',
+    scope: '所有执行节点。读写 L0 数据，执行已验证指令',
+    subjects: ['local_model:qwen3.5-0.8b', 'execution_node']
+  },
+  {
+    tier: 'T1',
+    name: '推理/控制',
+    scope: 'AI 级处理。PRVSE 引擎：编译器、物理引擎、状态机',
+    subjects: ['model:minimax-*', 'prvse_engine']
+  },
+  {
+    tier: 'T2',
+    name: '演化权限',
+    scope: '人机协同演化。目标、宪法、资源',
+    subjects: ['model:claude-*']
+  },
+  {
+    tier: 'T3',
+    name: '生变论（内部）',
+    scope: '创造者权限。至高权限，不在外部三级中暴露',
+    subjects: ['human:bornfly']
+  },
+]
+
+// 核心规则：模型智能层级 ≠ 固定能力排名
+// T0 模型经过训练可能掌握 L2 能力
+// 权威随能力而来，不随标签而来
 ```
 
 ---
 
-## 8. 编译器缺失项（Tag Tree + hm_protocol 尚未定义）
+## 10. Appendix A：宪法规则汇总
 
-### 8.1 P 层缺失
+| ID | 规则 | 权限 | 触发条件 |
+|----|------|------|----------|
+| const-001 | L0 atoms：任意执行节点可读写 | T0 | level = L0_atom |
+| const-002 | L1 molecules 需要推理权限 | T1 | level = L1_molecule |
+| const-003 | L2 genes 需要演化权限 | T2 | level = L2_gene |
+| const-004 | 外部来源必须声明溯源链 | T0 | origin.domain = external |
+| const-005 | external→candidate 需要 L0 验证 | T0 | state = external |
+| const-006 | candidate→internal 需要实践验证 | T1 | state = candidate |
+| const-007 | 禁止 external 直接变为 internal | BLOCK | state=external AND target=internal |
+| const-008 | L0 信息不得含主观/叙事内容 | T0 | infoLevel=L0 AND comm=bottom_up from narrative |
+| const-009 | 关系层级不得超过上下文信息层级 | T0 | R.infoLevel > context.infoLevel |
 
-| 缺失 | 说明 | 影响 |
-|------|------|------|
-| Pattern 必填字段校验 | source + physical_type + semantic_type 哪些组合合法？ | Lexer 无法拒绝非法 Token |
-| 物理↔语义 兼容矩阵 | `audio` + `rule` 合法吗？`code` + `narrative` 合法吗？ | Parser 无法做类型检查 |
+---
 
-### 8.2 R 层缺失
+## 11. Appendix B：字段变更映射（Old → New）
 
-| 缺失 | 说明 | 影响 |
-|------|------|------|
-| EdgeRules 合法连接矩阵 | P→V 直连？V→V？S→P？ | Parser 无法校验 AST |
-| 传播语义 propagation | constraint 边 forward 还是 backward？ | Tick 传播引擎无法运行 |
-| 边优先级/冲突解决 | 两条冲突边谁赢？ | 裁决层无法工作 |
-
-### 8.3 E 层缺失
-
-| 缺失 | 说明 | 影响 |
-|------|------|------|
-| Evolution Schema | mutation_type 的输入/输出/前置条件 | Codegen 无目标格式 |
-| Evolution 触发条件 | 什么事件产生 Evolution？ | Runtime 不知何时触发 |
-
-### 8.4 跨层缺失
-
-| 缺失 | 说明 | 影响 |
-|------|------|------|
-| Graph Invariants | 全局不变量（无环、连通性、覆盖率） | 编译后的图可能不一致 |
-| S.guard → V 具体绑定 | `rewardMet` = 哪个 V 指标 ≥ 什么值？ | 状态机转移条件是空的 |
-| 信息分级 × 权限分级 交叉规则 | L2 信息能否被 T0 处理？ | 资源路由可能越权 |
+| 旧字段 | 处置 | 新位置 |
+|--------|------|--------|
+| `source` (PSource) | **替换** | `origin` (POrigin) — 扩展为链式溯源 |
+| `destination` (P1-P7) | **从 P 中移除** | 由 L1 路由决定（V+R 判断），不是 P 的属性 |
+| `physical` | **扩展** | 5 类 → 9 类（新增 structured, video, stream, mixed） |
+| `semantic` (PSemanticType) | **从 P 中移除** | 属于 R（关系决定语义分类） |
+| `certainty` | **从 P 中移除** | 属于 V（价值判断） |
+| `completeness` | **从 P 中移除** | 属于 V（价值判断） |
+| `truth` | **从 P 中移除** | 属于 V（价值判断） |
+| — | **新增** | `state`（三态：external/candidate/internal） |
+| — | **新增** | `level`（三级形态：L0_atom/L1_molecule/L2_gene） |
+| — | **新增** | `communication`（方向：bottom_up/top_down/lateral） |
+| — | **新增** | `Narrowable<T>`（渐进定型，未解析字段触发权限降级） |
