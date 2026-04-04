@@ -34,6 +34,12 @@ const ICON_MAP: Record<string, LucideIcon> = {
   // R layer
   Zap, Clock, TrendingUp, RefreshCw, Link, Sparkles,
   BookOpen, Route, Fingerprint, Lightbulb, Swords, Merge,
+  // V layer
+  Target, Crosshair, Focus, Gauge, Timer, Coins, BarChart2, CheckCircle,
+  ClipboardCheck, Puzzle, AlertOctagon, FileCheck,
+  Cpu, HardDrive, ListOrdered, Crown, Scale,
+  TrendingDown, OctagonX,
+  Expand, Eye, EyeOff, Wand2,
 }
 
 function Icon({ name, size = 14, className, style }: {
