@@ -53,6 +53,7 @@ export default function PrvseWorldView() {
   // Three-body simulation — figure-8 orbit, runs only in L3 world view
   const threeBodiesRef = useRef<Body[]>(initFigure8())
   const layerRef       = useRef<'L2' | 'L3'>('L3')  // shadow of `layer` for tick closure
+  const panelRatioRef  = useRef(0)  // shadow of panelRatio for tick closure
 
   // Root sphere IDs ordered to match figure-8 bodies [0,1,2]
   const ROOT_IDS = ['dim-constitution', 'dim-resources', 'dim-goals'] as const
