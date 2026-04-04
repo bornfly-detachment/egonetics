@@ -514,9 +514,7 @@ export default function ProtocolView() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const catMap: Record<string, string> = { 'permission-layer': 'layer', 'resource-tier': 'resource-tier', 'communication': 'communication' }
-      const apiCat = catMap[catFilter] ?? catFilter
-      const rows = await authFetch<ProtocolEntry[]>(apiCat ? `/protocol?category=${apiCat}` : '/protocol')
+      const rows = await authFetch<ProtocolEntry[]>(catFilter ? `/protocol?category=${catFilter}` : '/protocol')
       setEntries(rows)
     } finally { setLoading(false) }
   }, [catFilter])
