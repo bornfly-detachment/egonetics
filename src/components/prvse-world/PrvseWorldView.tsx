@@ -183,11 +183,16 @@ export default function PrvseWorldView() {
       if (layerRef.current === 'L3' && entitiesRef.current) {
         threeBodiesRef.current = stepBodies(threeBodiesRef.current, TB_DT)
         const bodies = threeBodiesRef.current
+        const pr = panelRatioRef.current
+        // Scale down spheres as panel grows; shift left to stay in visible area
+        const scale = Math.max(0.15, 1 - pr * 0.85)
+        const offsetX = -pr * SCENE_R * 0.9
         ROOT_IDS.forEach((id, i) => {
           const group = entitiesRef.current!.meshes.get(id)
           if (group) {
-            group.position.x = bodies[i].x * SCENE_R
-            group.position.y = bodies[i].y * SCENE_R
+            group.position.x = bodies[i].x * SCENE_R * scale + offsetX
+            group.position.y = bodies[i].y * SCENE_R * scale
+            group.scale.setScalar(scale)
           }
         })
       }
