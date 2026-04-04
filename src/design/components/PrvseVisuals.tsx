@@ -285,6 +285,64 @@ export function CommDirectionVisual({ vis }: { vis: Record<string, unknown> }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  R — Relation 关系层
+// ══════════════════════════════════════════════════════════════════════
+
+// ── R: relation-card — 关系类型卡片 (L0/L1/L2 共用) ──────────────────
+interface RSubtype { id: string; label: string; desc: string; icon: string }
+interface RSlider { left: string; right: string; default: number }
+
+const R_LEVEL_META: Record<string, { color: string; label: string; certainty: string }> = {
+  l0: { color: '#3b82f6', label: 'L0 逻辑关系', certainty: '确定性 · deterministic' },
+  l1: { color: '#10b981', label: 'L1 条件关系', certainty: '概率性 · probabilistic' },
+  l2: { color: '#8b5cf6', label: 'L2 存在关系', certainty: '模糊性 · fuzzy' },
+}
+
+export function RelationCardVisual({ vis, layer }: { vis: Record<string, unknown>; layer: string }) {
+  const subtypes = (vis.subtypes as RSubtype[]) ?? []
+  const slider = vis.slider as RSlider | undefined
+  const meta = R_LEVEL_META[layer] ?? R_LEVEL_META.l0
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <SectionLabel>{meta.label}</SectionLabel>
+        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border"
+          style={{ color: meta.color + 'aa', borderColor: meta.color + '25', background: meta.color + '08' }}>
+          {meta.certainty}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {subtypes.map(s => (
+          <div key={s.id}
+            className="flex items-start gap-2 p-2.5 rounded-lg border min-h-[44px]"
+            style={{ background: meta.color + '06', borderColor: meta.color + '20' }}
+          >
+            <Icon name={s.icon} size={14} className="shrink-0 mt-0.5" style={{ color: meta.color + 'cc' }} />
+            <div>
+              <div className="text-[10px] font-semibold" style={{ color: meta.color + 'dd' }}>{s.label}</div>
+              <div className="text-[9px] text-white/35 leading-snug mt-0.5">{s.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {slider && (
+        <div className="pt-2 border-t border-white/[0.06]">
+          <SliderWidget
+            value={slider.default}
+            readOnly
+            leftLabel={slider.left}
+            rightLabel={slider.right}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  主分发器 — 根据 vis.type 路由到对应渲染器
 // ══════════════════════════════════════════════════════════════════════
 
