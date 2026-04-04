@@ -746,19 +746,41 @@ export default function L3AIInput({ activeSphereId }: Props) {
           {selectedTier === 'T2' && (
             <>
               <div className="w-px h-3 bg-white/10 mx-0.5" />
-              {(['sonnet', 'opus'] as T2Model[]).map(m => (
+              {/* Model selector — popup dropdown */}
+              <div className="relative">
                 <button
-                  key={m}
-                  onClick={() => setT2Model(m)}
-                  className="px-1.5 py-0.5 rounded text-[8px] font-mono transition-all"
-                  style={t2Model === m
-                    ? { background: '#a78bfa20', color: '#a78bfa', border: '1px solid #a78bfa40' }
-                    : { color: 'rgba(255,255,255,0.18)', border: '1px solid transparent' }
-                  }
+                  onClick={() => setModelDropdownOpen(v => !v)}
+                  className="px-1.5 py-0.5 rounded text-[8px] font-mono transition-all flex items-center gap-1"
+                  style={{ background: '#a78bfa18', color: '#a78bfa', border: '1px solid #a78bfa35' }}
                 >
-                  {m === 'sonnet' ? 'S4.6' : 'O4.6'}
+                  {(() => {
+                    const m = T2_MODEL_OPTIONS.find(o => o.key === t2ModelKey)
+                    return m ? `${m.label.split(' ')[0][0]}${m.label.split(' ')[1] ?? ''} ${m.ctx}` : 'Model'
+                  })()}
+                  <span style={{ opacity: 0.5, fontSize: 7 }}>▾</span>
                 </button>
-              ))}
+                {modelDropdownOpen && (
+                  <div
+                    className="absolute bottom-full mb-1 left-0 rounded-lg overflow-hidden z-50"
+                    style={{ background: '#0a0b14', border: '1px solid rgba(167,139,250,0.2)', minWidth: 140 }}
+                  >
+                    {T2_MODEL_OPTIONS.map(opt => (
+                      <button
+                        key={opt.key}
+                        onClick={() => { setT2ModelKey(opt.key); setModelDropdownOpen(false) }}
+                        className="w-full text-left px-3 py-1.5 text-[9px] font-mono transition-colors flex items-center justify-between gap-3"
+                        style={t2ModelKey === opt.key
+                          ? { color: '#a78bfa', background: 'rgba(167,139,250,0.1)' }
+                          : { color: 'rgba(255,255,255,0.35)' }
+                        }
+                      >
+                        <span>{opt.label}</span>
+                        <span style={{ opacity: 0.5, fontSize: 8 }}>{opt.ctx}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
