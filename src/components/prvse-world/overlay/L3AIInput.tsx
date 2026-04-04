@@ -403,7 +403,7 @@ export default function L3AIInput({ activeSphereId }: Props) {
     } finally {
       setStreaming(false)
     }
-  }, [messages, saveMessage, activeSphereId, selectedTier, t2Model])
+  }, [messages, saveMessage, activeSphereId, selectedTier, t2ModelKey])
 
   // ── T2 / Code-agent mode ──────────────────────────────────
 
