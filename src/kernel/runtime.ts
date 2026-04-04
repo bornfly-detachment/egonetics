@@ -22,7 +22,7 @@ import type {
   NodeId, ContractId, VersionId, PortId,
   Contract, State, Snapshot, TickResult,
   Effect, UniverseSpec, Frozen,
-  ConstitutionResult,
+  ConstitutionResult, HookRegistry,
 } from './types'
 import { nodeId, versionId } from './types'
 import { createState, addNode, addContract, removeContract, advanceTick } from './state'
