@@ -45,6 +45,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   TrendingDown, Octagon,
   Expand, Eye, EyeOff, Wand2,
   OctagonX: Octagon,
+  // S layer
+  Hammer, Play, Wrench, Bug, Pause, Search, FileText, Package, Archive,
+  Rocket, BookMarked, Shield, XCircle, Trophy,
+  ListChecks, HeartPulse, Compass,
 }
 
 function Icon({ name, size = 14, className, style }: {
