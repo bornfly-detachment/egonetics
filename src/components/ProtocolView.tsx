@@ -600,8 +600,8 @@ export default function ProtocolView() {
           <div className="p-6">
             <div className="max-w-3xl mx-auto space-y-6">
               <div className="text-center mb-8">
-                <h2 className="text-base font-bold text-white/8 mb-1">智能资源分级</h2>
-                <p className="text-[11px] text-white/3">Claude → Minimax → Qwen0.8B · 升级条件驱动路由</p>
+                <h2 className="text-base font-bold text-white/85 mb-1">E — 权限分级 / 智能资源</h2>
+                <p className="text-[11px] text-white/35">T0 执行 · T1 推理 · T2 进化 · T3 原创（bornfly 独有）</p>
               </div>
               <ResourceTierVisual vis={{
                 tiers: entries.map(e => {
