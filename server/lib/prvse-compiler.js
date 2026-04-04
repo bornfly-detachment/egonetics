@@ -23,7 +23,6 @@
  */
 
 const { createLLMEngine } = require('./llm-engine')
-const { getClientForTier } = require('./llm')
 const crypto = require('crypto')
 
 // ── LLM Lexer System Prompt ─────────────────────────────────
