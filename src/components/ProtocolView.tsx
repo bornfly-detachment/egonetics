@@ -586,17 +586,17 @@ export default function ProtocolView() {
           <div className="flex items-center justify-center h-48">
             <span className="text-[12px] text-white/3">加载中…</span>
           </div>
-        ) : catFilter === 'communication' ? (
+        ) : (catFilter === 'communication' || catFilter === 'E-comm') ? (
           <div className="p-6">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-6">
-                <h2 className="text-base font-bold text-white/8 mb-1">通信机制</h2>
-                <p className="text-[11px] text-white/3">AI ↛ AI 直接通信 · 必须经过 Control Bus 校验</p>
+                <h2 className="text-base font-bold text-white/85 mb-1">E — 通信机制</h2>
+                <p className="text-[11px] text-white/35">L0 信号 · L1 请求 · L2 控制 · AI ↛ AI 直接通信必须经过 Control Bus 校验</p>
               </div>
               <CommunicationPipeline entries={entries} />
             </div>
           </div>
-        ) : catFilter === 'resource-tier' ? (
+        ) : (catFilter === 'resource-tier' || catFilter === 'E-perm') ? (
           <div className="p-6">
             <div className="max-w-3xl mx-auto space-y-6">
               <div className="text-center mb-8">
