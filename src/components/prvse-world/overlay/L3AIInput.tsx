@@ -288,7 +288,7 @@ export default function L3AIInput({ activeSphereId }: Props) {
 
     // resolve model
     const tierModel = selectedTier === 'T2'
-      ? (t2Model === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-6')
+      ? (T2_MODEL_OPTIONS.find(m => m.key === t2ModelKey)?.id ?? 'claude-sonnet-4-6')
       : undefined
 
     const userMsg: PMessage = { role: 'user', content: text, timestamp: nowHHMM() }
