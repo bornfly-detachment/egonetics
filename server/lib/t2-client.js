@@ -24,7 +24,23 @@
 
 'use strict'
 
-const T2_SERVER_URL = process.env.T2_SERVER_URL || 'http://localhost:3003'
+const fs   = require('fs')
+const path = require('path')
+
+const T2_SERVER_URL  = process.env.T2_SERVER_URL || 'http://localhost:3003'
+const T2_CONFIG_PATH = path.resolve(__dirname, '../config/t2-agents.json')
+
+// ── Config lookup (sphere → { workdir, default_model }) ────────────────────
+
+function _loadConfig() {
+  try { return JSON.parse(fs.readFileSync(T2_CONFIG_PATH, 'utf-8')) }
+  catch { return [] }
+}
+
+function _getSphereConfig(sphere) {
+  const entries = _loadConfig()
+  return entries.find(e => e.sphere === sphere && e.active !== false) ?? null
+}
 
 // ── In-memory context store ─────────────────────────────────────────────────
 // 按 contextKey 存储 sessionId + event 历史，用于 getHistory / getSessionId
