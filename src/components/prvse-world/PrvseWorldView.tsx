@@ -404,26 +404,48 @@ export default function PrvseWorldView() {
         />
       )}
 
-      {/* ── Full-panel mode: sphere buttons in top-left when panel >82% ── */}
+      {/* ── Full-panel mode: sphere bookmarks on left edge, hover to expand ── */}
       {spherePanel && isFullPanel && !l1Panel && (
-        <div className="absolute top-14 left-4 z-50 flex flex-col gap-1.5">
-          {tree.map(root => (
-            <button
-              key={root.id}
-              onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all"
-              style={spherePanel?.id === root.id
-                ? { background: `${root.color}20`, border: `1px solid ${root.color}40`, color: root.color }
-                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
-              }
-            >
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: root.color, boxShadow: spherePanel?.id === root.id ? `0 0 8px ${root.color}` : 'none' }}
-              />
-              <span className="text-[10px] font-mono">{root.name}</span>
-            </button>
-          ))}
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 z-50 flex flex-col gap-0">
+          {tree.map(root => {
+            const isActive = spherePanel?.id === root.id
+            return (
+              <button
+                key={root.id}
+                onClick={() => setSpherePanel(prev => prev?.id === root.id ? null : root)}
+                className="group relative flex items-center h-10 transition-all duration-200"
+              >
+                {/* Bookmark tab — always visible */}
+                <div
+                  className="w-[6px] h-10 rounded-r-sm transition-all"
+                  style={{
+                    background: isActive ? root.color : `${root.color}40`,
+                    boxShadow: isActive ? `0 0 10px ${root.color}50` : 'none',
+                  }}
+                />
+                {/* Hover popup — name label */}
+                <div
+                  className="absolute left-[6px] flex items-center gap-2 px-3 py-1.5 rounded-r-lg
+                    opacity-0 -translate-x-1 pointer-events-none
+                    group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto
+                    transition-all duration-200"
+                  style={{
+                    background: isActive ? `${root.color}25` : 'rgba(10,10,15,0.9)',
+                    border: `1px solid ${isActive ? `${root.color}40` : 'rgba(255,255,255,0.08)'}`,
+                    borderLeft: 'none',
+                  }}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: root.color, boxShadow: `0 0 6px ${root.color}60` }}
+                  />
+                  <span className="text-[10px] font-mono whitespace-nowrap" style={{ color: isActive ? root.color : 'rgba(255,255,255,0.5)' }}>
+                    {root.name}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
 
