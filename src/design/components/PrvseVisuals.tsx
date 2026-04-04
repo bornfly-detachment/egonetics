@@ -757,8 +757,234 @@ export function VCorePanelVisual({ vis }: { vis: Record<string, unknown> }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  S — State 状态层
+// ══════════════════════════════════════════════════════════════════════
+
+const S_COLOR = '#10b981'
+
+// ── S: state-machine — L0 运行时状态机 ───────────────────────────────
+interface SState { id: string; label: string; color: string; icon: string }
+interface STransition { from: string; to: string; guard: string }
+
+export function SStateMachineVisual({ vis }: { vis: Record<string, unknown> }) {
+  const states = (vis.states as SState[]) ?? []
+  const transitions = (vis.transitions as STransition[]) ?? []
+  const [active, setActive] = useState(states[0]?.id ?? '')
+
+  const activeState = states.find(s => s.id === active)
+  const outgoing = transitions.filter(t => t.from === active)
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>S-L0 运行时状态机</SectionLabel>
+
+      <div className="flex flex-wrap gap-1.5">
+        {states.map(s => {
+          const isActive = s.id === active
+          return (
+            <button key={s.id} type="button" onClick={() => setActive(s.id)}
+              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border transition-all duration-200 cursor-pointer min-h-[44px]"
+              style={{
+                background: isActive ? s.color + '18' : s.color + '06',
+                borderColor: isActive ? s.color + '60' : s.color + '20',
+                boxShadow: isActive ? `0 0 10px ${s.color}20` : 'none',
+              }}
+            >
+              <Icon name={s.icon} size={14} style={{ color: isActive ? s.color : s.color + '70' }} />
+              <span className="text-[10px] font-medium"
+                style={{ color: isActive ? s.color : s.color + '80' }}>
+                {s.label}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {activeState && outgoing.length > 0 && (
+        <div className="pl-2 border-l-2 space-y-1" style={{ borderColor: activeState.color + '30' }}>
+          {outgoing.map(t => {
+            const target = states.find(s => s.id === t.to)
+            return (
+              <div key={`${t.from}-${t.to}`} className="flex items-center gap-2 text-[10px]">
+                <ArrowRight size={10} style={{ color: '#ffffff25' }} />
+                <span style={{ color: target?.color ?? '#ffffff80' }}>{target?.label ?? t.to}</span>
+                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono border"
+                  style={{ color: '#fcd34daa', borderColor: '#f59e0b25', background: '#f59e0b08' }}>
+                  {t.guard}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="text-[9px] text-white/25 border-t border-white/[0.06] pt-2">
+        守卫条件 = V 的 L0 规则清单全部通过
+      </div>
+    </div>
+  )
+}
+
+// ── S: lifecycle-pipeline — L1 任务生命周期 ──────────────────────────
+interface SStage { id: string; label: string; icon: string; color: string; desc?: string }
+
+export function LifecyclePipelineVisual({ vis }: { vis: Record<string, unknown> }) {
+  const stages = (vis.stages as SStage[]) ?? []
+  const feedbackLoop = vis.feedback_loop as Record<string, string> | undefined
+  const versionTracking = vis.version_tracking as string | undefined
+  const [activeIdx, setActiveIdx] = useState(0)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <SectionLabel>S-L1 任务生命周期</SectionLabel>
+        {versionTracking && (
+          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border"
+            style={{ color: S_COLOR + 'aa', borderColor: S_COLOR + '25', background: S_COLOR + '08' }}>
+            {versionTracking}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-1">
+        {stages.map((s, i) => {
+          const isActive = i === activeIdx
+          return (
+            <div key={s.id} className="flex items-center gap-1">
+              <button type="button" onClick={() => setActiveIdx(i)}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border transition-all duration-200 cursor-pointer min-h-[36px]"
+                style={{
+                  background: isActive ? s.color + '18' : s.color + '06',
+                  borderColor: isActive ? s.color + '60' : s.color + '18',
+                }}
+              >
+                <Icon name={s.icon} size={12} style={{ color: isActive ? s.color : s.color + '60' }} />
+                <span className="text-[9px] font-medium"
+                  style={{ color: isActive ? s.color : s.color + '70' }}>
+                  {s.label}
+                </span>
+              </button>
+              {i < stages.length - 1 && (
+                <ArrowRight size={10} style={{ color: '#ffffff15' }} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {stages[activeIdx]?.desc && (
+        <div className="text-[9px] text-white/35 pl-2 border-l-2"
+          style={{ borderColor: stages[activeIdx].color + '30' }}>
+          {stages[activeIdx].desc}
+        </div>
+      )}
+
+      {feedbackLoop && (
+        <div className="border-t border-white/[0.06] pt-2 space-y-1">
+          <div className="text-[8px] text-white/25 uppercase tracking-widest mb-1">反馈回路</div>
+          {Object.entries(feedbackLoop).map(([k, v]) => {
+            const color = k === 'positive' ? '#34d399' : k === 'negative' ? '#f87171' : '#ef4444'
+            return (
+              <div key={k} className="flex items-center gap-2 text-[9px]">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                <span style={{ color: color + 'cc' }}>{k}</span>
+                <span className="text-white/30">{v}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── S: strategy-board — L2 战略目标 ──────────────────────────────────
+interface SStrategyState { id: string; label: string; color: string; icon: string; desc?: string }
+
+export function StrategyBoardVisual({ vis }: { vis: Record<string, unknown> }) {
+  const states = (vis.states as SStrategyState[]) ?? []
+  const learner = vis.learner as Record<string, string> | undefined
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>S-L2 战略目标生命周期</SectionLabel>
+
+      <div className="grid grid-cols-3 gap-2">
+        {states.map(s => (
+          <div key={s.id}
+            className="p-2.5 rounded-lg border"
+            style={{ background: s.color + '08', borderColor: s.color + '25' }}
+          >
+            <div className="flex items-center gap-1.5 mb-1">
+              <Icon name={s.icon} size={14} style={{ color: s.color }} />
+              <div className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</div>
+            </div>
+            {s.desc && <div className="text-[8px] text-white/30 leading-snug">{s.desc}</div>}
+          </div>
+        ))}
+      </div>
+
+      {learner && (
+        <div className="p-3 rounded-lg border"
+          style={{ background: '#f59e0b06', borderColor: '#f59e0b20' }}
+        >
+          <div className="flex items-center gap-1.5 mb-2">
+            <BookMarked size={14} style={{ color: '#f59e0b' }} />
+            <span className="text-[10px] font-semibold" style={{ color: '#f59e0bcc' }}>搁置目标学习器</span>
+          </div>
+          <div className="space-y-1">
+            {Object.entries(learner).map(([k, v]) => (
+              <div key={k} className="flex items-center gap-2 text-[9px]">
+                <span className="text-white/30 font-mono w-16 shrink-0">{k}</span>
+                <span className="text-white/50">{v}</span>
+              </div>
+            ))}
+          </div>
+          <div className="text-[8px] text-white/20 mt-2 border-t border-white/[0.06] pt-1.5">
+            搁置 ≠ 放弃。置信度超阈值 → 建议重启
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── S: driving-force-cards — 驱动力 S1-S4 ────────────────────────────
+interface SDrivingForce { id: string; label: string; color: string; icon: string; desc: string }
+
+export function DrivingForceVisual({ vis }: { vis: Record<string, unknown> }) {
+  const forces = (vis.forces as SDrivingForce[]) ?? []
+  const note = vis.note as string | undefined
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>S 驱动力</SectionLabel>
+
+      <div className="grid grid-cols-2 gap-2">
+        {forces.map(f => (
+          <div key={f.id}
+            className="flex items-start gap-2 p-3 rounded-lg border min-h-[44px]"
+            style={{ background: f.color + '08', borderColor: f.color + '25' }}
+          >
+            <Icon name={f.icon} size={16} className="shrink-0 mt-0.5" style={{ color: f.color }} />
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: f.color }}>{f.id} {f.label}</div>
+              <div className="text-[9px] text-white/35 mt-0.5">{f.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {note && (
+        <div className="text-[9px] text-white/25 border-t border-white/[0.06] pt-2">{note}</div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  主分发器 — 根据 vis.type 路由到对应渲染器
-// ════���═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
 
 export function PrvseTypeRouter({ vis, layer }: { vis: Record<string, unknown>; layer?: string }) {
   const type = vis.type as string | undefined
