@@ -229,11 +229,28 @@ async function ensureClaudeRunning(sphere = 'main', model) {
     }
   } catch { /* ignore */ }
 
-  // ── 检测 claude 是否已在运行（claude CLI 进程名是 node，不是 claude） ──
+  // ── 检测 claude 是否已在运行 ─────────────────────────────────
   if (isClaudeRunningInPane(pane)) {
-    // 已在运行，按需切换 model（用 switchModelInClaude，内部处理菜单）
+    // _runningModel 重启后为空，从 JSONL 读上次实际使用的 model，避免盲目切换
+    if (!_runningModel[sphere]) {
+      const projectsDir = getProjectsDir(sphere)
+      const jsonlPath = findActiveJsonl(projectsDir)
+      if (jsonlPath) {
+        try {
+          const lines = fss.readFileSync(jsonlPath, 'utf8').split('\n').filter(l => l.trim())
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const e = JSON.parse(lines[i])
+            if (e.type === 'assistant' && e.message?.model && e.message.model !== '<synthetic>') {
+              _runningModel[sphere] = e.message.model
+              break
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
     const currentModel = _runningModel[sphere]
-    if (model && model !== currentModel) {
+    if (model && currentModel && model !== currentModel) {
       await switchModelInClaude(pane, model)
       _runningModel[sphere] = model
     }
