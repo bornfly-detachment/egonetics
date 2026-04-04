@@ -18,9 +18,11 @@
  */
 
 import type {
-  Contract, ContractId, NodeId, State, UniverseSpec,
-  Violation, ConstitutionRule, ConstitutionResult,
+  Contract, State, UniverseSpec,
+  Violation, ConstitutionResult,
+  RuleSourceEntry, RuleSourceRegistry, ConstitutionRuleSource,
 } from './types'
+import { RULE_SOURCE_PRIORITY } from './types'
 
 // ── Main Validation ────────────────────────────────────────────
 
