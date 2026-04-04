@@ -217,9 +217,9 @@ async function sendMessage(opts) {
     saveIndex(agentId, index)
   }
 
-  // LLM 调用
-  const { model } = getClientForTier(tier)
-  const engine = createLLMEngine(tier)
+  // LLM 调用 — 按 tier 路由到独立执行引擎
+  const engine = tier === 'T0' ? t0Engine : t1Engine
+  const model  = tier === 'T0' ? 'qwen3.5-0.8b' : t1Engine.MODEL
   let fullText = ''
   let usage = {}
 
