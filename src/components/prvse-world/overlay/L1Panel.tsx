@@ -475,7 +475,7 @@ function AITierView({ tier, node }: { tier: string; node: ControlNode }) {
     if (tier !== 'T2') return
     setLoading(true)
     try {
-      const r = await authFetch('/t2-config')
+      const r = await authFetch('/t2-config') as Response
       setAgents(await r.json())
     } catch { setErr('加载失败') }
     finally { setLoading(false) }
