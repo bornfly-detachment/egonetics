@@ -40,7 +40,7 @@
 const { randomUUID } = require('crypto')
 const express    = require('express')
 const router     = express.Router()
-const codeAgent  = require('../lib/code-agent')
+const codeAgent  = require('../lib/t2-client')
 
 // ── Run 内存注册表（24h TTL）─────────────────────────────────
 
