@@ -601,8 +601,9 @@ export default function L3AIInput({ activeSphereId }: Props) {
     const text = value.trim()
     if (!text) return
     setValue('')
+    setModelDropdownOpen(false)
     if (selectedTier === 'T2') {
-      const model = t2Model === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-6'
+      const model = T2_MODEL_OPTIONS.find(m => m.key === t2ModelKey)?.id ?? 'claude-sonnet-4-6'
       void sendCode(text, model)
     } else {
       void sendChat(text)
