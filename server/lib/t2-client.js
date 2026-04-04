@@ -74,12 +74,15 @@ async function* runQuery(prompt, opts = {}) {
   const {
     contextKey  = 'main',
     maxTurns    = 20,
-    model,
-    cwd,
     resetCtx    = false,
     systemPrompt,
     allowedTools,
   } = opts
+
+  // sphere config → defaults for model + cwd
+  const sphereCfg = _getSphereConfig(contextKey)
+  const model = opts.model ?? sphereCfg?.default_model ?? 'claude-sonnet-4-6'
+  const cwd   = opts.cwd   ?? sphereCfg?.workdir       ?? process.cwd()
 
   if (resetCtx) resetContext(contextKey)
 
