@@ -397,10 +397,10 @@ export default function PrvseWorldView() {
         </div>
       )}
 
-      {/* ── L3: AI 世界构建输入（进入 L3 自动显示，不是 panel）── */}
-      {layer === 'L3' && !l1Panel && tree.length > 0 && (
+      {/* ── L3: AI 世界构建输入（仅当无面板时显示）── */}
+      {layer === 'L3' && !l1Panel && !spherePanel && tree.length > 0 && (
         <L3AIInput
-          activeSphereId={spherePanel?.id ?? null}
+          activeSphereId={null}
         />
       )}
 
