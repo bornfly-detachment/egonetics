@@ -394,7 +394,22 @@ export default function PrvseWorldView() {
         </div>
       )}
 
-      {/* L3AIInput: removed from default view — user explicitly said no auto-popup */}
+      {/* ── L3 AI Input: 用户点击按钮打开，不自动弹出 ── */}
+      {layer === 'L3' && !l1Panel && !spherePanel && tree.length > 0 && (
+        showAIInput ? (
+          <L3AIInput activeSphereId={null} />
+        ) : (
+          <button
+            onClick={() => setShowAIInput(true)}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2
+              px-4 py-2 rounded-xl transition-all
+              bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.15]"
+          >
+            <MessageSquare size={12} className="text-white/30" />
+            <span className="text-[10px] font-mono text-white/30">PRVSE World</span>
+          </button>
+        )
+      )}
 
       {/* ── Fullscreen mode: sphere bookmarks on left edge, hover to expand ── */}
       {spherePanel && panelFullscreen && !l1Panel && (
