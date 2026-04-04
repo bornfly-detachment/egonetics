@@ -84,14 +84,14 @@ export const SPHERE_PAGES: SphereEntry[] = [
   {
     id: 'dim-resources',
     name: '资源',
-    color: '#f59e0b',
+    color: '#e6c833',
     pages: [
       // L0 物理层
       { id: 'r-agents',    name: 'Agents 执行节点',     color: '#60a5fa', layer: 'L0', component: 'agents',          desc: 'Agent 执行引擎与节点连接图' },
       { id: 'r-mq',        name: '消息队列 MQ',          color: '#8b5cf6', layer: 'L0', component: 'mq-view',         desc: '事件驱动消息总线·物理通信底层' },
-      { id: 'r-queue',     name: '执行队列',             color: '#22c55e', layer: 'L0', component: 'queue-view',      desc: '任务调度执行状态监控' },
+      { id: 'r-queue',     name: '执行队列',             color: '#3366e6', layer: 'L0', component: 'queue-view',      desc: '任务调度执行状态监控' },
       // L1 客观规律层
-      { id: 'r-tasks',     name: '任务看板',             color: '#22c55e', layer: 'L1', component: 'objective-goals', desc: '跨状态任务队列·执行中/排队/阻塞/完成' },
+      { id: 'r-tasks',     name: '任务看板',             color: '#3366e6', layer: 'L1', component: 'objective-goals', desc: '跨状态任务队列·执行中/排队/阻塞/完成' },
       { id: 'r-memory',    name: '记忆/对话历史',        color: '#60a5fa', layer: 'L1', component: 'memory',          desc: 'AI 对话记忆与历史会话管理' },
       { id: 'r-chronicle', name: 'Chronicle 历史',       color: '#fbbf24', layer: 'L1', component: 'chronicle',       desc: '哈希链式不可篡改历史·里程碑/决策/进化' },
       { id: 'r-priority',  name: '优先级调度',           color: '#f97316', layer: 'L1', component: 'priority',        desc: '合约优先级队列·p 值越高执行权越优先' },
