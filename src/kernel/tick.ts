@@ -93,6 +93,30 @@ export function tickWithSnapshot(state: State, snapshot: Snapshot, hooks?: HookR
     const { resolved, conflicts } = mergePatches(allPatches)
     allConflicts.push(...conflicts)
 
+    // ── Hook Gateway: constitutional pre-patch validation ──────
+    if (hooks?.prePatch.length) {
+      const hookResult = runPrePatchHooks(hooks.prePatch, {
+        patches: resolved,
+        conflicts: allConflicts,
+        prevState: state,
+        tick: snapshot.tick,
+        round,
+      })
+      if (hookResult.decision === 'deny') {
+        return {
+          state,   // rollback: original pre-tick state
+          rounds: round,
+          converged: false,
+          conflicts: [
+            ...allConflicts,
+            { type: 'conflict', patches: [], reason: hookResult.reason ?? 'hook denied' },
+          ],
+          patchesApplied: 0,
+          rolledBack: true,
+        }
+      }
+    }
+
     current = applyPatches(current, resolved)
     totalPatchesApplied += resolved.length
   }
