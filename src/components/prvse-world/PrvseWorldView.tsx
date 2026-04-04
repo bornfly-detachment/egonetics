@@ -66,6 +66,7 @@ export default function PrvseWorldView() {
   const [l1Panel, setL1Panel] = useState<ControlNode | null>(null)   // 2D overlay for L1
   const [spherePanel, setSpherePanel] = useState<ControlNode | null>(null)  // L3 sphere drawer
   const [panelFullscreen, setPanelFullscreen] = useState(false)
+  const [showAIInput, setShowAIInput] = useState(false)  // L3AIInput 需用户显式打开
   const [focus, setFocus] = useState<FocusState | null>(null)
   const [interactNode, setInteractNode] = useState<ControlNode | null>(null)
   const [establishedNodes, setEstablishedNodes] = useState<Set<string>>(new Set())
