@@ -67,7 +67,7 @@ async function call(messages, opts = {}) {
 }
 
 /**
- * 流式调用（推理服务不支持 SSE，退化为一次性返回模拟流）。
+ * 流式调用 — 调 /api/t0/generate?stream=true，逐 token yield。
  * @yields {{ type: 'text', text: string } | { type: 'done', usage: object }}
  */
 async function* stream(messages, opts = {}) {
@@ -75,11 +75,37 @@ async function* stream(messages, opts = {}) {
   const system    = opts.system    ?? ''
   const maxTokens = opts.maxTokens ?? DEFAULT_MAX_TOKENS
 
-  const data = await _generate(prompt, system, maxTokens)
-  const text = data.text ?? ''
+  const resp = await fetch(T0_GENERATE, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ prompt, system, max_tokens: maxTokens, stream: true }),
+    signal:  AbortSignal.timeout(TIMEOUT_MS),
+  })
 
-  if (text) yield { type: 'text', text }
-  yield { type: 'done', usage: { input_tokens: 0, output_tokens: 0 }, stopReason: 'end_turn' }
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '')
+    throw new Error(`[T0] stream ${resp.status}: ${body}`)
+  }
+
+  const decoder = new TextDecoder()
+  let buf = ''
+
+  for await (const chunk of resp.body) {
+    buf += decoder.decode(chunk, { stream: true })
+    const lines = buf.split('\n')
+    buf = lines.pop() ?? ''
+
+    for (const line of lines) {
+      const data = line.replace(/^data:\s*/, '').trim()
+      if (!data) continue
+      try {
+        const parsed = JSON.parse(data)
+        if (parsed.text)  yield { type: 'text', text: parsed.text }
+        if (parsed.done)  yield { type: 'done', usage: { input_tokens: 0, output_tokens: 0 }, stopReason: 'end_turn' }
+        if (parsed.error) throw new Error(parsed.error)
+      } catch (e) { if (e.message.startsWith('[T0]')) throw e }
+    }
+  }
 }
 
 /**
