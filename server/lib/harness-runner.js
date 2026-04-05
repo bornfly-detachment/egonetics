@@ -224,10 +224,17 @@ function buildSessionName(tier, cwd) {
  * @returns {{ command, args, effectiveUser, isolated, env, tier, sessionName }}
  */
 function buildTmuxSpawn(opts) {
-  const { tierId, tmuxSocket, tmuxConfig, cwd, binary } = opts
+  const { tierId, tmuxSocket, tmuxConfig, binary } = opts
+  let { cwd } = opts
 
   // Resolve tier (throws if unknown or disabled)
   const tier = resolveTier(tierId)
+
+  // If caller didn't provide cwd, use the tier's default_cwd.
+  // This ensures each tier starts in a directory its spawn_user can actually write to.
+  if (!cwd || !cwd.trim()) {
+    cwd = tier.default_cwd || os.homedir()
+  }
 
   // Per-tier spawn_user decides isolation:
   //   - null    → run as host user (bornfly)
