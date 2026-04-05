@@ -198,7 +198,14 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     }
 
     ws.onmessage = (ev) => {
-      let msg: { type: string; data?: string; code?: number; error?: string; cwd?: string }
+      let msg: {
+        type: string
+        data?: string
+        code?: number
+        error?: string
+        cwd?: string
+        tier?: { id: string; label: string }
+      }
       try {
         msg = JSON.parse(ev.data)
       } catch {
@@ -211,6 +218,9 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
             setCwd(msg.cwd)
             pushRecentCwd(msg.cwd)
             setRecentCwds(readRecentCwds())
+          }
+          if (msg.tier?.id) {
+            setCurrentTier(msg.tier.id)
           }
           break
         case 'output':
