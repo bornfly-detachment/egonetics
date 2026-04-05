@@ -101,25 +101,21 @@ router.post('/chat', async (req, res) => {
     return res.end()
   }
 
-  // 按 tier 路由：T0=SEAI / T1=MiniMax
-  const { client, model: tierModel, downgraded } = getClientForTier(tier)
-  const finalModel     = model || tierModel || DEFAULT_MODEL
+  // 按 tier 路由：T0=本地 Qwen / T1=MiniMax
+  const engine         = tier === 'T0' ? t0Engine : t1Engine
   const finalMaxTokens = max_tokens || DEFAULT_MAX_TOKENS
   const finalMessages  = buildMessages(messages, system)
+  const tierLabel      = tier || 'T1'
 
-  const tierLabel = tier ? `${tier}${downgraded ? '→T1(降级)' : ''}` : 'default'
-  console.log(`[llm/chat] tier=${tierLabel} model=${finalModel} turns=${finalMessages.length} stream=${useStream}`)
+  console.log(`[llm/chat] tier=${tierLabel} turns=${finalMessages.length} stream=${useStream}`)
 
   // ── 同步模式 ────────────────────────────────────────────────
   if (!useStream) {
     try {
-      const msg = await client.messages.create({
-        model: finalModel,
-        max_tokens: finalMaxTokens,
-        messages: finalMessages,
+      const { content: text, usage } = await engine.call(finalMessages, {
+        system, maxTokens: finalMaxTokens,
       })
-      const text = msg.content.find(c => c.type === 'text')?.text || ''
-      return res.json({ text, usage: msg.usage, tier: tierLabel })
+      return res.json({ text, usage, tier: tierLabel })
     } catch (e) {
       console.error('[llm/chat] sync error:', e.message)
       return res.status(500).json({ error: e.message })
@@ -134,50 +130,23 @@ router.post('/chat', async (req, res) => {
   res.flushHeaders()
 
   const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
-
-  // 首先告知前端实际使用的 tier（前端可展示"T0 SEAI 响应中..."）
-  send({ meta: { tier: tierLabel, model: finalModel } })
+  send({ meta: { tier: tierLabel } })
 
   try {
-    const stream = await client.messages.create({
-      model: finalModel,
-      max_tokens: finalMaxTokens,
-      messages: finalMessages,
-      stream: true,
-    })
-
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-        send({ text: chunk.delta.text })
-      }
-    }
-
-    try {
-      const final = await stream.finalMessage()
-      send({ done: true, usage: final.usage })
-    } catch {
-      send({ done: true })
+    for await (const event of engine.stream(finalMessages, { system, maxTokens: finalMaxTokens })) {
+      if (event.type === 'text')  send({ text: event.text })
+      if (event.type === 'done')  send({ done: true, usage: event.usage })
     }
   } catch (e) {
     console.error('[llm/chat] stream error:', e.message)
-    // T0 SEAI 不可用时自动降级到 T1
+    // T0 失败 → 自动降级 T1
     if (tier === 'T0') {
-      send({ meta: { tier: 'T0→T1(SEAI离线，降级)', model: DEFAULT_MODEL } })
-      console.log('[llm/chat] T0 SEAI unavailable, falling back to T1 MiniMax')
+      send({ meta: { tier: 'T0→T1(本地离线，降级)' } })
       try {
-        const { client: fallbackClient } = getClientForTier('T1')
-        const fallbackStream = await fallbackClient.messages.create({
-          model: DEFAULT_MODEL,
-          max_tokens: finalMaxTokens,
-          messages: finalMessages,
-          stream: true,
-        })
-        for await (const chunk of fallbackStream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-            send({ text: chunk.delta.text })
-          }
+        for await (const event of t1Engine.stream(finalMessages, { system, maxTokens: finalMaxTokens })) {
+          if (event.type === 'text') send({ text: event.text })
+          if (event.type === 'done') send({ done: true, usage: event.usage })
         }
-        send({ done: true })
       } catch (fallbackErr) {
         send({ error: fallbackErr.message })
       }
