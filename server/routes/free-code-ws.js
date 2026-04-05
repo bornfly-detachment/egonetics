@@ -222,15 +222,15 @@ function attach(httpServer) {
 
       switch (msg.type) {
         case 'start':
-          spawnPty(msg.cols, msg.rows, msg.cwd)
+          spawnPty(msg.cols, msg.rows, msg.cwd, msg.tier)
           break
         case 'restart':
           if (ptyProcess) {
             try { ptyProcess.kill() } catch {}
             ptyProcess = null
           }
-          // respawn with new cwd after short delay so exit is observed cleanly
-          setTimeout(() => spawnPty(msg.cols, msg.rows, msg.cwd), 100)
+          // respawn with new cwd+tier after short delay so exit is observed cleanly
+          setTimeout(() => spawnPty(msg.cols, msg.rows, msg.cwd, msg.tier), 100)
           break
         case 'input':
           if (ptyProcess && typeof msg.data === 'string') {
