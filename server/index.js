@@ -170,6 +170,7 @@ app.use('/api', controllerModule.init(kernelRuntime));
 app.use('/api', codeAgentRouter);
 app.use('/api', t2ConfigRouter);
 app.use('/api/acp', acpGatewayRouter);
+app.use('/api', t0InferenceRouter);
 app.use('/api/signals', signalsRouter.init(signalsDb));
 app.use('/api', compilerModule.init());
 
