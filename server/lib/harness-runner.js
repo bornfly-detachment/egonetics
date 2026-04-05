@@ -49,10 +49,17 @@ function userExists(username) {
   }
 }
 
-/** Check whether `sudo -n -u <user> true` works (NOPASSWD rule in place). */
+/**
+ * Check whether `sudo -n -u <user> tmux -V` works (NOPASSWD rule in place).
+ * We probe the actual binary we'll run (tmux) — probing with `true` would
+ * fail because only tmux is in the sudoers allowlist.
+ */
 function sudoWorks(username) {
   try {
-    execSync(`sudo -n -u ${username} true`, { stdio: 'ignore', timeout: 2000 })
+    // Find tmux absolute path (same one sudoers references)
+    const tmuxPath = execSync('command -v tmux', { encoding: 'utf8' }).trim()
+    if (!tmuxPath) return false
+    execSync(`sudo -n -u ${username} ${tmuxPath} -V`, { stdio: 'ignore', timeout: 2000 })
     return true
   } catch {
     return false
