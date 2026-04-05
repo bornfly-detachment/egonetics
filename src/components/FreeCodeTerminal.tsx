@@ -117,7 +117,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   // Fetch tier registry from backend once
   useEffect(() => {
     let cancelled = false
-    authFetch<{ default_tier: string; tiers: TierInfo[] }>('/api/free-code/tiers')
+    authFetch<{ default_tier: string; tiers: TierInfo[] }>('/free-code/tiers')
       .then((data) => {
         if (cancelled) return
         setTiers(data.tiers || [])
