@@ -202,6 +202,38 @@ function slugifyCwd(cwd) {
 }
 
 /**
+ * Repair a stale tmux server for a specific (socket, user) combination.
+ *
+ * When free-code crashes or the backend is killed ungracefully, the tmux server
+ * may leave a stale socket file that refuses new connections. Manually running
+ * `tmux kill-server` against that user clears it. This is a no-op if the server
+ * is healthy (list-sessions returns normally).
+ *
+ * Returns true if a repair was performed, false if server was already clean.
+ */
+function repairStaleServer(spawnUser, socketName) {
+  try {
+    const userPrefix = spawnUser ? ['sudo', '-n', '-u', spawnUser] : []
+    // Try list-sessions. If it errors with "no server" or "failed to connect",
+    // the socket is either dead or clean — either way a kill-server is safe.
+    const listCmd = [...userPrefix, 'tmux', '-L', socketName, 'list-sessions']
+      .map((x) => `'${x.replace(/'/g, "'\\''")}'`).join(' ')
+    const result = execSync(`${listCmd} 2>&1 || true`, { encoding: 'utf8', timeout: 2000 })
+    // Healthy server → leave alone
+    if (!/no server running|failed to connect|error connecting/i.test(result)) {
+      return false
+    }
+    // Socket is stale or missing — explicit kill-server is safe (it's a no-op on clean)
+    const killCmd = [...userPrefix, 'tmux', '-L', socketName, 'kill-server']
+      .map((x) => `'${x.replace(/'/g, "'\\''")}'`).join(' ')
+    execSync(`${killCmd} 2>/dev/null || true`, { timeout: 2000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Build a tier+cwd-qualified tmux session name.
  * Format: `<tier_prefix>-<cwd_slug>`
  * Example: `freecode-t2-Users-Shared-prvse_world_workspace-L2`
