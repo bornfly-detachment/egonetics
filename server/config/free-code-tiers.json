@@ -33,6 +33,12 @@
       "color": "sky",
       "enabled": false,
       "spawn_user": "egonetics-l1",
+      "default_cwd": "/Users/Shared/prvse_world_workspace/L1",
+      "scope": {
+        "readable": ["/Users/Shared/prvse_world_workspace/L0", "/Users/Shared/prvse_world_workspace/L1"],
+        "writable": ["/Users/Shared/prvse_world_workspace/L1"],
+        "description": "L1 推理层：可读 L0，读写 L1（客观法则、项目配置）"
+      },
       "env": {
         "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000/v1",
         "ANTHROPIC_API_KEY": "to-be-configured",
