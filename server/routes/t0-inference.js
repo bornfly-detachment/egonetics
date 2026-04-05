@@ -45,9 +45,11 @@ router.post('/t0/generate', async (req, res) => {
     return res.status(400).json({ error: 'prompt 不能为空' })
   }
 
+  await acquireT0()
   try {
     await runtime.ensureRunning()
   } catch (err) {
+    releaseT0()
     return res.status(503).json({ error: `T0 运行时未就绪: ${err.message}` })
   }
 
