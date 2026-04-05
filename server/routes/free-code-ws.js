@@ -52,6 +52,10 @@ const TMUX_CONFIG = path.join(TMUX_CONFIG_DIR, 'freecode.tmux.conf')
 function ensureTmuxConfig() {
   const content = [
     '# egonetics free-code embed — managed file, do not edit',
+    '# Force a real shell: service users (egonetics-lX) have login shell',
+    '# set to /usr/bin/false, which would cause tmux panes to die instantly.',
+    'set -g default-shell /bin/bash',
+    'set -g default-command /bin/bash',
     'set -g status off',
     'set -g default-terminal "xterm-256color"',
     'set -ga terminal-overrides ",xterm-256color:Tc"',
