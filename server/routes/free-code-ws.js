@@ -29,6 +29,9 @@ try {
   console.warn('[free-code-ws] node-pty not available:', err.message)
 }
 
+// Harness runner: wraps spawn with optional sudo -u level isolation
+const harnessRunner = require('../lib/harness-runner')
+
 const FREE_CODE_BIN =
   process.env.FREE_CODE_BIN ||
   '/Users/bornfly/Desktop/claude_code_learn/free-code/cli-dev'
