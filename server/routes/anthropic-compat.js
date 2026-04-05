@@ -70,6 +70,8 @@ router.post('/v1/messages', async (req, res) => {
   const msgId      = `msg_${uuidv4().replace(/-/g, '').slice(0, 24)}`
   const modelName  = model || 'qwen3.5-0.8b'
 
+  console.log('[compat] model=%s stream=%s msgs=%d system_len=%d', modelName, useStream, messages.length, system?.length ?? 0)
+
   if (!messages.length) {
     return res.status(400).json({ type: 'error', error: { type: 'invalid_request_error', message: 'messages is required' } })
   }
