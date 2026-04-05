@@ -10,6 +10,7 @@
       "description": "本地 mlx_lm 推理，零成本，数据不出本机",
       "color": "emerald",
       "enabled": true,
+      "spawn_user": "egonetics-l0",
       "env": {
         "ANTHROPIC_BASE_URL": "http://127.0.0.1:8000",
         "ANTHROPIC_API_KEY": "local-no-auth",
