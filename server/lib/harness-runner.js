@@ -224,20 +224,24 @@ function buildSessionName(tier, cwd) {
  * @returns {{ command, args, effectiveUser, isolated, env, tier, sessionName }}
  */
 function buildTmuxSpawn(opts) {
-  const { tierId, level, tmuxSocket, tmuxConfig, cwd, binary } = opts
-
-  if (!LEVEL_USERS[level]) {
-    throw new Error(`Unknown isolation level: ${level} (expected L0|L1|L2)`)
-  }
+  const { tierId, tmuxSocket, tmuxConfig, cwd, binary } = opts
 
   // Resolve tier (throws if unknown or disabled)
   const tier = resolveTier(tierId)
 
-  // Determine HOME for expansion. When isolation is on, HOME is the
-  // service user's home (e.g., /var/egonetics/l2-home). When off, use bornfly.
-  const targetUser = LEVEL_USERS[level]
-  const homeDir = detectIsolation().enabled
-    ? `/var/egonetics/${targetUser.replace('egonetics-', '')}-home`
+  // Per-tier spawn_user decides isolation:
+  //   - null    → run as host user (bornfly)
+  //   - 'egonetics-lX' → sudo -u to that service user
+  // This is orthogonal to the OS-level isolation infrastructure; a tier
+  // can opt out of isolation if it needs host-level access (e.g., Keychain).
+  const spawnUser = tier.spawn_user || null
+  const wantsIsolation = spawnUser !== null
+  const isolationStatus = wantsIsolation ? detectIsolation() : { enabled: false, reason: 'tier does not request isolation' }
+  const willIsolate = wantsIsolation && isolationStatus.enabled
+
+  // HOME expansion target
+  const homeDir = willIsolate
+    ? `/var/egonetics/${spawnUser.replace('egonetics-', '')}-home`
     : os.homedir()
 
   const envVars = buildTierEnv(tier, homeDir)
