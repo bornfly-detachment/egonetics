@@ -105,8 +105,8 @@ function attach(httpServer) {
           ptyProcess = null
         })
 
-        send({ type: 'ready' })
-        console.log(`[free-code-ws] pty spawned id=${clientId} pid=${ptyProcess.pid}`)
+        send({ type: 'ready', cwd })
+        console.log(`[free-code-ws] pty spawned id=${clientId} pid=${ptyProcess.pid} cwd=${cwd}`)
       } catch (err) {
         send({ type: 'error', error: `spawn failed: ${err.message}` })
       }
