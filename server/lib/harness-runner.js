@@ -292,6 +292,13 @@ function buildTmuxSpawn(opts) {
   // Per-tier session name: same cwd with different tier → different session
   const sessionName = buildSessionName(tier, cwd)
 
+  // Proactively repair stale tmux state before spawn. No-op if healthy.
+  // This fixes the edge case where a previous free-code crash left
+  // the tmux socket in a broken state that refuses new connections.
+  if (willIsolate) {
+    repairStaleServer(spawnUser, tmuxSocket)
+  }
+
   const tmuxArgs = [
     '-L', tmuxSocket,
     '-f', tmuxConfig,
