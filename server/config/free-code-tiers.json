@@ -26,6 +26,7 @@
       "description": "MiniMax 云端（未接通，需经 LiteLLM 做 Anthropic↔MiniMax 翻译）",
       "color": "sky",
       "enabled": false,
+      "spawn_user": "egonetics-l1",
       "env": {
         "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000/v1",
         "ANTHROPIC_API_KEY": "to-be-configured",
