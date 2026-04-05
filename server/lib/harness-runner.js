@@ -184,10 +184,12 @@ function buildTierEnv(tier, homeDir) {
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     FORCE_COLOR: '3',
+    // Diagnostic: print system prompt on startup so we can see what
+    // free-code thinks its model/context is. Keeps on by default for now.
+    DUMP_SYSTEM_PROMPT: '1',
   }
   const tierEnv = {}
   for (const [k, v] of Object.entries(tier.env || {})) {
-    // Expand ~ in FREE_CODE_CONFIG_DIR and other path vars
     tierEnv[k] = typeof v === 'string' ? expandTilde(v, homeDir) : v
   }
   return { ...base, ...tierEnv }

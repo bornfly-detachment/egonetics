@@ -1,0 +1,91 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img "Bornfly" [ref=e7]
+        - generic [ref=e8]:
+          - generic [ref=e9]: Egonetics
+          - button "EN" [ref=e10] [cursor=pointer]
+      - navigation [ref=e11]:
+        - button "主页" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e16]: 主页
+        - button "记忆" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]: 记忆
+        - button "生变论" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+          - generic [ref=e25]: 生变论
+        - button "生变录" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e31]: 生变录
+        - button "任务" [ref=e32] [cursor=pointer]:
+          - img [ref=e33]
+          - generic [ref=e36]: 任务
+        - button "博客" [ref=e37] [cursor=pointer]:
+          - img [ref=e38]
+          - generic [ref=e41]: 博客
+        - button "标签语义树" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+          - generic [ref=e45]: 标签语义树
+        - button "人机协议" [ref=e46] [cursor=pointer]:
+          - img [ref=e47]
+          - generic [ref=e50]: 人机协议
+        - button "协议构建器" [ref=e51] [cursor=pointer]:
+          - img [ref=e52]
+          - generic [ref=e56]: 协议构建器
+        - button "PRVSE World" [ref=e57] [cursor=pointer]:
+          - img [ref=e58]
+          - generic [ref=e61]: PRVSE World
+        - button "Free Code" [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+          - generic [ref=e65]: Free Code
+        - button "测试环境" [ref=e66] [cursor=pointer]:
+          - img [ref=e67]
+          - generic [ref=e69]: 测试环境
+        - button "消息队列" [ref=e70] [cursor=pointer]:
+          - img [ref=e71]
+          - generic [ref=e75]: 消息队列
+        - button "回收站" [ref=e76] [cursor=pointer]:
+          - img [ref=e77]
+          - generic [ref=e80]: 回收站
+      - generic [ref=e81]:
+        - button "bornfly admin" [ref=e82] [cursor=pointer]:
+          - img [ref=e83]
+          - generic [ref=e86]:
+            - generic [ref=e87]: bornfly
+            - generic [ref=e88]: admin
+        - button "收起" [ref=e89] [cursor=pointer]:
+          - img [ref=e90]
+          - generic [ref=e92]: 收起
+    - main [ref=e93]:
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - generic [ref=e102]:
+              - generic [ref=e103]: free-code
+              - generic [ref=e104]: ·
+              - generic [ref=e105]: TUI
+            - radiogroup "Model tier" [ref=e106]:
+              - img [ref=e107]
+              - radio "Local Qwen" [checked] [ref=e110] [cursor=pointer]: T0
+              - radio "MiniMax 2.7" [disabled] [ref=e111]: T1
+              - radio "Claude Sonnet 4.6" [ref=e112] [cursor=pointer]: T2
+            - button "Switch workspace directory" [ref=e114] [cursor=pointer]:
+              - img [ref=e115]
+              - generic [ref=e117]: select workspace
+              - img [ref=e118]
+          - status [ref=e121]:
+            - generic [ref=e123]: Connected
+        - application "free-code interactive terminal" [ref=e125]:
+          - generic [ref=e128]:
+            - generic:
+              - textbox "Terminal input"
+  - button "AI 对话助手" [ref=e129] [cursor=pointer]:
+    - img [ref=e130]
+  - generic [ref=e133]:
+    - generic [ref=e134]:
+      - generic [ref=e137]: "生命主体性: 活跃"
+      - generic [ref=e138]: "|"
+      - generic [ref=e139]: Egonetics v0.1 · Bornfly Theory
+    - generic [ref=e140]: 2026年4月5日星期日 23:55
