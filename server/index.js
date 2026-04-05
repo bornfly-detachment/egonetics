@@ -182,6 +182,7 @@ app.use('/api', compilerModule.init());
 const httpServer = http.createServer(app);
 proposalsModule.attachWebSocket(httpServer, pagesDb);
 gatewayWs.attach(httpServer);
+freeCodeWs.attach(httpServer);
 
 // Init kernel runtime, then start server
 Promise.all([kernelRuntime.init(), mq.init(kernelRuntime)]).then(async () => {
