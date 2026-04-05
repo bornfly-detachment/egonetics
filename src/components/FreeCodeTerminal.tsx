@@ -2,10 +2,21 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { FolderOpen, Check, ChevronDown } from 'lucide-react'
+import { FolderOpen, Check, ChevronDown, Cpu } from 'lucide-react'
+import { authFetch } from '@/lib/http'
 import '@xterm/xterm/css/xterm.css'
 
 type ConnState = 'connecting' | 'ready' | 'closed' | 'error'
+
+interface TierInfo {
+  id: string
+  label: string
+  description: string
+  color: string
+  enabled: boolean
+  not_ready_reason: string | null
+  model_hint: string
+}
 
 interface FreeCodeTerminalProps {
   wsUrl?: string
