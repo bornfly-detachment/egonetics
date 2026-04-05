@@ -20,8 +20,10 @@
 
 const express    = require('express')
 const router     = express.Router()
-const { getClientForTier, DEFAULT_MODEL, DEFAULT_MAX_TOKENS } = require('../lib/llm')
-const codeAgent  = require('../lib/code-agent')
+const { DEFAULT_MAX_TOKENS } = require('../lib/llm')
+const t0Engine   = require('../lib/t0-engine')
+const t1Engine   = require('../lib/t1-engine')
+const codeAgent  = require('../lib/t2-client')
 
 /** 将 system prompt 合并进 messages（ARK 部分模型不支持顶层 system 字段） */
 function buildMessages(messages, system) {
