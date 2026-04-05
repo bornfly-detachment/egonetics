@@ -19,7 +19,7 @@ const runtime = require('../lib/t0-runtime')
 // ── POST /api/t0/generate ────────────────────────────────────────────────────
 
 router.post('/t0/generate', async (req, res) => {
-  const { prompt, system, max_tokens = 512, temperature = 0.7 } = req.body
+  const { prompt, system, max_tokens = 512, temperature = 0.7, stream = false } = req.body
 
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ error: 'prompt 不能为空' })
@@ -31,28 +31,72 @@ router.post('/t0/generate', async (req, res) => {
     return res.status(503).json({ error: `T0 运行时未就绪: ${err.message}` })
   }
 
-  // 构建 messages
   const messages = []
   if (system) messages.push({ role: 'system', content: system })
   messages.push({ role: 'user', content: prompt })
 
-  const t0 = Date.now()
+  const MODEL = process.env.T0_MODEL_PATH || '/Users/bornfly/Desktop/qwen-edge-llm/model_weights/Qwen/Qwen3.5-0.8B'
 
+  // ── 流式模式 ─────────────────────────────────────────────────
+  if (stream) {
+    res.setHeader('Content-Type',  'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection',    'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.flushHeaders()
+
+    let mlxResp
+    try {
+      mlxResp = await fetch(`${runtime.getBaseUrl()}/v1/chat/completions`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ model: MODEL, messages, max_tokens, temperature, stream: true }),
+        signal:  AbortSignal.timeout(30000),
+      })
+    } catch (err) {
+      runtime.shutdown()
+      res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`)
+      return res.end()
+    }
+
+    if (!mlxResp.ok) {
+      const body = await mlxResp.text().catch(() => '')
+      res.write(`data: ${JSON.stringify({ error: `mlx ${mlxResp.status}: ${body}` })}\n\n`)
+      return res.end()
+    }
+
+    const decoder = new TextDecoder()
+    let buf = ''
+    for await (const chunk of mlxResp.body) {
+      buf += decoder.decode(chunk, { stream: true })
+      const lines = buf.split('\n')
+      buf = lines.pop() ?? ''
+      for (const line of lines) {
+        const data = line.replace(/^data:\s*/, '').trim()
+        if (!data || data === '[DONE]') continue
+        try {
+          const parsed = JSON.parse(data)
+          const delta = parsed.choices?.[0]?.delta?.content ?? ''
+          if (delta) res.write(`data: ${JSON.stringify({ text: delta })}\n\n`)
+        } catch { /* skip malformed */ }
+      }
+    }
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+    return res.end()
+  }
+
+  // ── 同步模式 ─────────────────────────────────────────────────
+  const t0 = Date.now()
   let mlxResp
   try {
     mlxResp = await fetch(`${runtime.getBaseUrl()}/v1/chat/completions`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        model:       process.env.T0_MODEL_PATH || '/Users/bornfly/Desktop/qwen-edge-llm/model_weights/Qwen/Qwen3.5-0.8B',
-        messages,
-        max_tokens,
-        temperature,
-      }),
-      signal: AbortSignal.timeout(30000),
+      body:    JSON.stringify({ model: MODEL, messages, max_tokens, temperature }),
+      signal:  AbortSignal.timeout(30000),
     })
   } catch (err) {
-    runtime.shutdown()   // 强制重置，下次请求重新启动
+    runtime.shutdown()
     return res.status(503).json({ error: `T0 推理调用失败: ${err.message}` })
   }
 
