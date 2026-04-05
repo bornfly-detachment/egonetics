@@ -35,6 +35,34 @@ const FREE_CODE_BIN =
 
 const DEFAULT_CWD = process.env.FREE_CODE_CWD || os.homedir()
 
+// Isolated tmux socket — our freecode sessions live on a dedicated server,
+// completely separate from the user's default tmux (incl. egonetics-coding-agent).
+const TMUX_SOCKET = 'egonetics-freecode'
+const TMUX_CONFIG = path.join(os.tmpdir(), 'egonetics-freecode.tmux.conf')
+
+// Write a minimal tmux config on first use. Status bar off so free-code's own
+// status line (Claude Max · model · context) is visible on the bottom row.
+function ensureTmuxConfig() {
+  const content = [
+    '# egonetics free-code embed — managed file, do not edit',
+    'set -g status off',
+    'set -g default-terminal "xterm-256color"',
+    'set -ga terminal-overrides ",xterm-256color:Tc"',
+    'set -g mouse on',
+    'set -g history-limit 50000',
+    'set -g escape-time 0',
+    'set -g focus-events on',
+    '',
+  ].join('\n')
+  try {
+    if (!fs.existsSync(TMUX_CONFIG) || fs.readFileSync(TMUX_CONFIG, 'utf8') !== content) {
+      fs.writeFileSync(TMUX_CONFIG, content, 'utf8')
+    }
+  } catch (err) {
+    console.warn('[free-code-ws] tmux config write failed:', err.message)
+  }
+}
+
 /** Validate a cwd candidate. Returns resolved absolute path or null. */
 function validateCwd(candidate) {
   if (!candidate || typeof candidate !== 'string') return null
