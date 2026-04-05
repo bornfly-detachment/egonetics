@@ -198,17 +198,17 @@ function attach(httpServer) {
           type: 'ready',
           cwd,
           session: sessionName,
+          tier: currentTier,
           isolation: {
             isolated: spawnPlan.isolated,
             user: spawnPlan.effectiveUser,
-            level: spawnPlan.isolated ? level : null,
             fallbackReason: spawnPlan.fallbackReason || null,
           },
         })
         const tag = spawnPlan.isolated
-          ? `level=${level} as ${spawnPlan.effectiveUser}`
+          ? `as ${spawnPlan.effectiveUser}`
           : `direct (${spawnPlan.fallbackReason})`
-        console.log(`[free-code-ws] spawned id=${clientId} pid=${ptyProcess.pid} session=${sessionName} cwd=${cwd} ${tag}`)
+        console.log(`[free-code-ws] spawned id=${clientId} pid=${ptyProcess.pid} tier=${currentTier.id} session=${sessionName} cwd=${cwd} ${tag}`)
       } catch (err) {
         send({ type: 'error', error: `spawn failed: ${err.message}` })
       }
