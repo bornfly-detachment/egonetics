@@ -528,6 +528,52 @@ function PickerItem({ label, path, active, onSelect }: PickerItemProps) {
   )
 }
 
+// Color maps must be static literals for Tailwind JIT
+const TIER_ACTIVE_CLASSES: Record<string, string> = {
+  emerald: 'bg-emerald-400/15 text-emerald-200 shadow-[0_0_10px_rgba(52,211,153,0.25)] ring-1 ring-emerald-400/40',
+  sky:     'bg-sky-400/15 text-sky-200 shadow-[0_0_10px_rgba(56,189,248,0.25)] ring-1 ring-sky-400/40',
+  violet:  'bg-violet-400/15 text-violet-200 shadow-[0_0_10px_rgba(167,139,250,0.25)] ring-1 ring-violet-400/40',
+}
+const TIER_INACTIVE_CLASSES: Record<string, string> = {
+  emerald: 'text-slate-400 hover:bg-emerald-400/[0.06] hover:text-emerald-200',
+  sky:     'text-slate-400 hover:bg-sky-400/[0.06] hover:text-sky-200',
+  violet:  'text-slate-400 hover:bg-violet-400/[0.06] hover:text-violet-200',
+}
+
+function TierButton({
+  tier,
+  active,
+  onSelect,
+}: {
+  tier: TierInfo
+  active: boolean
+  onSelect: () => void
+}) {
+  const activeClass = TIER_ACTIVE_CLASSES[tier.color] || TIER_ACTIVE_CLASSES.violet
+  const inactiveClass = TIER_INACTIVE_CLASSES[tier.color] || TIER_INACTIVE_CLASSES.violet
+
+  const title = tier.enabled
+    ? `${tier.label} · ${tier.description}`
+    : `${tier.label} (disabled): ${tier.not_ready_reason || 'unavailable'}`
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      aria-label={tier.label}
+      disabled={!tier.enabled}
+      title={title}
+      onClick={() => tier.enabled && onSelect()}
+      className={`rounded-sm px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider transition-all duration-150 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+        active ? activeClass : inactiveClass
+      }`}
+    >
+      {tier.id}
+    </button>
+  )
+}
+
 function StatusPill({ state }: { state: ConnState }) {
   const config = {
     connecting: {
