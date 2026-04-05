@@ -263,6 +263,7 @@ const AppContent: React.FC = () => {
               <Route path="/mq" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><MQView /></div>} />
               <Route path="/recycle" element={<RecycleBinView />} />
               <Route path="/prvse-world" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><PrvseWorldView /></div>} />
+              <Route path="/free-code" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><FreeCodeTerminal /></div>} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
