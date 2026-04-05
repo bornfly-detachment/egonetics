@@ -138,6 +138,7 @@ router.post('/t0/generate', async (req, res) => {
   const outputTokens = data.usage?.completion_tokens ?? 0
   const tokensPerSecond = elapsed > 0 ? outputTokens / elapsed : 0
 
+  releaseT0()
   res.json({ text, tokens_per_second: tokensPerSecond, usage: data.usage })
 })
 
