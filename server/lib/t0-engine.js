@@ -16,7 +16,7 @@
 const EGONETICS_BASE = process.env.EGONETICS_SERVER_URL || 'http://localhost:3002'
 const T0_GENERATE    = `${EGONETICS_BASE}/api/t0/generate`
 const DEFAULT_MAX_TOKENS = 2048
-const TIMEOUT_MS = 35000
+const TIMEOUT_MS = 120000
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
