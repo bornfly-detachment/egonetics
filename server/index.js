@@ -85,6 +85,11 @@ app.get('/api/health', (req, res) => {
 // Anthropic-compatible API (public, no JWT — for free-code / SDK clients)
 app.use('/', anthropicCompatRouter);
 
+// Anthropic transparent proxy for isolated harnesses (localhost only, no JWT).
+// Isolated agents (egonetics-lX via sudo -u) point ANTHROPIC_BASE_URL here;
+// proxy substitutes real credentials from backend env and forwards to api.anthropic.com.
+app.use('/proxy/anthropic', anthropicProxyRouter);
+
 // Auth routes (public)
 app.use('/api', authRouter.init(authDb));
 
