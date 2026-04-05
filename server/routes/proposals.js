@@ -227,7 +227,16 @@ router.get('/events', (req, res) => {
 // ── WebSocket 接入（SEAI 推送通道）───────────────────────────
 
 function attachWebSocket(httpServer, pagesDb) {
-  const wss = new WebSocket.Server({ server: httpServer, path: '/ws/seai' })
+  // noServer mode — see free-code-ws.js for rationale
+  const wss = new WebSocket.Server({ noServer: true })
+  const WS_PATH = '/ws/seai'
+  httpServer.on('upgrade', (req, socket, head) => {
+    try {
+      const url = new URL(req.url, 'http://localhost')
+      if (url.pathname !== WS_PATH) return
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req))
+    } catch {}
+  })
 
   wss.on('connection', (ws, req) => {
     console.log('[WS] SEAI connected from', req.socket.remoteAddress)
