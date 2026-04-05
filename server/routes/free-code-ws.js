@@ -40,9 +40,20 @@ function attach(httpServer) {
     return null
   }
 
-  const wss = new WebSocket.Server({
-    server: httpServer,
-    path: '/ws/free-code',
+  // noServer mode + manual upgrade dispatch — avoids the ws-library bug where
+  // multiple { server, path } WSS instances on one httpServer abort each other
+  // on path mismatch. See: node_modules/ws/lib/websocket-server.js onServerUpgrade.
+  const wss = new WebSocket.Server({ noServer: true })
+  const WS_PATH = '/ws/free-code'
+
+  httpServer.on('upgrade', (req, socket, head) => {
+    try {
+      const url = new URL(req.url, 'http://localhost')
+      if (url.pathname !== WS_PATH) return
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req)
+      })
+    } catch { /* ignore — other listeners may handle */ }
   })
 
   wss.on('connection', (ws, req) => {
