@@ -17,6 +17,7 @@ import {
   Hammer,
   Globe,
   Waves,
+  Terminal,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
