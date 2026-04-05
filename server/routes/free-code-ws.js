@@ -35,6 +35,19 @@ const FREE_CODE_BIN =
 
 const DEFAULT_CWD = process.env.FREE_CODE_CWD || os.homedir()
 
+/** Validate a cwd candidate. Returns resolved absolute path or null. */
+function validateCwd(candidate) {
+  if (!candidate || typeof candidate !== 'string') return null
+  try {
+    const resolved = path.resolve(candidate.replace(/^~/, os.homedir()))
+    const stat = fs.statSync(resolved)
+    if (!stat.isDirectory()) return null
+    return resolved
+  } catch {
+    return null
+  }
+}
+
 function attach(httpServer) {
   if (!pty) {
     console.warn('[free-code-ws] skipped (node-pty unavailable)')
