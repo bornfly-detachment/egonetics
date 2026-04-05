@@ -40,14 +40,14 @@
     "T2": {
       "id": "T2",
       "label": "Claude Sonnet 4.6",
-      "description": "Claude Max 订阅（默认），走 macOS Keychain OAuth",
+      "description": "Claude Max 订阅（默认），走 macOS Keychain OAuth — 必须以 host 身份跑",
       "color": "violet",
       "enabled": true,
-      "env": {
-        "FREE_CODE_CONFIG_DIR": "~/.free-code"
-      },
+      "spawn_user": null,
+      "env": {},
       "session_prefix": "freecode-t2",
-      "model_hint": "claude-sonnet-4-5"
+      "model_hint": "claude-sonnet-4-5",
+      "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行"
     }
   }
 }
