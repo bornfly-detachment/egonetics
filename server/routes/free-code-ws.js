@@ -106,7 +106,8 @@ function attach(httpServer) {
     console.warn('[free-code-ws] skipped (tmux not installed)')
     return null
   }
-  console.log(`[free-code-ws] tmux: ${tmuxVersion}`)
+  ensureTmuxConfig()
+  console.log(`[free-code-ws] tmux: ${tmuxVersion} (socket=${TMUX_SOCKET})`)
 
   // noServer mode + manual upgrade dispatch — avoids the ws-library bug where
   // multiple { server, path } WSS instances on one httpServer abort each other
