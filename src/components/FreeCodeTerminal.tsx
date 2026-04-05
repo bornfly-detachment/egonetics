@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { FolderOpen, Check, ChevronDown } from 'lucide-react'
 import '@xterm/xterm/css/xterm.css'
 
 type ConnState = 'connecting' | 'ready' | 'closed' | 'error'
@@ -10,10 +11,6 @@ interface FreeCodeTerminalProps {
   wsUrl?: string
 }
 
-/**
- * Modern Dark Cinema theme for xterm.js —
- * aligned with Egonetics design language.
- */
 const CINEMA_THEME = {
   background: '#0a0e1a',
   foreground: '#e2e8f0',
@@ -38,13 +35,83 @@ const CINEMA_THEME = {
   brightWhite: '#f8fafc',
 } as const
 
+const RECENT_CWD_KEY = 'egonetics:free-code:recent-cwds'
+const MAX_RECENT = 6
+
+// Common workspaces — shown as quick picks at the top of the dropdown
+const COMMON_CWDS: { label: string; path: string }[] = [
+  { label: 'Home', path: '~' },
+  { label: 'Desktop', path: '~/Desktop' },
+  { label: 'claude_code_learn', path: '~/Desktop/claude_code_learn' },
+  { label: 'egonetics', path: '~/Desktop/claude_code_learn/egonetics' },
+  { label: 'free-code', path: '~/Desktop/claude_code_learn/free-code' },
+  { label: 'SubjectiveEgoneticsAI', path: '~/Desktop/SubjectiveEgoneticsAI' },
+]
+
+function readRecentCwds(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_CWD_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
+function pushRecentCwd(cwd: string) {
+  try {
+    const list = readRecentCwds().filter((c) => c !== cwd)
+    list.unshift(cwd)
+    localStorage.setItem(RECENT_CWD_KEY, JSON.stringify(list.slice(0, MAX_RECENT)))
+  } catch {}
+}
+
+function shortenPath(p: string): string {
+  if (!p) return ''
+  // Collapse home prefix
+  const home = '/Users/bornfly'
+  if (p.startsWith(home)) return '~' + p.slice(home.length)
+  return p
+}
+
 export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const [state, setState] = useState<ConnState>('connecting')
+  const [cwd, setCwd] = useState<string>('')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [recentCwds, setRecentCwds] = useState<string[]>(() => readRecentCwds())
+  const [customPath, setCustomPath] = useState('')
+  const pickerRef = useRef<HTMLDivElement | null>(null)
 
+  // Derive initial cwd from URL ?cwd=... once on mount
+  const initialCwdRef = useRef<string | undefined>(undefined)
+  if (initialCwdRef.current === undefined) {
+    const params = new URLSearchParams(window.location.search)
+    initialCwdRef.current = params.get('cwd') || undefined
+  }
+
+  // Close picker on outside click / Esc
+  useEffect(() => {
+    if (!pickerOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pickerOpen])
+
+  // Main terminal + WS lifecycle
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -84,12 +151,13 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           type: 'start',
           cols: term.cols,
           rows: term.rows,
+          cwd: initialCwdRef.current,
         }),
       )
     }
 
     ws.onmessage = (ev) => {
-      let msg: { type: string; data?: string; code?: number; error?: string }
+      let msg: { type: string; data?: string; code?: number; error?: string; cwd?: string }
       try {
         msg = JSON.parse(ev.data)
       } catch {
@@ -98,6 +166,11 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       switch (msg.type) {
         case 'ready':
           setState('ready')
+          if (msg.cwd) {
+            setCwd(msg.cwd)
+            pushRecentCwd(msg.cwd)
+            setRecentCwds(readRecentCwds())
+          }
           break
         case 'output':
           if (msg.data) term.write(msg.data)
@@ -150,34 +223,152 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     }
   }, [wsUrl])
 
-  const reconnect = () => {
-    window.location.reload()
-  }
+  const switchCwd = useCallback((newCwd: string) => {
+    const term = termRef.current
+    const ws = wsRef.current
+    if (!term || !ws || ws.readyState !== WebSocket.OPEN) return
+    term.clear()
+    term.writeln(`\x1b[90m[switching workspace → ${newCwd}]\x1b[0m`)
+    setState('connecting')
+    ws.send(
+      JSON.stringify({
+        type: 'restart',
+        cols: term.cols,
+        rows: term.rows,
+        cwd: newCwd,
+      }),
+    )
+    setPickerOpen(false)
+    setCustomPath('')
+    // Update URL without reload so it can be bookmarked
+    const url = new URL(window.location.href)
+    url.searchParams.set('cwd', newCwd)
+    window.history.replaceState({}, '', url.toString())
+  }, [])
+
+  const handleCustomSubmit = useCallback(() => {
+    const trimmed = customPath.trim()
+    if (trimmed) switchCwd(trimmed)
+  }, [customPath, switchCwd])
 
   return (
     <div className="flex h-full w-full flex-col bg-[#0a0e1a] text-slate-200">
-      {/* Title bar — Modern Dark Cinema header */}
+      {/* Title bar */}
       <div className="flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-[#0f172a] via-[#0a0e1a] to-[#0f172a] px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          {/* Traffic lights — visual cue, not functional */}
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Traffic lights */}
           <div className="flex items-center gap-1.5" aria-hidden="true">
             <span className="h-3 w-3 rounded-full bg-[#ff5f57] shadow-[0_0_8px_rgba(255,95,87,0.4)]" />
             <span className="h-3 w-3 rounded-full bg-[#febc2e] shadow-[0_0_8px_rgba(254,188,46,0.4)]" />
             <span className="h-3 w-3 rounded-full bg-[#28c840] shadow-[0_0_8px_rgba(40,200,64,0.4)]" />
           </div>
-          <div className="flex items-baseline gap-2 font-mono text-[12px]">
+          <div className="flex min-w-0 items-baseline gap-2 font-mono text-[12px]">
             <span className="font-semibold tracking-wide text-slate-300">free-code</span>
             <span className="text-slate-500">·</span>
             <span className="text-slate-500">TUI</span>
+          </div>
+
+          {/* Workspace picker */}
+          <div className="relative ml-3 min-w-0" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setPickerOpen((v) => !v)}
+              aria-label="Switch workspace directory"
+              aria-expanded={pickerOpen}
+              className="group flex min-w-0 items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-[11px] text-slate-300 transition-all duration-150 ease-out hover:border-blue-400/40 hover:bg-blue-400/[0.08] hover:text-blue-200 active:scale-[0.98]"
+            >
+              <FolderOpen className="h-3.5 w-3.5 flex-shrink-0 text-blue-400/80 group-hover:text-blue-300" aria-hidden="true" />
+              <span className="max-w-[340px] truncate">{cwd ? shortenPath(cwd) : 'select workspace'}</span>
+              <ChevronDown className={`h-3 w-3 flex-shrink-0 text-slate-500 transition-transform duration-150 ${pickerOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+
+            {/* Dropdown */}
+            {pickerOpen && (
+              <div
+                role="listbox"
+                aria-label="Workspace directories"
+                className="absolute left-0 top-[calc(100%+6px)] z-50 w-[380px] overflow-hidden rounded-lg border border-white/10 bg-[#0c1222]/95 shadow-[0_12px_48px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+              >
+                {/* Common */}
+                <div className="px-3 pb-1 pt-2.5">
+                  <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-slate-500">
+                    Common
+                  </div>
+                </div>
+                <div className="pb-1.5">
+                  {COMMON_CWDS.map((item) => (
+                    <PickerItem
+                      key={item.path}
+                      label={item.label}
+                      path={item.path}
+                      active={cwd === item.path || shortenPath(cwd) === item.path}
+                      onSelect={() => switchCwd(item.path)}
+                    />
+                  ))}
+                </div>
+
+                {/* Recent */}
+                {recentCwds.length > 0 && (
+                  <>
+                    <div className="mx-3 h-px bg-white/5" />
+                    <div className="px-3 pb-1 pt-2.5">
+                      <div className="font-mono text-[9px] font-semibold uppercase tracking-widest text-slate-500">
+                        Recent
+                      </div>
+                    </div>
+                    <div className="pb-1.5">
+                      {recentCwds.map((p) => (
+                        <PickerItem
+                          key={p}
+                          path={shortenPath(p)}
+                          active={cwd === p}
+                          onSelect={() => switchCwd(p)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Custom path input */}
+                <div className="border-t border-white/5 bg-black/30 p-2.5">
+                  <label htmlFor="custom-cwd" className="block pb-1.5 font-mono text-[9px] font-semibold uppercase tracking-widest text-slate-500">
+                    Custom path
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="custom-cwd"
+                      type="text"
+                      value={customPath}
+                      onChange={(e) => setCustomPath(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCustomSubmit()
+                      }}
+                      placeholder="/path/to/workspace"
+                      className="flex-1 rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 font-mono text-[11px] text-slate-200 placeholder:text-slate-600 focus:border-blue-400/60 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCustomSubmit}
+                      disabled={!customPath.trim()}
+                      className="rounded-md border border-blue-400/40 bg-blue-400/10 px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-blue-200 transition-all duration-150 ease-out hover:border-blue-400/70 hover:bg-blue-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Go
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <StatusPill state={state} />
-          {state !== 'ready' && state !== 'connecting' && (
+          {(state === 'closed' || state === 'error') && (
             <button
               type="button"
-              onClick={reconnect}
+              onClick={() => window.location.reload()}
               aria-label="Reconnect free-code terminal"
               className="rounded-md border border-white/10 bg-white/5 px-3 py-1 font-mono text-[11px] font-medium text-slate-200 transition-all duration-150 ease-out hover:border-blue-400/50 hover:bg-blue-400/10 hover:text-blue-300 active:scale-[0.98]"
             >
@@ -187,7 +378,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
         </div>
       </div>
 
-      {/* Terminal surface — cinematic gradient vignette */}
+      {/* Terminal surface */}
       <div
         className="relative flex-1 overflow-hidden"
         style={{
@@ -195,7 +386,6 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
             'radial-gradient(ellipse at center, #0c1220 0%, #070a14 100%)',
         }}
       >
-        {/* Subtle top glow — implies depth without distraction */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
@@ -212,6 +402,39 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
         />
       </div>
     </div>
+  )
+}
+
+interface PickerItemProps {
+  label?: string
+  path: string
+  active: boolean
+  onSelect: () => void
+}
+
+function PickerItem({ label, path, active, onSelect }: PickerItemProps) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={active}
+      onClick={onSelect}
+      className={`flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors duration-120 ease-out ${
+        active
+          ? 'bg-blue-400/10 text-blue-200'
+          : 'text-slate-300 hover:bg-white/[0.04] hover:text-slate-100'
+      }`}
+    >
+      <div className="flex min-w-0 flex-col">
+        {label && (
+          <span className="font-mono text-[11px] font-medium">{label}</span>
+        )}
+        <span className={`truncate font-mono text-[10px] ${label ? 'text-slate-500' : 'text-slate-300'}`}>
+          {path}
+        </span>
+      </div>
+      {active && <Check className="h-3.5 w-3.5 flex-shrink-0 text-blue-400" aria-hidden="true" />}
+    </button>
   )
 }
 
