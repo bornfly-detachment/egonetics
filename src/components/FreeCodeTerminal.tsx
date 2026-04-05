@@ -287,6 +287,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
         cols: term.cols,
         rows: term.rows,
         cwd: newCwd,
+        tier: currentTierRef.current,
       }),
     )
     setPickerOpen(false)
@@ -296,6 +297,31 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     url.searchParams.set('cwd', newCwd)
     window.history.replaceState({}, '', url.toString())
   }, [])
+
+  const switchTier = useCallback((newTierId: string) => {
+    if (newTierId === currentTierRef.current) return
+    const term = termRef.current
+    const ws = wsRef.current
+    if (!term || !ws || ws.readyState !== WebSocket.OPEN) return
+    term.clear()
+    term.writeln(`\x1b[90m[switching tier → ${newTierId}]\x1b[0m`)
+    setCurrentTier(newTierId)
+    currentTierRef.current = newTierId
+    setState('connecting')
+    ws.send(
+      JSON.stringify({
+        type: 'restart',
+        cols: term.cols,
+        rows: term.rows,
+        cwd: cwd || undefined,
+        tier: newTierId,
+      }),
+    )
+    // Update URL
+    const url = new URL(window.location.href)
+    url.searchParams.set('tier', newTierId)
+    window.history.replaceState({}, '', url.toString())
+  }, [cwd])
 
   const handleCustomSubmit = useCallback(() => {
     const trimmed = customPath.trim()
