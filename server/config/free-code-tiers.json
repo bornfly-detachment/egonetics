@@ -1,0 +1,51 @@
+{
+  "_doc": "Free-Code Tier Registry. Each tier defines the model backend, env injection, and session/config isolation strategy for the same free-code binary.",
+
+  "default_tier": "T2",
+
+  "tiers": {
+    "T0": {
+      "id": "T0",
+      "label": "Local Qwen",
+      "description": "本地 mlx_lm 推理，零成本，数据不出本机",
+      "color": "emerald",
+      "enabled": true,
+      "env": {
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:8000",
+        "ANTHROPIC_API_KEY": "local-no-auth",
+        "FREE_CODE_CONFIG_DIR": "~/.free-code-t0"
+      },
+      "session_prefix": "freecode-t0",
+      "model_hint": "qwen3.5-0.8b"
+    },
+
+    "T1": {
+      "id": "T1",
+      "label": "MiniMax 2.7",
+      "description": "MiniMax 云端（未接通，需经 LiteLLM 做 Anthropic↔MiniMax 翻译）",
+      "color": "sky",
+      "enabled": false,
+      "env": {
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000/v1",
+        "ANTHROPIC_API_KEY": "to-be-configured",
+        "FREE_CODE_CONFIG_DIR": "~/.free-code-t1"
+      },
+      "session_prefix": "freecode-t1",
+      "model_hint": "minimax-m2.7",
+      "not_ready_reason": "MiniMax Anthropic-compat 端点尚未配置（需 LiteLLM 桥接）"
+    },
+
+    "T2": {
+      "id": "T2",
+      "label": "Claude Sonnet 4.6",
+      "description": "Claude Max 订阅（默认），走 macOS Keychain OAuth",
+      "color": "violet",
+      "enabled": true,
+      "env": {
+        "FREE_CODE_CONFIG_DIR": "~/.free-code"
+      },
+      "session_prefix": "freecode-t2",
+      "model_hint": "claude-sonnet-4-5"
+    }
+  }
+}
