@@ -152,6 +152,8 @@ function attach(httpServer) {
         ptyProcess = pty.spawn(
           'tmux',
           [
+            '-L', TMUX_SOCKET,        // isolated server socket
+            '-f', TMUX_CONFIG,        // minimal config (status off, truecolor)
             'new-session',
             '-A',
             '-s', sessionName,
