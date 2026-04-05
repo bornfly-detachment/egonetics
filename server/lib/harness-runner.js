@@ -194,31 +194,60 @@ function buildTierEnv(tier, homeDir) {
 }
 
 /**
+ * Slugify a cwd path for use in tmux session names.
+ * `/Users/Shared/prvse_world_workspace/L2` → `Users-Shared-prvse_world_workspace-L2`
+ */
+function slugifyCwd(cwd) {
+  return cwd.replace(/^\//, '').replace(/\//g, '-').slice(0, 80)
+}
+
+/**
+ * Build a tier+cwd-qualified tmux session name.
+ * Format: `<tier_prefix>-<cwd_slug>`
+ * Example: `freecode-t2-Users-Shared-prvse_world_workspace-L2`
+ */
+function buildSessionName(tier, cwd) {
+  return `${tier.session_prefix}-${slugifyCwd(cwd)}`
+}
+
+/**
  * Build the (command, args) pair to spawn a tmux session for a harness,
  * optionally wrapped in `sudo -u` for user isolation.
  *
  * @param {Object} opts
+ * @param {string} opts.tierId          - Tier id ('T0' | 'T1' | 'T2')
  * @param {'L0'|'L1'|'L2'} opts.level   - Security level for the spawned process
  * @param {string} opts.tmuxSocket       - tmux -L socket name
  * @param {string} opts.tmuxConfig       - tmux -f config file path
- * @param {string} opts.sessionName      - tmux session name
  * @param {string} opts.cwd              - working directory
  * @param {string} opts.binary           - absolute path to harness binary
- * @returns {{ command: string, args: string[], effectiveUser: string, isolated: boolean, env: object }}
+ * @returns {{ command, args, effectiveUser, isolated, env, tier, sessionName }}
  */
 function buildTmuxSpawn(opts) {
-  const { level, tmuxSocket, tmuxConfig, sessionName, cwd, binary } = opts
+  const { tierId, level, tmuxSocket, tmuxConfig, cwd, binary } = opts
 
   if (!LEVEL_USERS[level]) {
     throw new Error(`Unknown isolation level: ${level} (expected L0|L1|L2)`)
   }
 
-  const envVars = buildIsolationEnv()
-  // Flatten env vars into tmux -e KEY=VAL pairs
+  // Resolve tier (throws if unknown or disabled)
+  const tier = resolveTier(tierId)
+
+  // Determine HOME for expansion. When isolation is on, HOME is the
+  // service user's home (e.g., /var/egonetics/l2-home). When off, use bornfly.
+  const targetUser = LEVEL_USERS[level]
+  const homeDir = detectIsolation().enabled
+    ? `/var/egonetics/${targetUser.replace('egonetics-', '')}-home`
+    : os.homedir()
+
+  const envVars = buildTierEnv(tier, homeDir)
   const envArgs = []
   for (const [k, v] of Object.entries(envVars)) {
     envArgs.push('-e', `${k}=${v}`)
   }
+
+  // Per-tier session name: same cwd with different tier → different session
+  const sessionName = buildSessionName(tier, cwd)
 
   const tmuxArgs = [
     '-L', tmuxSocket,
