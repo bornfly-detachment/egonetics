@@ -16,6 +16,26 @@ const express = require('express')
 const router  = express.Router()
 const runtime = require('../lib/t0-runtime')
 
+// ── 串行队列：T0 单线程推理，防止并发超时 ────────────────────────────────────
+let _t0Busy = false
+const _t0Queue = []
+
+function acquireT0() {
+  return new Promise((resolve) => {
+    if (!_t0Busy) { _t0Busy = true; resolve(); return }
+    _t0Queue.push(resolve)
+  })
+}
+
+function releaseT0() {
+  if (_t0Queue.length > 0) {
+    const next = _t0Queue.shift()
+    next()
+  } else {
+    _t0Busy = false
+  }
+}
+
 // ── POST /api/t0/generate ────────────────────────────────────────────────────
 
 router.post('/t0/generate', async (req, res) => {
