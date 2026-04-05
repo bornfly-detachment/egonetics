@@ -63,6 +63,7 @@ const t2ConfigRouter     = require('./routes/t2-config');
 const acpGatewayRouter   = require('./routes/acp-gateway')
 const t0InferenceRouter  = require('./routes/t0-inference')
 const anthropicCompatRouter = require('./routes/anthropic-compat')
+const freeCodeRouter        = require('./routes/free-code')
 const signalsRouter      = require('./routes/signals');
 const compilerModule     = require('./routes/compiler');
 
