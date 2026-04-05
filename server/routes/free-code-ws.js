@@ -19,6 +19,7 @@
 const WebSocket = require('ws')
 const path = require('path')
 const os = require('os')
+const fs = require('fs')
 
 // node-pty 是原生模块，失败时 bridge 不挂载但不影响主进程
 let pty
