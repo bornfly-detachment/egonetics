@@ -100,6 +100,8 @@ const RouteSync: React.FC = () => {
       view = 'recycle'
     } else if (path === '/prvse-world') {
       view = 'prvse-world'
+    } else if (path === '/free-code') {
+      view = 'free-code'
     } else {
       view = 'memory'
     }
