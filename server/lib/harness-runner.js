@@ -109,30 +109,88 @@ function getIsolationStatus() {
 
 // ── Spawn command builder ───────────────────────────────────
 
-/**
- * Environment variables injected into every isolated harness session.
- * These are passed via `tmux new-session -e KEY=VAL` which does NOT require
- * sudoers SETENV flag — they're set at the tmux session level, and the
- * spawned harness (free-code) inherits them.
- *
- * Why not preserve env via sudo: sudo by default strips env for security;
- * `sudo -E` or env_keep require sudoers changes. tmux -e is the clean path.
- */
-const PROXY_PORT = process.env.EGONETICS_BACKEND_PORT || '3002'
-const PROXY_BASE_URL = `http://127.0.0.1:${PROXY_PORT}/proxy/anthropic`
+// ── Tier registry (loaded from server/config/free-code-tiers.json) ──
 
-function buildIsolationEnv() {
+const TIERS_CONFIG_PATH = path.join(__dirname, '..', 'config', 'free-code-tiers.json')
+let _tiersCache = null
+let _tiersCacheMtime = 0
+
+/**
+ * Load tier definitions from config file, with mtime-based cache invalidation.
+ * Each tier declares:
+ *   - env: key-value pairs injected via `tmux new-session -e KEY=VAL`
+ *   - session_prefix: used in tmux session name for per-tier isolation
+ *   - enabled: whether the tier can be used (disabled tiers throw on spawn)
+ */
+function loadTiers() {
+  try {
+    const stat = fs.statSync(TIERS_CONFIG_PATH)
+    if (_tiersCache && stat.mtimeMs === _tiersCacheMtime) return _tiersCache
+    const raw = fs.readFileSync(TIERS_CONFIG_PATH, 'utf8')
+    _tiersCache = JSON.parse(raw)
+    _tiersCacheMtime = stat.mtimeMs
+    return _tiersCache
+  } catch (err) {
+    console.warn('[harness-runner] failed to load tier config:', err.message)
+    return { default_tier: 'T2', tiers: {} }
+  }
+}
+
+/** Get a tier definition by id. Throws if tier doesn't exist or is disabled. */
+function resolveTier(tierId) {
+  const cfg = loadTiers()
+  const tier = cfg.tiers[tierId]
+  if (!tier) {
+    throw new Error(`Unknown tier: ${tierId}. Available: ${Object.keys(cfg.tiers).join(', ')}`)
+  }
+  if (tier.enabled === false) {
+    throw new Error(`Tier ${tierId} is disabled: ${tier.not_ready_reason || 'no reason given'}`)
+  }
+  return tier
+}
+
+/** List all tiers as {id, label, enabled, description, ...} for UI consumption. */
+function listTiers() {
+  const cfg = loadTiers()
   return {
-    // Route Anthropic SDK calls through our proxy instead of direct to api.anthropic.com
-    ANTHROPIC_BASE_URL: PROXY_BASE_URL,
-    // Agent sees a dummy token; real credentials live in backend process memory only.
-    // The proxy ignores this value and injects the real key from its own env.
-    ANTHROPIC_API_KEY: 'sess-isolated-harness',
-    // free-code reads these for TUI rendering
+    default_tier: cfg.default_tier,
+    tiers: Object.values(cfg.tiers).map((t) => ({
+      id: t.id,
+      label: t.label,
+      description: t.description,
+      color: t.color,
+      enabled: t.enabled !== false,
+      not_ready_reason: t.not_ready_reason || null,
+      model_hint: t.model_hint,
+    })),
+  }
+}
+
+/** Expand ~ in paths to the spawned user's home. Kept simple for MVP. */
+function expandTilde(p, homeDir) {
+  if (!p) return p
+  if (p === '~') return homeDir
+  if (p.startsWith('~/')) return path.join(homeDir, p.slice(2))
+  return p
+}
+
+/**
+ * Build the env vars to inject into the tmux session for a given tier.
+ * Base vars (TERM/COLORTERM/FORCE_COLOR) apply to all tiers.
+ * Tier-specific vars come from free-code-tiers.json.
+ */
+function buildTierEnv(tier, homeDir) {
+  const base = {
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     FORCE_COLOR: '3',
   }
+  const tierEnv = {}
+  for (const [k, v] of Object.entries(tier.env || {})) {
+    // Expand ~ in FREE_CODE_CONFIG_DIR and other path vars
+    tierEnv[k] = typeof v === 'string' ? expandTilde(v, homeDir) : v
+  }
+  return { ...base, ...tierEnv }
 }
 
 /**
