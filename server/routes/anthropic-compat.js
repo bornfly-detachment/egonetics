@@ -101,6 +101,14 @@ router.post('/v1/messages', async (req, res) => {
   }
 
   // ── 流式模式 (SSE) ────────────────────────────────────────────────────────
+  // 先确保 T0 就绪，再开 SSE。否则 T0 启动期间 15s 无 token，
+  // claude-code 的 stream-idle 检测触发 non-streaming fallback。
+  if (engine === t0Engine) {
+    try { await t0Runtime.ensureRunning() } catch (e) {
+      return res.status(503).json({ type: 'error', error: { type: 'api_error', message: `T0 not ready: ${e.message}` } })
+    }
+  }
+
   res.setHeader('Content-Type',      'text/event-stream')
   res.setHeader('Cache-Control',     'no-cache')
   res.setHeader('Connection',        'keep-alive')
