@@ -82,14 +82,15 @@ function attach(httpServer) {
       }
     }
 
-    const spawnPty = (cols, rows) => {
+    const spawnPty = (cols, rows, cwdCandidate) => {
       if (ptyProcess) return
+      const cwd = validateCwd(cwdCandidate) || DEFAULT_CWD
       try {
         ptyProcess = pty.spawn(FREE_CODE_BIN, [], {
           name: 'xterm-256color',
           cols: cols || 120,
           rows: rows || 32,
-          cwd: DEFAULT_CWD,
+          cwd,
           env: {
             ...process.env,
             TERM: 'xterm-256color',
