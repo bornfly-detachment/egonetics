@@ -108,6 +108,32 @@ function getIsolationStatus() {
 // ── Spawn command builder ───────────────────────────────────
 
 /**
+ * Environment variables injected into every isolated harness session.
+ * These are passed via `tmux new-session -e KEY=VAL` which does NOT require
+ * sudoers SETENV flag — they're set at the tmux session level, and the
+ * spawned harness (free-code) inherits them.
+ *
+ * Why not preserve env via sudo: sudo by default strips env for security;
+ * `sudo -E` or env_keep require sudoers changes. tmux -e is the clean path.
+ */
+const PROXY_PORT = process.env.EGONETICS_BACKEND_PORT || '3002'
+const PROXY_BASE_URL = `http://127.0.0.1:${PROXY_PORT}/proxy/anthropic`
+
+function buildIsolationEnv() {
+  return {
+    // Route Anthropic SDK calls through our proxy instead of direct to api.anthropic.com
+    ANTHROPIC_BASE_URL: PROXY_BASE_URL,
+    // Agent sees a dummy token; real credentials live in backend process memory only.
+    // The proxy ignores this value and injects the real key from its own env.
+    ANTHROPIC_API_KEY: 'sess-isolated-harness',
+    // free-code reads these for TUI rendering
+    TERM: 'xterm-256color',
+    COLORTERM: 'truecolor',
+    FORCE_COLOR: '3',
+  }
+}
+
+/**
  * Build the (command, args) pair to spawn a tmux session for a harness,
  * optionally wrapped in `sudo -u` for user isolation.
  *
@@ -118,7 +144,7 @@ function getIsolationStatus() {
  * @param {string} opts.sessionName      - tmux session name
  * @param {string} opts.cwd              - working directory
  * @param {string} opts.binary           - absolute path to harness binary
- * @returns {{ command: string, args: string[], effectiveUser: string, isolated: boolean }}
+ * @returns {{ command: string, args: string[], effectiveUser: string, isolated: boolean, env: object }}
  */
 function buildTmuxSpawn(opts) {
   const { level, tmuxSocket, tmuxConfig, sessionName, cwd, binary } = opts
@@ -127,10 +153,18 @@ function buildTmuxSpawn(opts) {
     throw new Error(`Unknown isolation level: ${level} (expected L0|L1|L2)`)
   }
 
+  const envVars = buildIsolationEnv()
+  // Flatten env vars into tmux -e KEY=VAL pairs
+  const envArgs = []
+  for (const [k, v] of Object.entries(envVars)) {
+    envArgs.push('-e', `${k}=${v}`)
+  }
+
   const tmuxArgs = [
     '-L', tmuxSocket,
     '-f', tmuxConfig,
     'new-session', '-A',
+    ...envArgs,
     '-s', sessionName,
     '-c', cwd,
     binary,
