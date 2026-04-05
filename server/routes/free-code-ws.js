@@ -145,21 +145,25 @@ function attach(httpServer) {
       sessionName = tmuxSessionName(cwd)
 
       // tmux new-session -A: attach if exists, create if not.
-      // The trailing command is only used on first creation; later attaches
-      // reuse the existing session and its running free-code process.
-      // This is what gives us persistence across browser close / nav / refresh.
+      // Wrapped via harness-runner to optionally drop privileges to
+      // egonetics-l<level> user when Phase 1 isolation is active.
+      // Persistence across disconnect still comes from tmux daemon — unchanged.
       try {
+        // TODO(phase-1.5): level should come from harness registry, not hardcoded.
+        // L2 is the default until we have multi-harness + per-instance config.
+        const level = 'L2'
+        const spawnPlan = harnessRunner.buildTmuxSpawn({
+          level,
+          tmuxSocket: TMUX_SOCKET,
+          tmuxConfig: TMUX_CONFIG,
+          sessionName,
+          cwd,
+          binary: FREE_CODE_BIN,
+        })
+
         ptyProcess = pty.spawn(
-          'tmux',
-          [
-            '-L', TMUX_SOCKET,        // isolated server socket
-            '-f', TMUX_CONFIG,        // minimal config (status off, truecolor)
-            'new-session',
-            '-A',
-            '-s', sessionName,
-            '-c', cwd,
-            FREE_CODE_BIN,
-          ],
+          spawnPlan.command,
+          spawnPlan.args,
           {
             name: 'xterm-256color',
             cols: cols || 120,
@@ -182,10 +186,23 @@ function attach(httpServer) {
           ptyProcess = null
         })
 
-        send({ type: 'ready', cwd, session: sessionName })
-        console.log(`[free-code-ws] tmux client attached id=${clientId} pid=${ptyProcess.pid} session=${sessionName} cwd=${cwd}`)
+        send({
+          type: 'ready',
+          cwd,
+          session: sessionName,
+          isolation: {
+            isolated: spawnPlan.isolated,
+            user: spawnPlan.effectiveUser,
+            level: spawnPlan.isolated ? level : null,
+            fallbackReason: spawnPlan.fallbackReason || null,
+          },
+        })
+        const tag = spawnPlan.isolated
+          ? `level=${level} as ${spawnPlan.effectiveUser}`
+          : `direct (${spawnPlan.fallbackReason})`
+        console.log(`[free-code-ws] spawned id=${clientId} pid=${ptyProcess.pid} session=${sessionName} cwd=${cwd} ${tag}`)
       } catch (err) {
-        send({ type: 'error', error: `tmux spawn failed: ${err.message}` })
+        send({ type: 'error', error: `spawn failed: ${err.message}` })
       }
     }
 
