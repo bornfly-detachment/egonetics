@@ -152,6 +152,7 @@ app.use('/api', canvasesRouter.init(pagesDb));
 app.use('/api', relationTypesRouter.init(pagesDb));
 app.use('/api', notionImportRouter.init({ pagesDb }));  // 不再传 tasksDb
 app.use('/api/constitution', constitutionRouter);
+app.use('/api/free-code', freeCodeRouter);
 app.use('/api/llm', llmRouter);
 app.use('/api/ai', aiWorldRouter);
 app.use('/api', ontologyRouter.init());
