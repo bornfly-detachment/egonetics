@@ -95,6 +95,7 @@ router.post('/v1/messages', async (req, res) => {
         },
       })
     } catch (e) {
+      console.error('[compat] sync error:', e.message)
       return res.status(500).json({ type: 'error', error: { type: 'api_error', message: e.message } })
     }
   }
