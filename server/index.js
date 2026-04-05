@@ -51,6 +51,7 @@ const seaiRouter         = require('./routes/seai');
 const aiWorldRouter      = require('./routes/ai-world');
 const webhookRouter      = require('./routes/webhook');
 const gatewayWs          = require('./routes/gateway-ws');
+const freeCodeWs         = require('./routes/free-code-ws');
 const heartbeat          = require('./lib/heartbeat');
 const perceiverRouter    = require('./routes/perceiver');
 const resourcePerceiver  = require('./lib/resource-perceiver');
