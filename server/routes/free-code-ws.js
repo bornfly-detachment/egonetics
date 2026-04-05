@@ -108,33 +108,53 @@ function attach(httpServer) {
       }
     }
 
+    let sessionName = null
+
     const spawnPty = (cols, rows, cwdCandidate) => {
       if (ptyProcess) return
       const cwd = validateCwd(cwdCandidate) || DEFAULT_CWD
+      sessionName = tmuxSessionName(cwd)
+
+      // tmux new-session -A: attach if exists, create if not.
+      // The trailing command is only used on first creation; later attaches
+      // reuse the existing session and its running free-code process.
+      // This is what gives us persistence across browser close / nav / refresh.
       try {
-        ptyProcess = pty.spawn(FREE_CODE_BIN, [], {
-          name: 'xterm-256color',
-          cols: cols || 120,
-          rows: rows || 32,
-          cwd,
-          env: {
-            ...process.env,
-            TERM: 'xterm-256color',
-            COLORTERM: 'truecolor',
-            FORCE_COLOR: '3',
+        ptyProcess = pty.spawn(
+          'tmux',
+          [
+            'new-session',
+            '-A',
+            '-s', sessionName,
+            '-c', cwd,
+            FREE_CODE_BIN,
+          ],
+          {
+            name: 'xterm-256color',
+            cols: cols || 120,
+            rows: rows || 32,
+            cwd,
+            env: {
+              ...process.env,
+              TERM: 'xterm-256color',
+              COLORTERM: 'truecolor',
+              FORCE_COLOR: '3',
+            },
           },
-        })
+        )
 
         ptyProcess.onData((data) => send({ type: 'output', data }))
         ptyProcess.onExit(({ exitCode, signal }) => {
+          // This fires when the tmux CLIENT exits (detach). The tmux daemon
+          // keeps the session alive unless the user explicitly killed it.
           send({ type: 'exit', code: exitCode, signal })
           ptyProcess = null
         })
 
-        send({ type: 'ready', cwd })
-        console.log(`[free-code-ws] pty spawned id=${clientId} pid=${ptyProcess.pid} cwd=${cwd}`)
+        send({ type: 'ready', cwd, session: sessionName })
+        console.log(`[free-code-ws] tmux client attached id=${clientId} pid=${ptyProcess.pid} session=${sessionName} cwd=${cwd}`)
       } catch (err) {
-        send({ type: 'error', error: `spawn failed: ${err.message}` })
+        send({ type: 'error', error: `tmux spawn failed: ${err.message}` })
       }
     }
 
