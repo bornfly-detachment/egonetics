@@ -46,8 +46,8 @@ relationLevel(only if content describes a relation): L0=pure-logic(1+1=2), L1=ca
  * Returns resolved fields (LLM does the semantic heavy lifting).
  */
 async function llmLex(content, opts = {}) {
-  const tier = opts.tier || 'T1'
-  const engine = createLLMEngine(tier)
+  const tier   = opts.tier || 'T1'
+  const engine = tier === 'T0' ? t0Engine : t1Engine
 
   const startTime = Date.now()
 
