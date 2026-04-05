@@ -122,6 +122,7 @@ router.post('/v1/messages', async (req, res) => {
   try {
     for await (const event of engine.stream(messages, { system, maxTokens })) {
       if (event.type === 'text') {
+        console.log('[compat] stream delta:', JSON.stringify(event.text).slice(0,40))
         writeSse(res, 'content_block_delta', {
           type:  'content_block_delta',
           index: 0,
