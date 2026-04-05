@@ -265,13 +265,13 @@ function buildTmuxSpawn(opts) {
 
   const status = detectIsolation()
 
-  if (!status.enabled) {
+  if (!willIsolate) {
     return {
       command: 'tmux',
       args: tmuxArgs,
       effectiveUser: os.userInfo().username,
       isolated: false,
-      fallbackReason: status.reason,
+      fallbackReason: wantsIsolation ? isolationStatus.reason : 'tier runs as host',
       env: envVars,
       tier: { id: tier.id, label: tier.label },
       sessionName,
@@ -283,8 +283,8 @@ function buildTmuxSpawn(opts) {
     // -n: non-interactive (no password prompt, fail fast if NOPASSWD missing)
     // -H: set HOME to target user's home (/var/egonetics/lX-home)
     // -u: target user
-    args: ['-n', '-H', '-u', targetUser, 'tmux', ...tmuxArgs],
-    effectiveUser: targetUser,
+    args: ['-n', '-H', '-u', spawnUser, 'tmux', ...tmuxArgs],
+    effectiveUser: spawnUser,
     isolated: true,
     env: envVars,
     tier: { id: tier.id, label: tier.label },
