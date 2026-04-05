@@ -314,8 +314,12 @@ function validateCwdForLevel(level, cwd) {
 // ── Exports ─────────────────────────────────────────────────
 module.exports = {
   buildTmuxSpawn,
+  buildSessionName,
   getIsolationStatus,
   validateCwdForLevel,
+  listTiers,
+  resolveTier,
+  loadTiers,
   LEVEL_USERS,
   WORKSPACE_ROOT,
 }
