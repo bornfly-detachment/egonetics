@@ -147,28 +147,27 @@ function attach(httpServer) {
     }
 
     let sessionName = null
+    let currentTier = null
 
-    const spawnPty = (cols, rows, cwdCandidate) => {
+    const spawnPty = (cols, rows, cwdCandidate, tierIdRaw) => {
       if (ptyProcess) return
       const cwd = validateCwd(cwdCandidate) || DEFAULT_CWD
-      sessionName = tmuxSessionName(cwd)
 
-      // tmux new-session -A: attach if exists, create if not.
-      // Wrapped via harness-runner to optionally drop privileges to
-      // egonetics-l<level> user when Phase 1 isolation is active.
-      // Persistence across disconnect still comes from tmux daemon — unchanged.
+      // Tier selection: default 'T2' when client doesn't specify
+      const tiersCfg = harnessRunner.loadTiers()
+      const tierId = tierIdRaw || tiersCfg.default_tier || 'T2'
+
+      // harness-runner generates tier-qualified session name + env + spawn plan
       try {
-        // TODO(phase-1.5): level should come from harness registry, not hardcoded.
-        // L2 is the default until we have multi-harness + per-instance config.
-        const level = 'L2'
         const spawnPlan = harnessRunner.buildTmuxSpawn({
-          level,
+          tierId,
           tmuxSocket: TMUX_SOCKET,
           tmuxConfig: TMUX_CONFIG,
-          sessionName,
           cwd,
           binary: FREE_CODE_BIN,
         })
+        sessionName = spawnPlan.sessionName
+        currentTier = spawnPlan.tier
 
         ptyProcess = pty.spawn(
           spawnPlan.command,
