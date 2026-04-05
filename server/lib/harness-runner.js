@@ -269,10 +269,11 @@ function buildTmuxSpawn(opts) {
       isolated: false,
       fallbackReason: status.reason,
       env: envVars,
+      tier: { id: tier.id, label: tier.label },
+      sessionName,
     }
   }
 
-  const targetUser = LEVEL_USERS[level]
   return {
     command: 'sudo',
     // -n: non-interactive (no password prompt, fail fast if NOPASSWD missing)
@@ -282,6 +283,8 @@ function buildTmuxSpawn(opts) {
     effectiveUser: targetUser,
     isolated: true,
     env: envVars,
+    tier: { id: tier.id, label: tier.label },
+    sessionName,
   }
 }
 
