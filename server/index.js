@@ -80,6 +80,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Anthropic-compatible API (public, no JWT — for free-code / SDK clients)
+app.use('/', anthropicCompatRouter);
+
 // Auth routes (public)
 app.use('/api', authRouter.init(authDb));
 
