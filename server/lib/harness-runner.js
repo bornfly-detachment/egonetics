@@ -179,6 +179,7 @@ function buildTmuxSpawn(opts) {
       effectiveUser: os.userInfo().username,
       isolated: false,
       fallbackReason: status.reason,
+      env: envVars,
     }
   }
 
@@ -191,6 +192,7 @@ function buildTmuxSpawn(opts) {
     args: ['-n', '-H', '-u', targetUser, 'tmux', ...tmuxArgs],
     effectiveUser: targetUser,
     isolated: true,
+    env: envVars,
   }
 }
 
