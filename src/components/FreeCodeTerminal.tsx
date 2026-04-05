@@ -192,6 +192,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           cols: term.cols,
           rows: term.rows,
           cwd: initialCwdRef.current,
+          tier: initialTierRef.current || currentTierRef.current,
         }),
       )
     }
