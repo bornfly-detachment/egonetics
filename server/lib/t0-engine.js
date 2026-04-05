@@ -12,9 +12,11 @@
 
 'use strict'
 
-const SEAI_BASE = process.env.SEAI_INFERENCE_URL || process.env.SEAI_URL || 'http://localhost:8001'
+// T0 调用 Egonetics 内部推理端点（由 t0-runtime.js 管理 mlx_lm.server）
+const EGONETICS_BASE = process.env.EGONETICS_SERVER_URL || 'http://localhost:3002'
+const T0_GENERATE    = `${EGONETICS_BASE}/api/t0/generate`
 const DEFAULT_MAX_TOKENS = 2048
-const TIMEOUT_MS = 30000
+const TIMEOUT_MS = 35000
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,15 +31,15 @@ function _extractPrompt(messages) {
 }
 
 async function _generate(prompt, system, maxTokens) {
-  const resp = await fetch(`${SEAI_BASE}/generate`, {
+  const resp = await fetch(T0_GENERATE, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ prompt, system: system || '', max_tokens: maxTokens, temperature: 0.7 }),
+    body:    JSON.stringify({ prompt, system: system || '', max_tokens: maxTokens }),
     signal:  AbortSignal.timeout(TIMEOUT_MS),
   })
   if (!resp.ok) {
     const body = await resp.text().catch(() => '')
-    throw new Error(`[T0] /generate ${resp.status}: ${body}`)
+    throw new Error(`[T0] /api/t0/generate ${resp.status}: ${body}`)
   }
   return await resp.json()  // { text, tokens_per_second }
 }
