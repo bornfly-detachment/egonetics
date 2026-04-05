@@ -41,7 +41,11 @@ const DEFAULT_CWD = process.env.FREE_CODE_CWD || os.homedir()
 // Isolated tmux socket — our freecode sessions live on a dedicated server,
 // completely separate from the user's default tmux (incl. egonetics-coding-agent).
 const TMUX_SOCKET = 'egonetics-freecode'
-const TMUX_CONFIG = path.join(os.tmpdir(), 'egonetics-freecode.tmux.conf')
+// NOT os.tmpdir() — that resolves to /var/folders/<uid>/T/ which is per-user-private
+// on macOS (darwin user temp dir), so isolated agents (egonetics-lX) can't read it.
+// /Users/Shared is world-traversable; file itself is world-readable.
+const TMUX_CONFIG_DIR = '/Users/Shared/egonetics'
+const TMUX_CONFIG = path.join(TMUX_CONFIG_DIR, 'freecode.tmux.conf')
 
 // Write a minimal tmux config on first use. Status bar off so free-code's own
 // status line (Claude Max · model · context) is visible on the bottom row.
