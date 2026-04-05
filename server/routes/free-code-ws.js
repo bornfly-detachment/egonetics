@@ -161,7 +161,10 @@ function attach(httpServer) {
 
     const spawnPty = (cols, rows, cwdCandidate, tierIdRaw) => {
       if (ptyProcess) return
-      const cwd = validateCwd(cwdCandidate) || DEFAULT_CWD
+
+      // Only pre-validate if client actually sent a cwd. Otherwise pass undefined
+      // to harness-runner so it can apply the tier's default_cwd.
+      const cwd = cwdCandidate ? (validateCwd(cwdCandidate) || undefined) : undefined
 
       // Tier selection: default 'T2' when client doesn't specify
       const tiersCfg = harnessRunner.loadTiers()
