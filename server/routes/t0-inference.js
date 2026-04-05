@@ -44,7 +44,7 @@ router.post('/t0/generate', async (req, res) => {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        model:       'qwen3.5-0.8b',
+        model:       process.env.T0_MODEL_PATH || '/Users/bornfly/Desktop/qwen-edge-llm/model_weights/Qwen/Qwen3.5-0.8B',
         messages,
         max_tokens,
         temperature,
