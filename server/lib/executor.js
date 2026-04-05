@@ -30,43 +30,22 @@ function dbGet(sql, params = []) {
 const MAX_CALLS_PER_TIER = 10
 const TIER_ORDER = ['T0', 'T1', 'T2', 'human']
 
-const SEAI_BASE = process.env.SEAI_URL || 'http://localhost:8001'
+// ── T0: 本地 Qwen 推理（via Egonetics 内部端点）──
 
-// ── SEAI Local Model (T0) ──
-
-let _seaiReady = null // cached health status, reset after 30s
+const t0Engine = require('./t0-engine')
 
 async function checkSEAIHealth() {
-  if (_seaiReady !== null) return _seaiReady
-  try {
-    const res = await fetch(`${SEAI_BASE}/health`, { signal: AbortSignal.timeout(3000) })
-    const data = await res.json()
-    _seaiReady = data.status === 'ok' && data.model_loaded === true
-    // Cache for 30s
-    setTimeout(() => { _seaiReady = null }, 30000)
-    return _seaiReady
-  } catch {
-    _seaiReady = false
-    setTimeout(() => { _seaiReady = null }, 10000) // retry sooner on failure
-    return false
-  }
+  return t0Engine.checkHealth()
 }
 
 async function callSEAI(prompt, opts = {}) {
-  const res = await fetch(`${SEAI_BASE}/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt,
-      system: opts.system || null,
-      max_tokens: opts.max_tokens || 2048,
-      temperature: opts.temperature || 0.7,
-    }),
-    signal: AbortSignal.timeout(30000),
+  const messages = []
+  if (opts.system) messages.push({ role: 'system', content: opts.system })
+  messages.push({ role: 'user', content: prompt })
+  const { content: text, usage } = await t0Engine.call(messages, {
+    maxTokens: opts.max_tokens || 2048,
   })
-  if (!res.ok) throw new Error(`SEAI /generate ${res.status}: ${await res.text()}`)
-  const data = await res.json()
-  return { text: data.text || '', tokensPerSecond: data.tokens_per_second }
+  return { text, tokensPerSecond: usage?.tokens_per_second ?? 0 }
 }
 
 async function callSEAIJudge(question, context = {}, constitutionHint = null) {
