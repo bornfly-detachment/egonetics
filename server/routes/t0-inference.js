@@ -73,15 +73,17 @@ router.post('/t0/generate', async (req, res) => {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ model: MODEL, messages, max_tokens, temperature, stream: true }),
-        signal:  AbortSignal.timeout(30000),
+        signal:  AbortSignal.timeout(90000),
       })
     } catch (err) {
+      releaseT0()
       runtime.shutdown()
       res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`)
       return res.end()
     }
 
     if (!mlxResp.ok) {
+      releaseT0()
       const body = await mlxResp.text().catch(() => '')
       res.write(`data: ${JSON.stringify({ error: `mlx ${mlxResp.status}: ${body}` })}\n\n`)
       return res.end()
@@ -103,6 +105,7 @@ router.post('/t0/generate', async (req, res) => {
         } catch { /* skip malformed */ }
       }
     }
+    releaseT0()
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
     return res.end()
   }
@@ -115,14 +118,16 @@ router.post('/t0/generate', async (req, res) => {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ model: MODEL, messages, max_tokens, temperature }),
-      signal:  AbortSignal.timeout(30000),
+      signal:  AbortSignal.timeout(90000),
     })
   } catch (err) {
+    releaseT0()
     runtime.shutdown()
     return res.status(503).json({ error: `T0 推理调用失败: ${err.message}` })
   }
 
   if (!mlxResp.ok) {
+    releaseT0()
     const body = await mlxResp.text().catch(() => '')
     return res.status(502).json({ error: `mlx_lm.server ${mlxResp.status}: ${body}` })
   }
