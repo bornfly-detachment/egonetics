@@ -96,4 +96,4 @@ async function checkHealth() {
   }
 }
 
-module.exports = { call, stream, checkHealth, SEAI_BASE }
+module.exports = { call, stream, checkHealth }
