@@ -48,6 +48,26 @@ function validateCwd(candidate) {
   }
 }
 
+/** Derive a stable tmux session name from a cwd. One session per cwd. */
+function tmuxSessionName(cwd) {
+  const slug = cwd
+    .replace(/^\//, '')
+    .replace(/\//g, '-')
+    .replace(/[^\w\-]/g, '_')
+    .slice(0, 80)
+  return `freecode-${slug}`
+}
+
+/** Check that tmux is installed; return version string or null. */
+function detectTmux() {
+  try {
+    const { execSync } = require('child_process')
+    return execSync('tmux -V', { encoding: 'utf8' }).trim()
+  } catch {
+    return null
+  }
+}
+
 function attach(httpServer) {
   if (!pty) {
     console.warn('[free-code-ws] skipped (node-pty unavailable)')
