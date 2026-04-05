@@ -62,9 +62,15 @@ function ensureTmuxConfig() {
     '',
   ].join('\n')
   try {
-    if (!fs.existsSync(TMUX_CONFIG) || fs.readFileSync(TMUX_CONFIG, 'utf8') !== content) {
-      fs.writeFileSync(TMUX_CONFIG, content, 'utf8')
+    // Ensure config dir exists with world-readable perms so isolated agents can read it
+    if (!fs.existsSync(TMUX_CONFIG_DIR)) {
+      fs.mkdirSync(TMUX_CONFIG_DIR, { recursive: true, mode: 0o755 })
     }
+    if (!fs.existsSync(TMUX_CONFIG) || fs.readFileSync(TMUX_CONFIG, 'utf8') !== content) {
+      fs.writeFileSync(TMUX_CONFIG, content, { encoding: 'utf8', mode: 0o644 })
+    }
+    // Force 644 in case file was previously written with restrictive perms
+    fs.chmodSync(TMUX_CONFIG, 0o644)
   } catch (err) {
     console.warn('[free-code-ws] tmux config write failed:', err.message)
   }
