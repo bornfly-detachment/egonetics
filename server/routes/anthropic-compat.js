@@ -80,6 +80,7 @@ router.post('/v1/messages', async (req, res) => {
   if (!useStream) {
     try {
       const { content: text, usage } = await engine.call(messages, { system, maxTokens })
+      console.log('[compat] sync response text_len=%d text_preview=%s', text.length, text.slice(0,80))
       return res.json({
         id:           msgId,
         type:         'message',
