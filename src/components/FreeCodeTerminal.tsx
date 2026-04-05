@@ -96,12 +96,36 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   const [customPath, setCustomPath] = useState('')
   const pickerRef = useRef<HTMLDivElement | null>(null)
 
-  // Derive initial cwd from URL ?cwd=... once on mount
+  // Tier state
+  const [tiers, setTiers] = useState<TierInfo[]>([])
+  const [currentTier, setCurrentTier] = useState<string>('T2')
+
+  // Derive initial cwd+tier from URL once on mount
   const initialCwdRef = useRef<string | undefined>(undefined)
+  const initialTierRef = useRef<string | undefined>(undefined)
   if (initialCwdRef.current === undefined) {
     const params = new URLSearchParams(window.location.search)
     initialCwdRef.current = params.get('cwd') || undefined
+    initialTierRef.current = params.get('tier') || undefined
   }
+
+  // Fetch tier registry from backend once
+  useEffect(() => {
+    let cancelled = false
+    authFetch('/api/free-code/tiers')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        setTiers(data.tiers || [])
+        // Initialize tier: URL param > backend default > T2 fallback
+        const initial = initialTierRef.current || data.default_tier || 'T2'
+        setCurrentTier(initial)
+      })
+      .catch((err) => console.error('[FreeCodeTerminal] failed to fetch tiers:', err))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Close picker on outside click / Esc
   useEffect(() => {
