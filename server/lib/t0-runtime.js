@@ -21,7 +21,7 @@ const { spawn } = require('child_process')
 
 const T0_PORT      = parseInt(process.env.T0_INFERENCE_PORT || '8100', 10)
 const MODEL_PATH   = process.env.T0_MODEL_PATH || '/Users/bornfly/Desktop/qwen-edge-llm/model_weights/Qwen/Qwen3.5-0.8B'
-const PYTHON_BIN   = process.env.T0_PYTHON || '/Users/bornfly/llama-factory/venv/bin/python'
+const PYTHON_BIN   = process.env.T0_PYTHON || '/Users/bornfly/anaconda3/bin/python3'
 const BASE_URL     = `http://localhost:${T0_PORT}`
 const HEALTH_URL   = `${BASE_URL}/health`
 const STARTUP_WAIT = 15000  // ms — model loading takes time
