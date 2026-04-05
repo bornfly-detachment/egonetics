@@ -52,6 +52,7 @@ export interface Translation {
     protocol: string
     protoBuilder: string
     prvseWorld: string
+    freeCode: string
     lab: string
     mq: string
     recycle: string
