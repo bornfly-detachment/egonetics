@@ -88,9 +88,9 @@ async function* stream(messages, opts = {}) {
  */
 async function checkHealth() {
   try {
-    const resp = await fetch(`${SEAI_BASE}/health`, { signal: AbortSignal.timeout(3000) })
+    const resp = await fetch(`${EGONETICS_BASE}/api/t0/health`, { signal: AbortSignal.timeout(3000) })
     const data = await resp.json()
-    return data.status === 'ok' && data.model_loaded === true
+    return data.ok === true
   } catch {
     return false
   }
