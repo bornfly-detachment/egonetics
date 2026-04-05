@@ -18,10 +18,11 @@
 
 'use strict'
 
-const express  = require('express')
-const router   = express.Router()
-const t0Engine = require('../lib/t0-engine')
-const t1Engine = require('../lib/t1-engine')
+const express   = require('express')
+const router    = express.Router()
+const t0Engine  = require('../lib/t0-engine')
+const t1Engine  = require('../lib/t1-engine')
+const t0Runtime = require('../lib/t0-runtime')
 const { v4: uuidv4 } = require('uuid')
 
 const DEFAULT_MAX_TOKENS = 2048
