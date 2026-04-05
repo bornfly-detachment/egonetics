@@ -99,6 +99,11 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   // Tier state
   const [tiers, setTiers] = useState<TierInfo[]>([])
   const [currentTier, setCurrentTier] = useState<string>('T2')
+  // Ref mirrors state so callbacks always see latest value without re-creation
+  const currentTierRef = useRef<string>('T2')
+  useEffect(() => {
+    currentTierRef.current = currentTier
+  }, [currentTier])
 
   // Derive initial cwd+tier from URL once on mount
   const initialCwdRef = useRef<string | undefined>(undefined)
