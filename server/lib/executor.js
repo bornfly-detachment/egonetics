@@ -35,7 +35,8 @@ const TIER_ORDER = ['T0', 'T1', 'T2', 'human']
 const t0Engine = require('./t0-engine')
 
 async function checkSEAIHealth() {
-  return t0Engine.checkHealth()
+  // T0 按需启动，直接返回 true；实际调用失败时 executor 会自动降级 T1
+  return true
 }
 
 async function callSEAI(prompt, opts = {}) {
