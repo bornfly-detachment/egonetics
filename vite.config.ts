@@ -20,6 +20,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/seai/, ''),
       },
+      '/ws': {
+        target: 'ws://localhost:3002',
+        ws: true,
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:3002',
         changeOrigin: true,
