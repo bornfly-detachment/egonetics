@@ -114,6 +114,49 @@ router.post('/t0/generate', async (req, res) => {
   res.json({ text, tokens_per_second: tokensPerSecond, usage: data.usage })
 })
 
+// ── POST /api/t0/v1/chat/completions  (OpenAI-compatible proxy for LiteLLM) ──
+// LiteLLM config: api_base: http://localhost:3002/api/t0
+// Ensures mlx_lm.server is running, then proxies request transparently.
+
+router.post('/t0/v1/chat/completions', async (req, res) => {
+  try {
+    await runtime.ensureRunning()
+  } catch (err) {
+    return res.status(503).json({ error: { message: `T0 runtime not ready: ${err.message}`, type: 'server_error' } })
+  }
+
+  const isStream = req.body?.stream === true
+  let mlxResp
+  try {
+    mlxResp = await fetch(`${runtime.getBaseUrl()}/v1/chat/completions`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(req.body),
+      signal:  AbortSignal.timeout(60000),
+    })
+  } catch (err) {
+    runtime.shutdown()
+    return res.status(503).json({ error: { message: `T0 fetch failed: ${err.message}`, type: 'server_error' } })
+  }
+
+  // Pipe headers
+  res.status(mlxResp.status)
+  const ct = mlxResp.headers.get('content-type')
+  if (ct) res.setHeader('Content-Type', ct)
+  if (isStream) {
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.flushHeaders()
+  }
+
+  // Pipe body
+  for await (const chunk of mlxResp.body) {
+    res.write(chunk)
+  }
+  res.end()
+})
+
 // ── GET /api/t0/health ───────────────────────────────────────────────────────
 
 router.get('/t0/health', async (_req, res) => {
