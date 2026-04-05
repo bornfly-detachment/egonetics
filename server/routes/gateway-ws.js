@@ -50,7 +50,16 @@ function broadcast(event, data) {
 
 /** 挂载到 httpServer，创建 WebSocket 服务器 */
 function attach(httpServer) {
-  const wss = new WebSocket.Server({ server: httpServer, path: '/ws/gateway' })
+  // noServer mode — see free-code-ws.js for rationale
+  const wss = new WebSocket.Server({ noServer: true })
+  const WS_PATH = '/ws/gateway'
+  httpServer.on('upgrade', (req, socket, head) => {
+    try {
+      const url = new URL(req.url, 'http://localhost')
+      if (url.pathname !== WS_PATH) return
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req))
+    } catch {}
+  })
 
   wss.on('connection', (ws, req) => {
     let authenticated = !GATEWAY_TOKEN  // 未配置 token → 开放
