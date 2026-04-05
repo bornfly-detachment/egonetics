@@ -42,6 +42,7 @@ const Sidebar: React.FC = () => {
     { id: 'protocol',         label: s.protocol,      icon: FileText,     color: 'text-pink-400',    path: '/protocol'         },
     { id: 'protocol-builder', label: s.protoBuilder,  icon: Hammer,       color: 'text-indigo-400',  path: '/protocol/builder' },
     { id: 'prvse-world',      label: s.prvseWorld,    icon: Globe,        color: 'text-amber-400',   path: '/prvse-world'      },
+    { id: 'free-code',        label: s.freeCode,      icon: Terminal,     color: 'text-emerald-400', path: '/free-code'        },
     { id: 'lab',              label: s.lab,           icon: FlaskConical, color: 'text-violet-400',  path: '/lab'              },
     { id: 'mq',               label: s.mq,            icon: Waves,        color: 'text-cyan-400',    path: '/mq'               },
     { id: 'recycle',          label: s.recycle,       icon: Trash2,       color: 'text-white/20',    path: '/recycle'          },
