@@ -190,6 +190,9 @@ const RouteSync: React.FC = () => {
       case 'prvse-world':
         targetPath = '/prvse-world'
         break
+      case 'free-code':
+        targetPath = '/free-code'
+        break
       default:
         targetPath = '/memory'
     }
