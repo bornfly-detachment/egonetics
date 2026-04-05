@@ -110,7 +110,13 @@ function attach(httpServer) {
     return null
   }
   ensureTmuxConfig()
+  const iso = harnessRunner.getIsolationStatus()
   console.log(`[free-code-ws] tmux: ${tmuxVersion} (socket=${TMUX_SOCKET})`)
+  if (iso.enabled) {
+    console.log('[free-code-ws] user isolation: ENABLED (egonetics-l0/l1/l2)')
+  } else {
+    console.log(`[free-code-ws] user isolation: DISABLED — ${iso.reason}`)
+  }
 
   // noServer mode + manual upgrade dispatch — avoids the ws-library bug where
   // multiple { server, path } WSS instances on one httpServer abort each other
