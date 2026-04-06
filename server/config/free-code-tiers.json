@@ -63,9 +63,7 @@
         "writable": ["*"],
         "description": "T2 作为 host user (bornfly) 运行，拥有全部文件系统权限 — 谨慎使用"
       },
-      "env": {
-        "FREE_CODE_CONFIG_DIR": "/Users/Shared/prvse_world_workspace/L2/free-code-config"
-      },
+      "env": {},
       "session_prefix": "freecode-t2",
       "model_hint": "claude-sonnet-4-5",
       "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行"
