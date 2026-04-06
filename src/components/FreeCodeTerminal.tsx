@@ -182,8 +182,14 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
     fit.fit()
-    // Auto-focus so user can type immediately without clicking first
     term.focus()
+
+    // Track viewport position so we can auto-scroll to bottom on new output
+    // only when the user hasn't scrolled up to read history.
+    term.onScroll(() => {
+      const buf = term.buffer.active
+      atBottomRef.current = buf.viewportY + term.rows >= buf.length
+    })
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Goals:
