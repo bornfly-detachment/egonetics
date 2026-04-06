@@ -185,8 +185,9 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.loadAddon(new WebLinksAddon())
-    term.loadAddon(new CanvasAddon())
     term.open(containerRef.current)
+    // CanvasAddon must be loaded AFTER open() — it needs the DOM container
+    term.loadAddon(new CanvasAddon())
     fit.fit()
     term.focus()
 
