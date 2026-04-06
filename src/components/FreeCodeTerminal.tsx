@@ -390,6 +390,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       if (resizeTimer) clearTimeout(resizeTimer)
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
       pendingWritesRef.current = []
+      document.removeEventListener('mouseup', captureSelection, true)
       observer.disconnect()
       sendInput.dispose()
       try { ws.close() } catch {}
