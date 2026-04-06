@@ -597,6 +597,13 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           className="h-full w-full px-4 py-3"
           role="application"
           aria-label="free-code interactive terminal"
+          onMouseUp={() => {
+            // Capture selection immediately — xterm may clear it when live output arrives
+            setTimeout(() => {
+              const sel = termRef.current?.getSelection()
+              if (sel) lastSelectionRef.current = sel
+            }, 0)
+          }}
           onClick={() => { if (!termRef.current?.getSelection()) termRef.current?.focus() }}
         />
       </div>
