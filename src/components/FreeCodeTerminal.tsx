@@ -315,6 +315,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       switch (msg.type) {
         case 'ready':
           setState('ready')
+          isReadyRef.current = true
           if (msg.cwd) {
             setCwd(msg.cwd)
             pushRecentCwd(msg.cwd)
