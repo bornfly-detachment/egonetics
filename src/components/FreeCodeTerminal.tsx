@@ -336,6 +336,8 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           term.writeln(`\r\n\x1b[31m[error] ${msg.error}\x1b[0m`)
           setState('error')
           break
+        case 'pong':
+          break
       }
     }
 
