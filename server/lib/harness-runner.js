@@ -175,24 +175,54 @@ function expandTilde(p, homeDir) {
 }
 
 /**
+ * Parse a shell env file (lines of `export KEY=VALUE` or `KEY=VALUE`).
+ * Handles quoted values (single or double). Returns a plain object.
+ */
+function parseEnvFile(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8')
+    const result = {}
+    for (const raw of content.split('\n')) {
+      const line = raw.replace(/^export\s+/, '').trim()
+      if (!line || line.startsWith('#')) continue
+      const eq = line.indexOf('=')
+      if (eq < 1) continue
+      const key = line.slice(0, eq).trim()
+      let val = line.slice(eq + 1).trim()
+      // Strip surrounding quotes
+      if ((val.startsWith('"') && val.endsWith('"')) ||
+          (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1)
+      }
+      result[key] = val
+    }
+    return result
+  } catch {
+    return {}
+  }
+}
+
+/**
  * Build the env vars to inject into the tmux session for a given tier.
  * Base vars (TERM/COLORTERM/FORCE_COLOR) apply to all tiers.
- * Tier-specific vars come from free-code-tiers.json.
+ * Tier-specific vars come from free-code-tiers.json (env object + optional env_file).
+ * env_file is parsed last so it can override inline env values.
  */
 function buildTierEnv(tier, homeDir) {
   const base = {
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     FORCE_COLOR: '3',
-    // Diagnostic: print system prompt on startup so we can see what
-    // free-code thinks its model/context is. Keeps on by default for now.
     DUMP_SYSTEM_PROMPT: '1',
   }
   const tierEnv = {}
   for (const [k, v] of Object.entries(tier.env || {})) {
     tierEnv[k] = typeof v === 'string' ? expandTilde(v, homeDir) : v
   }
-  return { ...base, ...tierEnv }
+  const fileEnv = tier.env_file
+    ? parseEnvFile(expandTilde(tier.env_file, homeDir))
+    : {}
+  return { ...base, ...tierEnv, ...fileEnv }
 }
 
 /**
