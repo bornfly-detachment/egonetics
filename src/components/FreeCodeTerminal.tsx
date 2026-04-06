@@ -342,6 +342,17 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     ws.onclose = () => setState((s) => (s === 'error' ? s : 'closed'))
     ws.onerror = () => setState('error')
 
+    // ── Heartbeat ────────────────────────────────────────────────────────
+    // Sends a ping every 30 s. If the connection silently drops (tunnel,
+    // NAT timeout, sleep/wake) the WS error/close handlers fire and the
+    // status pill updates to Closed/Error — without this, it would stay
+    // "Connected" forever.
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }))
+      }
+    }, 30_000)
+
     const sendInput = term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'input', data }))
