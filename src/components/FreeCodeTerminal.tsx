@@ -201,6 +201,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     // Cmd+C handler always has the last non-empty selection regardless of timing.
     term.onSelectionChange(() => {
       const sel = term.getSelection()
+      console.log('[xterm] onSelectionChange:', JSON.stringify(sel))
       if (sel) lastSelectionRef.current = sel
     })
 
