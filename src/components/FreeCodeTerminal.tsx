@@ -385,7 +385,6 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     observer.observe(containerRef.current)
 
     return () => {
-      document.removeEventListener('mouseup', captureNativeSelection, { capture: true })
       clearInterval(pingInterval)
       if (resizeTimer) clearTimeout(resizeTimer)
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
