@@ -162,6 +162,8 @@ function attach(httpServer) {
 
     let sessionName = null
     let currentTier = null
+    let batchBuf = ''
+    let batchTimer = null
 
     const spawnPty = (cols, rows, cwdCandidate, tierIdRaw) => {
       if (ptyProcess) return
