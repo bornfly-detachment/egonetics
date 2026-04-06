@@ -295,7 +295,11 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           }
           break
         case 'output':
-          if (msg.data) term.write(msg.data)
+          if (msg.data) {
+            const snap = atBottomRef.current
+            term.write(msg.data)
+            if (snap) term.scrollToBottom()
+          }
           break
         case 'exit':
           term.writeln(`\r\n\x1b[90m[process exited code=${msg.code}]\x1b[0m`)
