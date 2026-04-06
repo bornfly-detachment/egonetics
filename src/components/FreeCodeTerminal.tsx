@@ -104,6 +104,9 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   // RAF write batching — prevents main-thread freeze on large PTY bursts
   const pendingWritesRef = useRef<string[]>([])
   const rafIdRef = useRef<number | null>(null)
+  // Last captured selection — xterm may clear visual selection on live output,
+  // but we keep a copy so Cmd+C still works after mouseup
+  const lastSelectionRef = useRef('')
 
   // Tier state
   const [tiers, setTiers] = useState<TierInfo[]>([])
