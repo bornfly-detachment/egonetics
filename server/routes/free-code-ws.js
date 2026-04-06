@@ -211,8 +211,6 @@ function attach(httpServer) {
         // renders the whole batch atomically — eliminates Ink cursor-up flicker.
         const BATCH_MS = 8
         const BATCH_MAX = 16384  // flush immediately when buffer exceeds 16 KB
-        let batchBuf = ''
-        let batchTimer = null
         const flushBatch = () => {
           batchTimer = null
           if (!batchBuf) return
