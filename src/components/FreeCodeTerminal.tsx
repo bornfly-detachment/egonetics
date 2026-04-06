@@ -321,16 +321,26 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       }
     })
 
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
     const observer = new ResizeObserver(() => {
-      if (!fitRef.current || !termRef.current) return
-      try {
-        fitRef.current.fit()
-        const cols = Math.max(MIN_COLS, termRef.current.cols)
-        const rows = Math.max(MIN_ROWS, termRef.current.rows)
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'resize', cols, rows }))
-        }
-      } catch {}
+      if (resizeTimer) clearTimeout(resizeTimer)
+      // Trailing-edge debounce: wait until resize stops, then do one reflow.
+      // Firing on every pixel change floods the PTY with SIGWINCH and leaves
+      // line-reflow debris in the scrollback.
+      resizeTimer = setTimeout(() => {
+        resizeTimer = null
+        if (!fitRef.current || !termRef.current) return
+        try {
+          fitRef.current.fit()
+          const cols = Math.max(MIN_COLS, termRef.current.cols)
+          const rows = Math.max(MIN_ROWS, termRef.current.rows)
+          // Clear scrollback debris from line reflow (Ink will redraw on SIGWINCH)
+          termRef.current.write('\x1b[3J\x1b[H\x1b[2J')
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'resize', cols, rows }))
+          }
+        } catch {}
+      }, 300)
     })
     observer.observe(containerRef.current)
 
