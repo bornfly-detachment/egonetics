@@ -12,7 +12,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, ChevronDown, ChevronRight, Bot, Send, RotateCcw, Cpu, ArrowUpRight, Paperclip, Maximize2, Minimize2 } from 'lucide-react'
+import { X, ChevronDown, ChevronRight, Bot, Send, RotateCcw, Cpu, ArrowUpRight, Paperclip, PanelRight, AppWindow, Maximize2 } from 'lucide-react'
+
+type PanelMode = 'side' | 'center' | 'fullscreen'
 import { getToken } from '@/lib/http'
 import type { ControlNode } from '../useControlTree'
 import { COMPONENT_ROUTE } from '../sphere-pages'
