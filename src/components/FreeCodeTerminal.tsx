@@ -286,6 +286,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     wsRef.current = ws
 
     ws.onopen = () => {
+      isReadyRef.current = false
       ws.send(
         JSON.stringify({
           type: 'start',
