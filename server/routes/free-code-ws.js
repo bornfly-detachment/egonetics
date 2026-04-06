@@ -298,6 +298,9 @@ function attach(httpServer) {
 
     ws.on('close', () => {
       console.log(`[free-code-ws] disconnect id=${clientId} (detaching tmux client, session "${sessionName}" stays alive)`)
+      if (typeof batchTimer !== 'undefined' && batchTimer) {
+        clearTimeout(batchTimer)
+      }
       if (ptyProcess) {
         // Killing the node-pty process kills only the tmux CLIENT.
         // The tmux DAEMON preserves the session and the free-code process
