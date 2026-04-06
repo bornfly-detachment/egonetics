@@ -21,7 +21,7 @@
         "ANTHROPIC_BASE_URL": "http://127.0.0.1:3002",
         "ANTHROPIC_API_KEY": "local-no-auth",
         "ANTHROPIC_MODEL": "qwen3.5-0.8b",
-        "FREE_CODE_CONFIG_DIR": "~/.free-code-t0"
+        "FREE_CODE_CONFIG_DIR": "/Users/Shared/prvse_world_workspace/L0/free-code-config"
       },
       "session_prefix": "freecode-t0",
       "model_hint": "qwen3.5-0.8b"
