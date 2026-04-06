@@ -195,15 +195,16 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       atBottomRef.current = buf.viewportY + term.rows >= buf.length
     })
 
-    // Capture selection immediately whenever it changes.
-    // Live PTY output pushes selected lines into scrollback and clears the visual
-    // selection before the user can press Cmd+C. Storing it here means the
-    // Cmd+C handler always has the last non-empty selection regardless of timing.
-    term.onSelectionChange(() => {
+    // Capture selection on mouseup directly on the container element.
+    // term.onSelectionChange doesn't fire reliably in this xterm build.
+    // xterm finalises its selection synchronously before mouseup bubbles,
+    // so getSelection() at this point always returns the final text.
+    const captureSelection = () => {
       const sel = term.getSelection()
-      console.log('[xterm] onSelectionChange:', JSON.stringify(sel))
+      console.log('[xterm] mouseup selection:', JSON.stringify(sel))
       if (sel) lastSelectionRef.current = sel
-    })
+    }
+    containerRef.current.addEventListener('mouseup', captureSelection)
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
