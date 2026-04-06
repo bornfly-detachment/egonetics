@@ -101,6 +101,9 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
   // Tracks whether terminal viewport is pinned to the bottom
   const atBottomRef = useRef(true)
+  // RAF write batching — prevents main-thread freeze on large PTY bursts
+  const pendingWritesRef = useRef<string[]>([])
+  const rafIdRef = useRef<number | null>(null)
 
   // Tier state
   const [tiers, setTiers] = useState<TierInfo[]>([])
