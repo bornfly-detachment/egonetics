@@ -68,6 +68,7 @@
       },
       "session_prefix": "freecode-t2",
       "model_hint": "claude-sonnet-4-5",
+      "startup_flags": ["--dangerously-skip-permissions"],
       "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行"
     }
   }
