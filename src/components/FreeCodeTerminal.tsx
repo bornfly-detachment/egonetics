@@ -243,16 +243,19 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
       const snap = atBottomRef.current
       const full = chunks.join('')
-      // Don't scroll if user has text selected — scrollToBottom clears selection in xterm
-      const hasSelection = !!term.getSelection()
+      // Use write callback to check selection AFTER xterm processes the chunk.
+      // Checking before write races with in-flight mouse selection; after is accurate.
+      // scrollToBottom() clears visual selection in xterm, so skip it when selected.
       if (full.length <= MAX_FRAME_BYTES) {
-        term.write(full)
-        if (snap && !hasSelection) term.scrollToBottom()
+        term.write(full, () => {
+          if (snap && !term.getSelection()) term.scrollToBottom()
+        })
       } else {
-        term.write(full.slice(0, MAX_FRAME_BYTES))
+        term.write(full.slice(0, MAX_FRAME_BYTES), () => {
+          if (snap && !term.getSelection()) term.scrollToBottom()
+        })
         pendingWritesRef.current.unshift(full.slice(MAX_FRAME_BYTES))
         rafIdRef.current = requestAnimationFrame(flushWrites)
-        if (snap && !hasSelection) term.scrollToBottom()
       }
     }
 
