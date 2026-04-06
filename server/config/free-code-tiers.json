@@ -30,9 +30,9 @@
     "T1": {
       "id": "T1",
       "label": "MiniMax 2.7",
-      "description": "MiniMax 云端（未接通，需经 LiteLLM 做 Anthropic↔MiniMax 翻译）",
+      "description": "MiniMax 云端，原生支持 Anthropic 协议，走 egonetics-l1 隔离用户",
       "color": "sky",
-      "enabled": false,
+      "enabled": true,
       "spawn_user": "egonetics-l1",
       "default_cwd": "/Users/Shared/prvse_world_workspace/L1",
       "scope": {
@@ -41,13 +41,11 @@
         "description": "L1 推理层：可读 L0，读写 L1（客观法则、项目配置）"
       },
       "env": {
-        "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000/v1",
-        "ANTHROPIC_API_KEY": "to-be-configured",
         "FREE_CODE_CONFIG_DIR": "/Users/Shared/prvse_world_workspace/L1/free-code-config"
       },
+      "env_file": "~/.minimax_claude",
       "session_prefix": "freecode-t1",
-      "model_hint": "minimax-m2.7",
-      "not_ready_reason": "MiniMax Anthropic-compat 端点尚未配置（需 LiteLLM 桥接）"
+      "model_hint": "MiniMax-M2.7"
     },
 
     "T2": {
