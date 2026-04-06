@@ -166,6 +166,8 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       scrollback: 10000,
       allowProposedApi: true,
       smoothScrollDuration: 120,
+      // Auto-copy selected text to system clipboard
+      copyOnSelect: true,
       theme: CINEMA_THEME,
     })
 
