@@ -249,7 +249,11 @@ export default function PrvseWorldView() {
   }, [])
 
   // ── Dynamic 3D adjustment when panel is fullscreen ──
-  const panelRatio = spherePanel ? (panelFullscreen ? 1 : 380 / (containerRef.current?.clientWidth ?? 1200)) : 0
+  const panelRatio = spherePanel
+    ? panelMode === 'fullscreen' ? 1
+    : panelMode === 'center'    ? 0   // center modal floats, no canvas shift
+    : 380 / (containerRef.current?.clientWidth ?? 1200)
+    : 0
 
   // Keep panelRatioRef in sync for tick closure
   useEffect(() => { panelRatioRef.current = panelRatio }, [panelRatio])
