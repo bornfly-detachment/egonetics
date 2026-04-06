@@ -214,6 +214,8 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
       if (e.type !== 'keydown') return true
 
+      console.log('[keyhandler]', e.key, 'meta:', e.metaKey, 'ctrl:', e.ctrlKey, 'lastSel:', JSON.stringify(lastSelectionRef.current))
+
       const isMac = navigator.platform.toUpperCase().includes('MAC')
 
       // Cmd+C: use lastSelectionRef — captured via onSelectionChange so it survives
