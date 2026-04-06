@@ -201,10 +201,17 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     // so getSelection() at this point always returns the final text.
     const captureSelection = () => {
       const sel = term.getSelection()
-      console.log('[xterm] mouseup selection:', JSON.stringify(sel))
+      console.log('[xterm] mouseup selection:', JSON.stringify(sel), 'hasSelection:', term.hasSelection())
       if (sel) lastSelectionRef.current = sel
     }
     containerRef.current.addEventListener('mouseup', captureSelection)
+
+    // Diagnostic: programmatic select to verify getSelection() works at all
+    setTimeout(() => {
+      term.select(0, 0, 10)
+      console.log('[diag] after select(0,0,10):', JSON.stringify(term.getSelection()), 'hasSelection:', term.hasSelection())
+      term.clearSelection()
+    }, 2000)
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
