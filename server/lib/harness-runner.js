@@ -219,8 +219,10 @@ function buildTierEnv(tier, homeDir) {
   for (const [k, v] of Object.entries(tier.env || {})) {
     tierEnv[k] = typeof v === 'string' ? expandTilde(v, homeDir) : v
   }
+  // env_file is read by the backend process (bornfly), not the spawned agent,
+  // so always expand ~ relative to the host user's home, not the isolated user's.
   const fileEnv = tier.env_file
-    ? parseEnvFile(expandTilde(tier.env_file, homeDir))
+    ? parseEnvFile(expandTilde(tier.env_file, os.homedir()))
     : {}
   return { ...base, ...tierEnv, ...fileEnv }
 }
