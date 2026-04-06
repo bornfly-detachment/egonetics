@@ -497,13 +497,22 @@ export default function PrvseWorldView() {
         </div>
       )}
 
+      {/* ── Center mode backdrop ── */}
+      {spherePanel && !l1Panel && panelMode === 'center' && (
+        <div
+          className="absolute inset-0 z-30"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setSpherePanel(null)}
+        />
+      )}
+
       {/* ── L3 Sphere Panel: 右侧抽屉，点击三球体展开 L0/L1/L2 树 + AI 上下文 ── */}
       {spherePanel && !l1Panel && (
         <WorldSpherePanel
           node={spherePanel}
-          onClose={() => { setSpherePanel(null); setPanelFullscreen(false) }}
-          isFullscreen={panelFullscreen}
-          onToggleFullscreen={() => setPanelFullscreen(v => !v)}
+          onClose={() => setSpherePanel(null)}
+          mode={panelMode}
+          onModeChange={handlePanelMode}
         />
       )}
 
