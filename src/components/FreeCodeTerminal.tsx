@@ -199,23 +199,17 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     // term.onSelectionChange doesn't fire reliably in this xterm build.
     // xterm finalises its selection synchronously before mouseup bubbles,
     // so getSelection() at this point always returns the final text.
-    // Poll selection during mouse drag — Ink's continuous screen redraws clear
-    // xterm's selection between mousedown and mouseup, so we capture on every tick.
-    let dragPollTimer: ReturnType<typeof setInterval> | null = null
-    const onDragStart = () => {
-      dragPollTimer = setInterval(() => {
-        const sel = term.getSelection()
-        if (sel) lastSelectionRef.current = sel
-      }, 30)
-    }
-    const onDragEnd = () => {
-      if (dragPollTimer) { clearInterval(dragPollTimer); dragPollTimer = null }
-      // One final check right on mouseup
-      const sel = term.getSelection()
+    // xterm 6.0 without canvas/webgl addon uses the DOM renderer — text is real
+    // DOM spans, so the browser creates a native text selection on drag.
+    // On mouseup, xterm calls document.getSelection().removeAllRanges() which
+    // clears the browser selection before it can be read.
+    // Fix: capture window.getSelection() in document capture phase, which fires
+    // BEFORE xterm's mouseup handler runs on the terminal element.
+    const captureNativeSelection = () => {
+      const sel = window.getSelection()?.toString()
       if (sel) lastSelectionRef.current = sel
     }
-    containerRef.current.addEventListener('mousedown', onDragStart)
-    containerRef.current.addEventListener('mouseup', onDragEnd)
+    document.addEventListener('mouseup', captureNativeSelection, { capture: true })
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
