@@ -439,6 +439,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     setCurrentTier(newTierId)
     currentTierRef.current = newTierId
     setState('connecting')
+    isReadyRef.current = false
     ws.send(
       JSON.stringify({
         type: 'restart',
