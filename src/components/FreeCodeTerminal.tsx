@@ -253,6 +253,29 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     termRef.current = term
     fitRef.current = fit
 
+    // ── RAF write batcher ────────────────────────────────────────────────
+    // Max bytes written per animation frame. Beyond this, remainder is
+    // deferred to the next frame to avoid freezing the main thread.
+    const MAX_FRAME_BYTES = 65536
+    const flushWrites = () => {
+      rafIdRef.current = null
+      const chunks = pendingWritesRef.current
+      if (chunks.length === 0) return
+      pendingWritesRef.current = []
+
+      const snap = atBottomRef.current
+      const full = chunks.join('')
+      if (full.length <= MAX_FRAME_BYTES) {
+        term.write(full)
+        if (snap) term.scrollToBottom()
+      } else {
+        term.write(full.slice(0, MAX_FRAME_BYTES))
+        pendingWritesRef.current.unshift(full.slice(MAX_FRAME_BYTES))
+        rafIdRef.current = requestAnimationFrame(flushWrites)
+        if (snap) term.scrollToBottom()
+      }
+    }
+
     const resolvedUrl =
       wsUrl ||
       `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/free-code`
