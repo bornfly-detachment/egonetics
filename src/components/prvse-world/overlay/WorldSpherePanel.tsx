@@ -497,6 +497,10 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
   const systemPrompt = SPHERE_SYSTEM_PROMPTS[node.id] ?? `你是 ${node.name} 的 AI 守护者，用中文回答。`
   const componentId  = SPHERE_COMPONENT_IDS[node.id]  ?? `L3-${node.id}-Guardian-PersistentContext`
 
+  // Tab state — only used for dim-resources sphere
+  type ResourceTab = 'overview' | 'tiers'
+  const [resourceTab, setResourceTab] = useState<ResourceTab>('overview')
+
   const spectrum = ROOT_SPECTRUM[node.id]
   // Parse base color for gradient rgba values
   const hexToRgb = (hex: string) => {
