@@ -373,6 +373,8 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
+      pendingWritesRef.current = []
       observer.disconnect()
       sendInput.dispose()
       try { ws.close() } catch {}
