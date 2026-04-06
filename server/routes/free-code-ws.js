@@ -265,6 +265,9 @@ function attach(httpServer) {
             ptyProcess = null
           }
           break
+        case 'ping':
+          send({ type: 'pong' })
+          break
         default:
           send({ type: 'error', error: `unknown type: ${msg.type}` })
       }
