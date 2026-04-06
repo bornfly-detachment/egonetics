@@ -361,7 +361,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     }, 30_000)
 
     const sendInput = term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState === WebSocket.OPEN && isReadyRef.current) {
         ws.send(JSON.stringify({ type: 'input', data }))
       }
     })
