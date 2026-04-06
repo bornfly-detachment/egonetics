@@ -534,17 +534,20 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
 
   return (
     <div
-      className="absolute top-0 right-0 h-full z-40 flex flex-col transition-all duration-300"
+      className="absolute z-40 flex flex-col transition-all duration-300 overflow-hidden"
       style={{
-        width: isFullscreen ? '100%' : '380px',
+        ...MODE_STYLES[mode],
         background: `linear-gradient(180deg, rgba(${rgb},0.08) 0%, rgba(${rgb},0.03) 12%, rgba(4,5,10,0.97) 30%, rgba(4,5,10,0.97) 100%)`,
         backdropFilter: 'blur(28px)',
-        borderLeft: 'none',
-        boxShadow: isFullscreen ? 'none' : `-12px 0 48px rgba(0,0,0,0.8), -2px 0 20px rgba(${rgb},0.04)`,
+        boxShadow: mode === 'side'
+          ? `-12px 0 48px rgba(0,0,0,0.8), -2px 0 20px rgba(${rgb},0.04)`
+          : mode === 'center'
+          ? `0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(${rgb},0.15), 0 0 40px rgba(${rgb},0.06)`
+          : 'none',
       }}
     >
-      {/* Gradient left border line */}
-      {!isFullscreen && spectrum && (
+      {/* Gradient left border line — side mode only */}
+      {mode === 'side' && spectrum && (
         <div
           className="absolute left-0 top-0 h-full pointer-events-none"
           style={{
