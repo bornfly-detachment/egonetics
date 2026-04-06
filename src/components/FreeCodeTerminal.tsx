@@ -107,6 +107,8 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   // Last captured selection — xterm may clear visual selection on live output,
   // but we keep a copy so Cmd+C still works after mouseup
   const lastSelectionRef = useRef('')
+  // Gate input until backend confirms PTY is ready (prevents echo artifacts on sudo tiers)
+  const isReadyRef = useRef(false)
 
   // Tier state
   const [tiers, setTiers] = useState<TierInfo[]>([])
