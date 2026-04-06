@@ -186,8 +186,13 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     term.loadAddon(fit)
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
-    // CanvasAddon must be loaded AFTER open() — it needs the DOM container
-    term.loadAddon(new CanvasAddon())
+    // CanvasAddon must load AFTER open(); fall back to DOM renderer on failure
+    // (headless Chrome / environments without GPU will throw here)
+    try {
+      term.loadAddon(new CanvasAddon())
+    } catch {
+      // DOM renderer fallback — selection captured via window.getSelection()
+    }
     fit.fit()
     term.focus()
 
