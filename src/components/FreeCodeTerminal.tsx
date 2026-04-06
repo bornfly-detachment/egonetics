@@ -183,14 +183,8 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
     const fit = new FitAddon()
     term.loadAddon(fit)
-    term.open(containerRef.current)
-    // All renderer-dependent addons must load AFTER open()
     term.loadAddon(new WebLinksAddon())
-    try {
-      term.loadAddon(new CanvasAddon())
-    } catch {
-      // DOM renderer fallback (headless Chrome / no GPU)
-    }
+    term.open(containerRef.current)
     fit.fit()
     term.focus()
 
