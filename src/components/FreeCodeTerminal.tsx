@@ -312,14 +312,10 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       if (!fitRef.current || !termRef.current) return
       try {
         fitRef.current.fit()
+        const cols = Math.max(MIN_COLS, termRef.current.cols)
+        const rows = Math.max(MIN_ROWS, termRef.current.rows)
         if (ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: 'resize',
-              cols: termRef.current.cols,
-              rows: termRef.current.rows,
-            }),
-          )
+          ws.send(JSON.stringify({ type: 'resize', cols, rows }))
         }
       } catch {}
     })
