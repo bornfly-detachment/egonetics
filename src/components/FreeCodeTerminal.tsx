@@ -299,9 +299,10 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           break
         case 'output':
           if (msg.data) {
-            const snap = atBottomRef.current
-            term.write(msg.data)
-            if (snap) term.scrollToBottom()
+            pendingWritesRef.current.push(msg.data)
+            if (rafIdRef.current === null) {
+              rafIdRef.current = requestAnimationFrame(flushWrites)
+            }
           }
           break
         case 'exit':
