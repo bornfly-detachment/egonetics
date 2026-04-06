@@ -19,6 +19,7 @@ import { COMPONENT_ROUTE } from '../sphere-pages'
 import { ROOT_SPECTRUM } from '../constants'
 import ResourcePanel from '../panels/ResourcePanel'
 import CompilerPanel from '../panels/CompilerPanel'
+import TierManagePanel from '../panels/TierManagePanel'
 
 // ── Types ──────────────────────────────────────────────────────────
 
