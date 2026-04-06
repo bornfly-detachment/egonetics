@@ -195,6 +195,15 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       atBottomRef.current = buf.viewportY + term.rows >= buf.length
     })
 
+    // Capture selection immediately whenever it changes.
+    // Live PTY output pushes selected lines into scrollback and clears the visual
+    // selection before the user can press Cmd+C. Storing it here means the
+    // Cmd+C handler always has the last non-empty selection regardless of timing.
+    term.onSelectionChange(() => {
+      const sel = term.getSelection()
+      if (sel) lastSelectionRef.current = sel
+    })
+
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
     // Cmd+V  → NOT intercepted: xterm's internal textarea receives the native
