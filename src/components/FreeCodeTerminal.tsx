@@ -201,17 +201,14 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     // term.onSelectionChange doesn't fire reliably in this xterm build.
     // xterm finalises its selection synchronously before mouseup bubbles,
     // so getSelection() at this point always returns the final text.
-    // xterm 6.0 without canvas/webgl addon uses the DOM renderer — text is real
-    // DOM spans, so the browser creates a native text selection on drag.
-    // On mouseup, xterm calls document.getSelection().removeAllRanges() which
-    // clears the browser selection before it can be read.
-    // Fix: capture window.getSelection() in document capture phase, which fires
-    // BEFORE xterm's mouseup handler runs on the terminal element.
-    const captureNativeSelection = () => {
-      const sel = window.getSelection()?.toString()
+    // With CanvasAddon, xterm owns the selection model. onSelectionChange fires
+    // reliably whenever the user drags to select or xterm clears the selection.
+    // We only update lastSelectionRef on non-empty selection so Cmd+C still works
+    // even after Ink redraws briefly clear the visual highlight.
+    term.onSelectionChange(() => {
+      const sel = term.getSelection()
       if (sel) lastSelectionRef.current = sel
-    }
-    document.addEventListener('mouseup', captureNativeSelection, { capture: true })
+    })
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
