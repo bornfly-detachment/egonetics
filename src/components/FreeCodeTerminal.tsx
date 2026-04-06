@@ -176,6 +176,36 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
     fit.fit()
+    // Auto-focus so user can type immediately without clicking first
+    term.focus()
+
+    // ── Clipboard integration ─────────────────────────────────────────────
+    // copyOnSelect handles copy; this handler adds Cmd/Ctrl+C (when no
+    // selection falls through) and Cmd/Ctrl+V for paste.
+    term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC')
+      const mod = isMac ? e.metaKey : e.ctrlKey
+
+      if (e.type === 'keydown' && mod) {
+        if (e.key === 'c') {
+          const sel = term.getSelection()
+          if (sel) {
+            navigator.clipboard.writeText(sel).catch(() => {})
+            // Don't swallow — let Ctrl-C also send SIGINT when there's no sel
+            return !!sel
+          }
+        }
+        if (e.key === 'v') {
+          navigator.clipboard.readText().then((text) => {
+            if (text && wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: 'input', data: text }))
+            }
+          }).catch(() => {})
+          return false // prevent browser default paste into page
+        }
+      }
+      return true
+    })
 
     termRef.current = term
     fitRef.current = fit
