@@ -265,6 +265,8 @@ function attach(httpServer) {
           spawnPty(msg.cols, msg.rows, msg.cwd, msg.tier)
           break
         case 'restart':
+          if (batchTimer) { clearTimeout(batchTimer); batchTimer = null }
+          batchBuf = ''
           if (ptyProcess) {
             try { ptyProcess.kill() } catch {}
             ptyProcess = null
