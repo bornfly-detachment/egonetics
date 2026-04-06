@@ -206,14 +206,17 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
       const isMac = navigator.platform.toUpperCase().includes('MAC')
 
-      // Cmd+C: copy selection; fall through to SIGINT when nothing selected
+      // Cmd+C: copy selection; fall through to SIGINT when nothing selected.
+      // lastSelectionRef holds the last mouseup selection in case xterm already
+      // cleared the visual highlight by the time the key fires.
       if (isMac && e.metaKey && !e.ctrlKey && e.key === 'c') {
-        const sel = term.getSelection()
+        const sel = term.getSelection() || lastSelectionRef.current
         if (sel) {
           navigator.clipboard.writeText(sel).catch(() => {})
-          return false // copied — do NOT send \x03 SIGINT
+          lastSelectionRef.current = ''
+          return false
         }
-        return true // no selection → pass through
+        return true // no selection → pass through as SIGINT
       }
 
       // Reclaim Ctrl shortcuts stolen by the browser
