@@ -201,6 +201,15 @@ Promise.all([kernelRuntime.init(), mq.init(kernelRuntime)]).then(async () => {
   // 启动心跳（24/7 自触发）
   heartbeat.start();
 
+  // T0 推理服务常驻启动 — mlx_lm.server 加载模型需要 ~15s，
+  // 提前拉起避免第一次请求等待。进程生命周期跟后端一致。
+  const t0Runtime = require('./lib/t0-runtime');
+  t0Runtime.ensureRunning().then(() => {
+    console.log(`🧠 T0 推理: mlx_lm.server ready at ${t0Runtime.BASE_URL}`);
+  }).catch(err => {
+    console.warn(`⚠️ T0 推理启动失败（不影响 T1/T2）: ${err.message}`);
+  });
+
   httpServer.listen(PORT, () => {
     console.log(`🚀 后端运行在 http://localhost:${PORT}`);
     console.log(`📊 数据库: memory.db + pages.db (统一) + agents.db`);
