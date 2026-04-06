@@ -179,21 +179,25 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     // Auto-focus so user can type immediately without clicking first
     term.focus()
 
-    // ── Clipboard integration ─────────────────────────────────────────────
-    // copyOnSelect handles copy; this handler adds Cmd/Ctrl+C (when no
-    // selection falls through) and Cmd/Ctrl+V for paste.
+    // ── Keyboard / clipboard integration ─────────────────────────────────
+    // Goals:
+    //  1. Cmd+C  → copy selection (Mac), no SIGINT; without selection → let \x03 through
+    //  2. Cmd+V / Ctrl+Shift+V → paste from system clipboard into PTY
+    //  3. Ctrl+W / Ctrl+R / Ctrl+F / Ctrl+P → block browser defaults, send to PTY
     term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().includes('MAC')
-      const mod = isMac ? e.metaKey : e.ctrlKey
+      if (e.type !== 'keydown') return true
 
-      if (e.type === 'keydown' && mod) {
+      const isMac = navigator.platform.toUpperCase().includes('MAC')
+
+      // ── Mac: Cmd+C copy, Cmd+V paste ──────────────────────────────────
+      if (isMac && e.metaKey && !e.ctrlKey) {
         if (e.key === 'c') {
           const sel = term.getSelection()
           if (sel) {
             navigator.clipboard.writeText(sel).catch(() => {})
-            // Don't swallow — let Ctrl-C also send SIGINT when there's no sel
-            return !!sel
+            return false // selection copied — do NOT send SIGINT to PTY
           }
+          return true // no selection → fall through (Cmd+C without sel is rare)
         }
         if (e.key === 'v') {
           navigator.clipboard.readText().then((text) => {
@@ -201,9 +205,33 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
               wsRef.current.send(JSON.stringify({ type: 'input', data: text }))
             }
           }).catch(() => {})
-          return false // prevent browser default paste into page
+          return false
         }
       }
+
+      // ── Non-Mac: Ctrl+Shift+V paste ────────────────────────────────────
+      if (!isMac && e.ctrlKey && e.shiftKey && e.key === 'v') {
+        navigator.clipboard.readText().then((text) => {
+          if (text && wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: 'input', data: text }))
+          }
+        }).catch(() => {})
+        return false
+      }
+
+      // ── Reclaim Ctrl+<key> shortcuts stolen by the browser ────────────
+      // preventDefault stops the browser action; returning true lets xterm
+      // process the key normally and forward it to the PTY via onData.
+      if (e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        const key = e.key.toLowerCase()
+        // Ctrl+W closes tab, Ctrl+R refreshes, Ctrl+F opens find,
+        // Ctrl+P opens print, Ctrl+T opens new tab, Ctrl+N opens new window
+        if (['w', 'r', 'f', 'p', 't', 'n'].includes(key)) {
+          e.preventDefault()
+          return true // xterm will send the correct escape sequence to PTY
+        }
+      }
+
       return true
     })
 
