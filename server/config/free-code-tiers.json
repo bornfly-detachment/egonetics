@@ -43,7 +43,7 @@
       "env": {
         "ANTHROPIC_BASE_URL": "http://127.0.0.1:4000/v1",
         "ANTHROPIC_API_KEY": "to-be-configured",
-        "FREE_CODE_CONFIG_DIR": "~/.free-code-t1"
+        "FREE_CODE_CONFIG_DIR": "/Users/Shared/prvse_world_workspace/L1/free-code-config"
       },
       "session_prefix": "freecode-t1",
       "model_hint": "minimax-m2.7",
