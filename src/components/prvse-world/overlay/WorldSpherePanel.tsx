@@ -574,8 +574,33 @@ export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggle
 
       {/* Content — specialized panels per sphere, tree view as fallback */}
       {node.id === 'dim-resources' ? (
-        <div className="overflow-y-auto shrink-0" style={{ maxHeight: '52%' }}>
-          <ResourcePanel sphereColor={node.color} />
+        <div className="flex flex-col shrink-0" style={{ maxHeight: '52%' }}>
+          {/* Tabs */}
+          <div className="flex items-center gap-0.5 px-3 pt-2 pb-0 shrink-0">
+            {([['overview', '资源总览'], ['tiers', '智能分级']] as [ResourceTab, string][]).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setResourceTab(id)}
+                className="px-2.5 py-1 text-[10px] font-mono rounded-t-lg transition-all"
+                style={resourceTab === id ? {
+                  background: `${node.color}15`,
+                  color: `${node.color}cc`,
+                  borderBottom: `1px solid ${node.color}40`,
+                } : {
+                  color: 'rgba(255,255,255,0.3)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* Panel content */}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            {resourceTab === 'overview'
+              ? <ResourcePanel sphereColor={node.color} />
+              : <TierManagePanel sphereColor={node.color} />
+            }
+          </div>
         </div>
       ) : node.id === 'dim-constitution' ? (
         <div className="overflow-y-auto shrink-0" style={{ maxHeight: '52%' }}>
