@@ -581,14 +581,30 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
         >
           AI 持久上下文
         </span>
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={onToggleFullscreen}
-            className="p-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
-            title={isFullscreen ? '退出全屏' : '全屏'}
+        <div className="ml-auto flex items-center gap-0.5">
+          {/* Mode selector — 3 icons */}
+          <div
+            className="flex items-center gap-0.5 rounded-lg px-1 py-0.5 mr-1"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
           >
-            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-          </button>
+            {MODE_BUTTONS.map(({ id, icon, title }) => (
+              <button
+                key={id}
+                onClick={() => onModeChange(id)}
+                title={title}
+                className="p-1 rounded transition-all"
+                style={mode === id ? {
+                  background: `${node.color}22`,
+                  color: node.color,
+                  boxShadow: `0 0 8px ${node.color}30`,
+                } : {
+                  color: 'rgba(255,255,255,0.25)',
+                }}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
