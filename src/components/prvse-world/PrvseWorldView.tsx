@@ -87,7 +87,16 @@ export default function PrvseWorldView() {
   const [selectedRoot, setSelectedRoot] = useState<ControlNode | null>(null)
   const [l1Panel, setL1Panel] = useState<ControlNode | null>(null)   // 2D overlay for L1
   const [spherePanel, setSpherePanel] = useState<ControlNode | null>(null)  // L3 sphere drawer
-  const [panelFullscreen, setPanelFullscreen] = useState(false)
+
+  type PanelMode = 'side' | 'center' | 'fullscreen'
+  const [panelMode, setPanelMode] = useState<PanelMode>(() => {
+    const saved = localStorage.getItem('prvse_panel_mode')
+    return (saved === 'side' || saved === 'center' || saved === 'fullscreen') ? saved : 'side'
+  })
+  const handlePanelMode = (m: PanelMode) => {
+    setPanelMode(m)
+    localStorage.setItem('prvse_panel_mode', m)
+  }
   const [showAIInput, setShowAIInput] = useState(false)  // L3AIInput 需用户显式打开
   const [focus, setFocus] = useState<FocusState | null>(null)
   const [interactNode, setInteractNode] = useState<ControlNode | null>(null)
