@@ -195,18 +195,21 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
       atBottomRef.current = buf.viewportY + term.rows >= buf.length
     })
 
-    // Capture selection on mouseup directly on the container element.
-    // term.onSelectionChange doesn't fire reliably in this xterm build.
-    // xterm finalises its selection synchronously before mouseup bubbles,
-    // so getSelection() at this point always returns the final text.
-    // With CanvasAddon, xterm owns the selection model. onSelectionChange fires
-    // reliably whenever the user drags to select or xterm clears the selection.
-    // We only update lastSelectionRef on non-empty selection so Cmd+C still works
-    // even after Ink redraws briefly clear the visual highlight.
-    term.onSelectionChange(() => {
-      const sel = term.getSelection()
+    // Capture selection in mouseup capture-phase — fires before xterm's own
+    // mouseup handler which calls document.getSelection().removeAllRanges().
+    // With DOM renderer, xterm renders text in <span> elements so the browser
+    // builds a native text selection when the user drags (or Shift+drags with
+    // mouse-tracking on). We grab window.getSelection() before xterm clears it.
+    // Fallback to term.getSelection() in case xterm's SelectionService was
+    // updated but the browser selection is already gone.
+    const captureSelection = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) return
+      const browserSel = window.getSelection()?.toString() ?? ''
+      const xtermSel = term.getSelection()
+      const sel = browserSel || xtermSel
       if (sel) lastSelectionRef.current = sel
-    })
+    }
+    document.addEventListener('mouseup', captureSelection, true)
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
     // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
