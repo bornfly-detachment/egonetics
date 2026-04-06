@@ -203,7 +203,30 @@ function attach(httpServer) {
           },
         )
 
-        ptyProcess.onData((data) => send({ type: 'output', data }))
+        // ── Micro-batch PTY output ──────────────────────────────────────
+        // Accumulate PTY chunks for up to 8 ms, then send as one WS frame
+        // wrapped in DEC 2026 Synchronized Output markers so xterm.js 6.x
+        // renders the whole batch atomically — eliminates Ink cursor-up flicker.
+        const BATCH_MS = 8
+        const BATCH_MAX = 16384  // flush immediately when buffer exceeds 16 KB
+        let batchBuf = ''
+        let batchTimer = null
+        const flushBatch = () => {
+          batchTimer = null
+          if (!batchBuf) return
+          send({ type: 'output', data: `\x1b[?2026h${batchBuf}\x1b[?2026l` })
+          batchBuf = ''
+        }
+        ptyProcess.onData((data) => {
+          batchBuf += data
+          if (batchBuf.length >= BATCH_MAX) {
+            if (batchTimer) { clearTimeout(batchTimer); batchTimer = null }
+            flushBatch()
+          } else if (!batchTimer) {
+            batchTimer = setTimeout(flushBatch, BATCH_MS)
+          }
+        })
+
         ptyProcess.onExit(({ exitCode, signal }) => {
           // This fires when the tmux CLIENT exits (detach). The tmux daemon
           // keeps the session alive unless the user explicitly killed it.
