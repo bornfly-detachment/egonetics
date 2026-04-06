@@ -215,17 +215,16 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
       const isMac = navigator.platform.toUpperCase().includes('MAC')
 
-      // Cmd+C: copy selection; fall through to SIGINT when nothing selected.
-      // lastSelectionRef holds the last mouseup selection in case xterm already
-      // cleared the visual highlight by the time the key fires.
+      // Cmd+C: use lastSelectionRef — captured via onSelectionChange so it survives
+      // live output clearing the visual selection before the key fires.
       if (isMac && e.metaKey && !e.ctrlKey && e.key === 'c') {
-        const sel = term.getSelection() || lastSelectionRef.current
+        const sel = lastSelectionRef.current
         if (sel) {
           navigator.clipboard.writeText(sel).catch(() => {})
           lastSelectionRef.current = ''
           return false
         }
-        return true // no selection → pass through as SIGINT
+        return true // nothing selected → Cmd+C passes through (no PTY effect on Mac)
       }
 
       // Reclaim Ctrl shortcuts stolen by the browser
