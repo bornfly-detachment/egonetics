@@ -46,6 +46,9 @@ const CINEMA_THEME = {
   brightWhite: '#f8fafc',
 } as const
 
+const MIN_COLS = 40
+const MIN_ROWS = 10
+
 const RECENT_CWD_KEY = 'egonetics:free-code:recent-cwds'
 const MAX_RECENT = 6
 
