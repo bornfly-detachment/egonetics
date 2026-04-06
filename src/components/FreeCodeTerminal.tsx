@@ -99,6 +99,9 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
   const [customPath, setCustomPath] = useState('')
   const pickerRef = useRef<HTMLDivElement | null>(null)
 
+  // Tracks whether terminal viewport is pinned to the bottom
+  const atBottomRef = useRef(true)
+
   // Tier state
   const [tiers, setTiers] = useState<TierInfo[]>([])
   const [currentTier, setCurrentTier] = useState<string>('T2')
