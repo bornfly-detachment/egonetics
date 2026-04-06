@@ -345,6 +345,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     observer.observe(containerRef.current)
 
     return () => {
+      if (resizeTimer) clearTimeout(resizeTimer)
       observer.disconnect()
       sendInput.dispose()
       try { ws.close() } catch {}
