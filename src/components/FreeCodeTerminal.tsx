@@ -520,6 +520,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           className="h-full w-full px-4 py-3"
           role="application"
           aria-label="free-code interactive terminal"
+          onClick={() => termRef.current?.focus()}
         />
       </div>
     </div>
