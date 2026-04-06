@@ -193,55 +193,32 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
     })
 
     // ── Keyboard / clipboard integration ─────────────────────────────────
-    // Goals:
-    //  1. Cmd+C  → copy selection (Mac), no SIGINT; without selection → let \x03 through
-    //  2. Cmd+V / Ctrl+Shift+V → paste from system clipboard into PTY
-    //  3. Ctrl+W / Ctrl+R / Ctrl+F / Ctrl+P → block browser defaults, send to PTY
+    // Cmd+C  → copy selection to clipboard (Mac); no SIGINT when text is selected
+    // Cmd+V  → NOT intercepted: xterm's internal textarea receives the native
+    //          paste event directly, fires onData, no clipboard permission needed
+    // Ctrl+W/R/F/P/T/N → preventDefault so browser doesn't steal them; xterm
+    //          still processes them and forwards the correct escape to the PTY
     term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
       if (e.type !== 'keydown') return true
 
       const isMac = navigator.platform.toUpperCase().includes('MAC')
 
-      // ── Mac: Cmd+C copy, Cmd+V paste ──────────────────────────────────
-      if (isMac && e.metaKey && !e.ctrlKey) {
-        if (e.key === 'c') {
-          const sel = term.getSelection()
-          if (sel) {
-            navigator.clipboard.writeText(sel).catch(() => {})
-            return false // selection copied — do NOT send SIGINT to PTY
-          }
-          return true // no selection → fall through (Cmd+C without sel is rare)
+      // Cmd+C: copy selection; fall through to SIGINT when nothing selected
+      if (isMac && e.metaKey && !e.ctrlKey && e.key === 'c') {
+        const sel = term.getSelection()
+        if (sel) {
+          navigator.clipboard.writeText(sel).catch(() => {})
+          return false // copied — do NOT send \x03 SIGINT
         }
-        if (e.key === 'v') {
-          navigator.clipboard.readText().then((text) => {
-            if (text && wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'input', data: text }))
-            }
-          }).catch(() => {})
-          return false
-        }
+        return true // no selection → pass through
       }
 
-      // ── Non-Mac: Ctrl+Shift+V paste ────────────────────────────────────
-      if (!isMac && e.ctrlKey && e.shiftKey && e.key === 'v') {
-        navigator.clipboard.readText().then((text) => {
-          if (text && wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'input', data: text }))
-          }
-        }).catch(() => {})
-        return false
-      }
-
-      // ── Reclaim Ctrl+<key> shortcuts stolen by the browser ────────────
-      // preventDefault stops the browser action; returning true lets xterm
-      // process the key normally and forward it to the PTY via onData.
+      // Reclaim Ctrl shortcuts stolen by the browser
       if (e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
         const key = e.key.toLowerCase()
-        // Ctrl+W closes tab, Ctrl+R refreshes, Ctrl+F opens find,
-        // Ctrl+P opens print, Ctrl+T opens new tab, Ctrl+N opens new window
         if (['w', 'r', 'f', 'p', 't', 'n'].includes(key)) {
           e.preventDefault()
-          return true // xterm will send the correct escape sequence to PTY
+          return true // xterm sends the escape sequence to PTY
         }
       }
 
