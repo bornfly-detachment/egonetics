@@ -333,13 +333,8 @@ function buildTmuxSpawn(opts) {
     repairStaleServer(spawnUser, tmuxSocket)
   }
 
-  // Isolated users (egonetics-lX) default to umask 077, which makes every file
-  // they write inaccessible to bornfly (owner only, mode 600). Wrap the binary
-  // in a shell that sets umask 022 first so files come out as 644 — readable
-  // by bornfly while still private from unrelated system users.
   const startupFlags = Array.isArray(tier.startup_flags) ? tier.startup_flags.join(' ') : ''
-  const binaryWithFlags = startupFlags ? `${binary} ${startupFlags}` : binary
-  const binaryCmd = willIsolate ? `bash -c 'umask 022; exec ${binaryWithFlags}'` : binaryWithFlags
+  const binaryCmd = startupFlags ? `${binary} ${startupFlags}` : binary
 
   const tmuxArgs = [
     '-L', tmuxSocket,
