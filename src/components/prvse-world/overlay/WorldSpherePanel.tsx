@@ -473,11 +473,32 @@ function AIChat({
 interface WorldSpherePanelProps {
   node: ControlNode
   onClose: () => void
-  isFullscreen: boolean
-  onToggleFullscreen: () => void
+  mode: PanelMode
+  onModeChange: (m: PanelMode) => void
 }
 
-export default function WorldSpherePanel({ node, onClose, isFullscreen, onToggleFullscreen }: WorldSpherePanelProps) {
+const MODE_STYLES: Record<PanelMode, React.CSSProperties> = {
+  side: {
+    top: 0, right: 0, height: '100%', width: '380px',
+  },
+  center: {
+    top: '50%', left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '720px', maxHeight: '78vh',
+    borderRadius: '18px',
+  },
+  fullscreen: {
+    top: 0, right: 0, height: '100%', width: '100%',
+  },
+}
+
+const MODE_BUTTONS: { id: PanelMode; icon: React.ReactNode; title: string }[] = [
+  { id: 'side',       icon: <PanelRight size={12} />,  title: '侧边面板' },
+  { id: 'center',     icon: <AppWindow size={12} />,   title: '居中窗口' },
+  { id: 'fullscreen', icon: <Maximize2 size={12} />,   title: '全屏' },
+]
+
+export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: WorldSpherePanelProps) {
   const children = node.children ?? []
 
   // Group direct children by their meta.layer
