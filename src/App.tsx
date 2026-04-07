@@ -109,6 +109,8 @@ const RouteSync: React.FC = () => {
       view = 'free-code'
     } else if (path === '/prv-demo') {
       view = 'prv-demo'
+    } else if (path === '/font-compare') {
+      view = 'font-compare'
     } else {
       view = 'memory'
     }
