@@ -170,7 +170,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
 
     const term = new Terminal({
       fontFamily:
-        '"JetBrains Mono", "SF Mono", "Fira Code", ui-monospace, Menlo, Monaco, Consolas, monospace',
+        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
       fontSize: 13,
       lineHeight: 1.35,
       letterSpacing: 0,
