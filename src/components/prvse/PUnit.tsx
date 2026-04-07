@@ -130,10 +130,6 @@ export default function PUnit({
   const nc = narrowingCount(data)
   const authority = derivedAuthority(data)
 
-  const PHYSICAL_OPTIONS: PhysicalType[] = ['text', 'number', 'code', 'structured', 'image', 'audio', 'video', 'stream', 'mixed']
-  const LEVEL_OPTIONS: InfoLevel[] = ['L0', 'L1', 'L2']
-  const COMM_OPTIONS: Communication[] = ['bottom_up', 'top_down', 'lateral']
-
   return (
     <div
       className="rounded-xl overflow-hidden transition-all duration-200"
