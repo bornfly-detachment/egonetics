@@ -17,18 +17,39 @@ const fs      = require('fs')
 const path    = require('path')
 const { pagesDb } = require('../db')
 
-// ── JSON 文件路径 ─────────────────────────────────────────────
-const TAG_TREE_PATH = path.resolve(__dirname, '../../src/kernel/compiler/tag-tree.json')
+// ── YAML 文件路径（workspace — Git 跟踪，T0/T1/T2 均可读） ──
+const yaml = require('js-yaml')
+const WORKSPACE = process.env.EGONETICS_WORKSPACE || '/Users/Shared/prvse_world_workspace'
+const TAG_TREE_PATH = path.join(WORKSPACE, 'chronicle', 'tag-tree.yaml')
+// Legacy JSON path — kept in sync for backward compatibility
+const TAG_TREE_JSON_LEGACY = path.resolve(__dirname, '../../src/kernel/compiler/tag-tree.json')
 
-// ── 读写 JSON ─────────────────────────────────────────────────
+// ── 内存缓存 + 读写 ──────────────────────────────────────────
+let _cache = null
+let _cacheMtime = 0
 
 function readTree() {
-  const raw = fs.readFileSync(TAG_TREE_PATH, 'utf-8')
-  return JSON.parse(raw)
+  try {
+    const stat = fs.statSync(TAG_TREE_PATH)
+    if (_cache && stat.mtimeMs === _cacheMtime) return _cache
+    const raw = fs.readFileSync(TAG_TREE_PATH, 'utf-8')
+    _cache = yaml.load(raw)
+    _cacheMtime = stat.mtimeMs
+    return _cache
+  } catch {
+    // Fallback: try legacy JSON
+    const raw = fs.readFileSync(TAG_TREE_JSON_LEGACY, 'utf-8')
+    return JSON.parse(raw)
+  }
 }
 
 function writeTree(tree) {
-  fs.writeFileSync(TAG_TREE_PATH, JSON.stringify(tree, null, 2) + '\n', 'utf-8')
+  _cache = tree
+  _cacheMtime = Date.now()
+  // Write YAML (primary)
+  fs.writeFileSync(TAG_TREE_PATH, yaml.dump(tree, { lineWidth: 120, noRefs: true }), 'utf-8')
+  // Write legacy JSON (backward compat for frontend imports)
+  fs.writeFileSync(TAG_TREE_JSON_LEGACY, JSON.stringify(tree, null, 2) + '\n', 'utf-8')
 }
 
 // ── 递归查找/遍历 ─────────────────────────────────────────────
