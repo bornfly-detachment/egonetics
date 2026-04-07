@@ -37,9 +37,9 @@
       "spawn_user": "egonetics-l1",
       "default_cwd": "/Users/Shared/prvse_world_workspace/L1",
       "scope": {
-        "readable": ["/Users/Shared/prvse_world_workspace/L0", "/Users/Shared/prvse_world_workspace/L1"],
+        "readable": ["/Users/Shared/prvse_world_workspace/L0", "/Users/Shared/prvse_world_workspace/L1", "/Users/Shared/reference"],
         "writable": ["/Users/Shared/prvse_world_workspace/L1"],
-        "description": "L1 推理层：可读 L0，读写 L1（客观法则、项目配置）"
+        "description": "L1 推理层：可读 L0/L1，读写 L1（客观法则、项目配置）；可读 reference 参考代码"
       },
       "env": {
         "FREE_CODE_CONFIG_DIR": "/Users/Shared/prvse_world_workspace/L1/free-code-config"
