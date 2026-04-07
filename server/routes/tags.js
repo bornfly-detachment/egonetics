@@ -166,7 +166,9 @@ function genId() {
 // ── 路由 ──────────────────────────────────────────────────────
 
 // GET /api/tag-trees — 返回 TagNode[] 格式（前端兼容）
-router.get('/tag-trees', (_req, res) => {
+// ?scope=L0|L1|L2 — 按级别过滤（只返回 scope 包含该级别的节点）
+// ?for=classify — 返回精简版供 AI 分类 prompt 使用
+router.get('/tag-trees', (req, res) => {
   try {
     const tree = readTree()
     const roots = []
@@ -176,6 +178,23 @@ router.get('/tag-trees', (_req, res) => {
         if (node) roots.push(node)
       }
     }
+
+    // scope 过滤：只返回 scope 字段包含指定级别的节点
+    const scope = req.query.scope
+    if (scope) {
+      const filtered = roots.map(r => filterByScope(r, scope)).filter(Boolean)
+      return res.json(filtered)
+    }
+
+    // for=classify：返回精简的 {id, name, path} 列表供 prompt 生成
+    if (req.query.for === 'classify') {
+      const flat = []
+      for (const root of roots) {
+        collectClassifyTags(root, '', flat)
+      }
+      return res.json(flat)
+    }
+
     res.json(roots)
   } catch (err) {
     res.status(500).json({ error: err.message })
