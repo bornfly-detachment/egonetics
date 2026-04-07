@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, Circle, ArrowRight } from 'lucide-react'
 import type {
-  PatternData, PatternState, InfoLevel, PhysicalType, Communication,
+  PatternData, PatternState,
   ProvenanceData, ResourceData, MountData,
 } from '@prvse/types'
 import { narrowingCount, derivedAuthority, L_COLORS, STATE_VISUALS } from '@prvse/types'
