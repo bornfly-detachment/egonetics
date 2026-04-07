@@ -70,8 +70,8 @@ function GraphSummary({ data, viewLevel, onViewLevelChange }: {
     <div className="space-y-2">
       {/* 统计概览 */}
       <div className="flex gap-4 text-[10px] font-mono">
-        <span className="text-white/30">{data.nodes.length} 节点</span>
-        <span className="text-white/30">{data.edges.length} 边</span>
+        <span className="text-white/45">{data.nodes.length} 节点</span>
+        <span className="text-white/45">{data.edges.length} 边</span>
         <span className="text-white/40">
           L0:{edgesByLevel.L0.length} L1:{edgesByLevel.L1.length} L2:{edgesByLevel.L2.length}
         </span>
