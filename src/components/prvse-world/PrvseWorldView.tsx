@@ -447,7 +447,7 @@ export default function PrvseWorldView() {
       )}
 
       {/* ── Fullscreen mode: bookmark icons on left edge ── */}
-      {spherePanel && panelFullscreen && !l1Panel && (
+      {spherePanel && panelMode === 'fullscreen' && !l1Panel && (
         <div className="absolute top-1/2 -translate-y-1/2 left-1 z-50 flex flex-col gap-2">
           {tree.map(root => {
             const isActive = spherePanel?.id === root.id
