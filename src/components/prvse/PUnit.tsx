@@ -81,24 +81,20 @@ function StateBar({ state, onTransition }: {
   )
 }
 
-// ── 分类选择器 ──────────────────────────────────────────────────
-function ClassificationRow<T extends string>({ label, value, options, onChange }: {
-  label: string; value: T | undefined; options: T[]; onChange?: (v: T) => void
+// ── 分类显示行 ──────────────────────────────────────────────────
+function ClassificationRow({ label, value, resolved, source }: {
+  label: string; value: string | undefined; resolved: boolean; source?: string
 }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-white/75 w-10 shrink-0">{label}</span>
-      {onChange ? (
-        <select
-          value={value ?? ''}
-          onChange={e => onChange(e.target.value as T)}
-          className="text-sm font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-white/65 outline-none"
-        >
-          <option value="">未解析</option>
-          {options.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
+      {resolved ? (
+        <span className="text-sm font-mono text-white/75 flex items-center gap-1.5">
+          {value}
+          {source === 'ai' && <span className="text-[9px] px-1 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold">AI</span>}
+        </span>
       ) : (
-        <span className="text-sm font-mono text-white/65">{value ?? '未解析'}</span>
+        <span className="text-sm font-mono text-white/30 italic">待分类</span>
       )}
     </div>
   )
