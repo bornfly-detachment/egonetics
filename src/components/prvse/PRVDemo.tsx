@@ -255,19 +255,27 @@ function PSection() {
         <textarea
           value={newContent}
           onChange={e => setNewContent(e.target.value)}
-          placeholder="输入新 Pattern 内容..."
+          placeholder="输入原始内容，AI 自动分类..."
           rows={2}
           className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/25 resize-none focus:outline-none focus:border-amber-500/40 font-sans"
         />
         <button
           onClick={handleCreate}
-          disabled={creating || !newContent.trim()}
+          disabled={creating || classifying || !newContent.trim()}
           className="px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-mono hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
-          {creating ? '创建中...' : '新建 P'}
+          {creating ? '创建中...' : classifying ? 'AI 分类中...' : '新建 P'}
         </button>
       </div>
+
+      {/* AI classifying indicator */}
+      {classifying && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+          <RefreshCw className="w-3.5 h-3.5 text-violet-400 animate-spin" />
+          <span className="text-xs text-violet-300 font-mono">AI 自动识别分类中（T1 MiniMax）...</span>
+        </div>
+      )}
 
       {/* PUnit */}
       {selected ? (
@@ -280,6 +288,13 @@ function PSection() {
           onStateTransition={next => handleUpdate({ state: next })}
           onFork={handleFork}
           onFreeze={handleFreeze}
+          onClassify={() => {
+            setClassifying(true)
+            prvseApi.classify<PatternData>('P', selected.id)
+              .then(classified => setSelected(classified))
+              .catch(err => console.error('[PRVDemo] classify failed:', err))
+              .finally(() => setClassifying(false))
+          }}
         />
       ) : (
         <div className="flex items-center justify-center h-24 rounded-xl border border-white/[0.06] text-white/25 text-sm">
