@@ -47,7 +47,7 @@
       "env_file": "~/.minimax_claude",
       "session_prefix": "freecode-t1",
       "model_hint": "MiniMax-M2.7",
-      "startup_flags": ["--dangerously-skip-permissions"]
+      "startup_flags": ["--dangerously-skip-permissions", "--add-dir", "/Users/Shared/reference"]
     },
 
     "T2": {
