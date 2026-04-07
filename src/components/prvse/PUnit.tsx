@@ -87,7 +87,7 @@ function ClassificationRow<T extends string>({ label, value, options, onChange }
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[9px] text-white/30 w-10 shrink-0">{label}</span>
+      <span className="text-[9px] text-white/45 w-10 shrink-0">{label}</span>
       {onChange ? (
         <select
           value={value ?? ''}
@@ -164,7 +164,7 @@ export default function PUnit({
 
         {/* 物理类型 */}
         {data.physical.resolved && (
-          <span className="text-[9px] font-mono text-white/30">·{data.physical.value}</span>
+          <span className="text-[9px] font-mono text-white/45">·{data.physical.value}</span>
         )}
 
         {/* 内容预览 */}
