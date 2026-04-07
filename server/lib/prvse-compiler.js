@@ -48,11 +48,18 @@ relationLevel(only if content describes a relation): L0=pure-logic(1+1=2), L1=ca
 async function llmLex(content, opts = {}) {
   const tier   = opts.tier || 'T1'
   const engine = tier === 'T0' ? t0Engine : t1Engine
+  const tagTreeContext = opts.tagTreeContext || ''
 
   const startTime = Date.now()
 
+  // Build prompt: base schema + optional tag-tree for tag ID matching
+  let systemPrompt = LEXER_SYSTEM_PROMPT
+  if (tagTreeContext) {
+    systemPrompt += `\n\nAvailable tag-tree nodes (pick the most specific matching tag IDs and return them in a "tagIds" array):\n${tagTreeContext}`
+  }
+
   const { content: rawText } = await engine.call(
-    [{ role: 'user', content: `[System]\n${LEXER_SYSTEM_PROMPT}\n\n[Input to classify]\n${content}` }],
+    [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
     { maxTokens: 1024 }
   )
   const raw = rawText || '{}'
