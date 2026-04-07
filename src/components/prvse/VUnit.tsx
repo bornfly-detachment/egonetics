@@ -37,7 +37,7 @@ function CheckRow({ item }: { item: ChecklistItem }) {
           <span className="text-[10px] text-white/55 truncate">{item.description}</span>
         </div>
         {item.evidence && (
-          <div className="text-[9px] text-white/25 mt-0.5 truncate">{item.evidence}</div>
+          <div className="text-[9px] text-white/40 mt-0.5 truncate">{item.evidence}</div>
         )}
       </div>
     </div>
@@ -153,7 +153,7 @@ export default function VUnit({
         <div>
           {/* Checklist */}
           <div className="px-3 pb-2">
-            <div className="text-[9px] text-white/25 mb-1 uppercase tracking-wider">Checklist</div>
+            <div className="text-[9px] text-white/40 mb-1 uppercase tracking-wider">Checklist</div>
             <div className="rounded-lg bg-black/20 border border-white/[0.05] px-2 py-1">
               {data.checklist.map(item => <CheckRow key={item.id} item={item} />)}
             </div>
@@ -162,7 +162,7 @@ export default function VUnit({
           {/* 指标 */}
           {data.metrics.length > 0 && (
             <div className="px-3 pb-2">
-              <div className="text-[9px] text-white/25 mb-1.5 uppercase tracking-wider">指标 (V1)</div>
+              <div className="text-[9px] text-white/40 mb-1.5 uppercase tracking-wider">指标 (V1)</div>
               <div className="space-y-1.5">
                 {data.metrics.map(m => <MetricBar key={m.type} metric={m} />)}
               </div>
@@ -174,7 +174,7 @@ export default function VUnit({
             <div className="px-3 pb-2">
               <div className="flex items-center gap-1 mb-1.5">
                 <TrendingUp size={9} className="text-emerald-400/50" />
-                <span className="text-[9px] text-white/25 uppercase tracking-wider">Reward</span>
+                <span className="text-[9px] text-white/40 uppercase tracking-wider">Reward</span>
               </div>
               <div className="space-y-1.5">
                 {data.rewards.map(r => <RewardRow key={r.type} reward={r} />)}
@@ -185,7 +185,7 @@ export default function VUnit({
           {/* 生命周期评估（L1） */}
           {data.lifecycle && (
             <div className="px-3 pb-2">
-              <div className="text-[9px] text-white/25 mb-1 uppercase tracking-wider">Lifecycle (L1)</div>
+              <div className="text-[9px] text-white/40 mb-1 uppercase tracking-wider">Lifecycle (L1)</div>
               <div className="rounded-lg bg-black/20 border border-white/[0.05] px-2.5 py-2 space-y-1 text-[10px] font-mono">
                 <div className="flex justify-between">
                   <span className="text-white/30">反馈方向</span>
@@ -212,7 +212,7 @@ export default function VUnit({
           {/* 独立性状态 */}
           <div className="px-3 pb-2">
             <div className="flex items-center gap-2 text-[9px]">
-              <Scale size={9} className="text-white/25" />
+              <Scale size={9} className="text-white/40" />
               <span className={data.independence.neutral ? 'text-emerald-400/50' : 'text-red-400/50'}>
                 {data.independence.neutral ? '✓ 中立' : '✗ 非中立'}
               </span>
