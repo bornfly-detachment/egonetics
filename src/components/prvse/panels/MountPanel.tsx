@@ -96,7 +96,7 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
                   >
                     {port.direction === 'out' ? <ArrowRight size={8} /> : <ArrowLeft size={8} />}
                     {port.targetType}:{port.target}
-                    <span className="text-white/20">{port.edgeType}</span>
+                    <span className="text-white/40">{port.edgeType}</span>
                   </span>
                 ))}
               </div>
