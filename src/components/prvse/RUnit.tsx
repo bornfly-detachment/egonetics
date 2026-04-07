@@ -79,8 +79,8 @@ function GraphSummary({ data, viewLevel, onViewLevelChange }: {
 
       {/* L 级别切换（R 的核心能力：递进展开） */}
       <div className="flex items-center gap-1">
-        <Layers size={10} className="text-white/25" />
-        <span className="text-[9px] text-white/25 mr-1">视图</span>
+        <Layers size={10} className="text-white/40" />
+        <span className="text-[9px] text-white/40 mr-1">视图</span>
         {levels.map(lv => {
           const active = viewLevel === lv
           const lc = L_COLORS[lv]
@@ -155,7 +155,7 @@ export default function RUnit({
         <span className="flex-1 text-[10px] text-white/50 truncate text-left min-w-0">
           {data.label}
         </span>
-        <span className="text-[9px] font-mono text-white/25 shrink-0">
+        <span className="text-[9px] font-mono text-white/40 shrink-0">
           {data.nodes.length}n·{data.edges.length}e
         </span>
         <Network size={11} className="text-white/40 shrink-0" />
@@ -175,7 +175,7 @@ export default function RUnit({
 
           {/* 边列表（按当前视图级别过滤） */}
           <div className="px-3 pb-2">
-            <div className="text-[9px] text-white/25 mb-1">
+            <div className="text-[9px] text-white/40 mb-1">
               边 ({visibleEdges.length}/{data.edges.length})
               {viewLevel !== 'L0' && <span className="text-white/15"> — {viewLevel} 视图已压缩</span>}
             </div>
