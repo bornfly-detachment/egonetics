@@ -180,7 +180,7 @@ export default function PUnit({
         />
 
         {/* 权限 + Tier */}
-        <span className="text-[9px] font-mono text-white/25 shrink-0">{authority}</span>
+        <span className="text-[9px] font-mono text-white/40 shrink-0">{authority}</span>
 
         {/* 展开控制 */}
         {collapsed ? <ChevronRight size={12} className="text-white/40" /> : <ChevronDown size={12} className="text-white/40" />}
@@ -203,13 +203,13 @@ export default function PUnit({
 
           {/* 三态 */}
           <div className="px-3 pb-2">
-            <div className="text-[9px] text-white/25 mb-1">状态</div>
+            <div className="text-[9px] text-white/40 mb-1">状态</div>
             <StateBar state={data.state} onTransition={onStateTransition} />
           </div>
 
           {/* 分类属性 */}
           <div className="px-3 pb-2 space-y-1">
-            <div className="text-[9px] text-white/25 mb-1">分类（缩窄 {nc}/3）</div>
+            <div className="text-[9px] text-white/40 mb-1">分类（缩窄 {nc}/3）</div>
             <ClassificationRow
               label="物理"
               value={data.physical.value}
