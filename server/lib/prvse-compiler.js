@@ -51,6 +51,7 @@ async function llmLex(content, opts = {}) {
   const tagTreeContext = opts.tagTreeContext || ''
 
   const startTime = Date.now()
+  const model = tier === 'T0' ? 'seai' : tier === 'T1' ? 'MiniMax-M2.7' : 'claude-sonnet-4-6'
 
   // Build prompt: base schema + optional tag-tree for tag ID matching
   let systemPrompt = LEXER_SYSTEM_PROMPT
@@ -58,11 +59,11 @@ async function llmLex(content, opts = {}) {
     systemPrompt += `\n\nAvailable tag-tree nodes (pick the most specific matching tag IDs and return them in a "tagIds" array):\n${tagTreeContext}`
   }
 
-  const { content: rawText } = await engine.call(
+  const msg = await engine.call(
     [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
     { maxTokens: 1024 }
   )
-  const raw = rawText || '{}'
+  const raw = (msg.content || msg) + ''
   const elapsed = Date.now() - startTime
   console.log(`[compiler/lexer] raw length=${raw.length}, first100=${JSON.stringify(raw.slice(0, 100))}`)
 
