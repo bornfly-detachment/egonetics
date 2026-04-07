@@ -40,6 +40,8 @@ import { isPathAllowed } from './components/AuthGuard'
 import CommandPalette from './components/CommandPalette'
 import SlashCommandMenu from './components/SlashCommandMenu'
 import SpherePalette from './components/SpherePalette'
+import BottomNav from './components/layout/BottomNav'
+import { useViewport } from './hooks/useViewport'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
