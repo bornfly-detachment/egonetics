@@ -59,7 +59,7 @@ export default function ResourcePanel({ data, accentColor = '#60a5fa' }: Resourc
           {/* 文件路径 */}
           <div className="flex items-center gap-1.5">
             <FolderOpen size={10} className="text-white/40 shrink-0" />
-            <span className="text-[9px] font-mono text-white/30 truncate">{data.filePath}</span>
+            <span className="text-[9px] font-mono text-white/45 truncate">{data.filePath}</span>
           </div>
 
           {/* 权限 + AI */}
