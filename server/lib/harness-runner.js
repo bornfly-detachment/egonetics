@@ -361,12 +361,23 @@ function buildTmuxSpawn(opts) {
     }
   }
 
+  // For isolated tiers: wrap sudo+tmux in a bash one-liner that first calls
+  // `stty -echo` as bornfly (the PTY slave owner).  The PTY slave device is
+  // created by node-pty and owned by the server user (bornfly, mode 0600).
+  // When tmux later runs as egonetics-lX it may fail tcsetattr because it
+  // doesn't own the device — leaving the line discipline ECHO flag set, which
+  // causes every keystroke to appear twice in the terminal (PTY echo + app echo).
+  // Calling stty -echo HERE, before exec'ing sudo, clears the flag at the kernel
+  // level.  That setting persists across exec() boundaries; tmux inherits an
+  // already-silent terminal and only needs to enable raw/no-canon (which it can
+  // do regardless of ownership because those flags don't require write access).
+  const shellQuote = (s) => "'" + s.replace(/'/g, "'\\''") + "'"
+  const sudoTmuxCmd = ['sudo', '-n', '-H', '-u', spawnUser, 'tmux', ...tmuxArgs]
+    .map(shellQuote).join(' ')
+
   return {
-    command: 'sudo',
-    // -n: non-interactive (no password prompt, fail fast if NOPASSWD missing)
-    // -H: set HOME to target user's home (/var/egonetics/lX-home)
-    // -u: target user
-    args: ['-n', '-H', '-u', spawnUser, 'tmux', ...tmuxArgs],
+    command: '/bin/bash',
+    args: ['-c', `stty -echo; exec ${sudoTmuxCmd}`],
     effectiveUser: spawnUser,
     isolated: true,
     env: envVars,
