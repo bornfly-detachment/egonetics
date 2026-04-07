@@ -68,6 +68,9 @@ export interface UIState {
     | 'mq'
     | 'recycle'
     | 'prvse-world'
+    | 'free-code'
+    | 'prv-demo'
+    | 'font-compare'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'
