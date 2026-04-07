@@ -188,19 +188,19 @@ export default function VUnit({
               <div className="text-[9px] text-white/40 mb-1 uppercase tracking-wider">Lifecycle (L1)</div>
               <div className="rounded-lg bg-black/20 border border-white/[0.05] px-2.5 py-2 space-y-1 text-[10px] font-mono">
                 <div className="flex justify-between">
-                  <span className="text-white/30">反馈方向</span>
+                  <span className="text-white/45">反馈方向</span>
                   <span className={data.lifecycle.feedbackDirection === 'positive' ? 'text-emerald-400/70' : data.lifecycle.feedbackDirection === 'negative' ? 'text-red-400/70' : 'text-white/40'}>
                     {data.lifecycle.feedbackDirection}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/30">稳态偏离</span>
+                  <span className="text-white/45">稳态偏离</span>
                   <span className={data.lifecycle.homeostasisDeviation > 0.5 ? 'text-red-400/70' : 'text-white/50'}>
                     {(data.lifecycle.homeostasisDeviation * 100).toFixed(0)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/30">最优性</span>
+                  <span className="text-white/45">最优性</span>
                   <span className={data.lifecycle.optimalityType === 'global' ? 'text-emerald-400/70' : data.lifecycle.optimalityType === 'local' ? 'text-amber-400/70' : 'text-white/40'}>
                     {data.lifecycle.optimalityType}
                   </span>
