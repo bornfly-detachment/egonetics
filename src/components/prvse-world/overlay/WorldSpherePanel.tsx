@@ -477,20 +477,57 @@ interface WorldSpherePanelProps {
   onModeChange: (m: PanelMode) => void
 }
 
-const MODE_STYLES: Record<PanelMode, React.CSSProperties> = {
-  side: {
-    top: 0, right: 0, height: '100%',
-    width: 'min(380px, 100vw)',
-  },
-  center: {
-    top: '50%', left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(720px, 96vw)', height: 'min(78vh, 96dvh)',
-    borderRadius: '18px',
-  },
-  fullscreen: {
-    top: 0, right: 0, height: '100%', width: '100%',
-  },
+// ── Responsive panel dimensions ───────────────────────────────────
+// Listens to resize + orientationchange so rotating the device recalculates.
+// All sizing is relative to the actual container (100%) not the viewport (vw/vh),
+// because the panel is position:absolute inside a flex container.
+
+function usePanelDimensions(mode: PanelMode): React.CSSProperties {
+  const [vw, setVw] = useState(() => window.innerWidth)
+  const [vh, setVh] = useState(() => window.innerHeight)
+
+  useEffect(() => {
+    const update = () => { setVw(window.innerWidth); setVh(window.innerHeight) }
+    window.addEventListener('resize', update)
+    window.addEventListener('orientationchange', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('orientationchange', update)
+    }
+  }, [])
+
+  const isMobileWidth  = vw  < 768   // phone portrait or landscape narrow
+  const isShortScreen  = vh  < 500   // phone landscape
+
+  if (mode === 'fullscreen') return { top: 0, right: 0, height: '100%', width: '100%' }
+
+  if (mode === 'center') {
+    if (isMobileWidth) {
+      // Phone: nearly full screen with small inset so user sees they can dismiss
+      return {
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '94%',
+        height: isShortScreen ? '96%' : '88%',
+        borderRadius: '14px',
+      }
+    }
+    // Tablet / desktop
+    return {
+      top: '50%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: Math.min(720, vw * 0.9) + 'px',
+      height: isShortScreen ? '90%' : '78%',
+      borderRadius: '18px',
+    }
+  }
+
+  // side mode
+  if (isMobileWidth) {
+    // Phone: full width side panel (essentially fullscreen)
+    return { top: 0, right: 0, height: '100%', width: '100%' }
+  }
+  return { top: 0, right: 0, height: '100%', width: '380px' }
 }
 
 const MODE_BUTTONS: { id: PanelMode; icon: React.ReactNode; title: string }[] = [
