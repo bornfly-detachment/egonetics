@@ -63,7 +63,10 @@ async function llmLex(content, opts = {}) {
     [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
     { maxTokens: 1024 }
   )
-  const raw = (msg.content || msg) + ''
+  // engine.call() may return { content: "string" } or { content: [{type:'text',text:'...'}] }
+  const raw = typeof msg.content === 'string' ? msg.content
+    : Array.isArray(msg.content) ? msg.content.map(b => b.text || '').join('')
+    : typeof msg === 'string' ? msg : ''
   const elapsed = Date.now() - startTime
   console.log(`[compiler/lexer] raw length=${raw.length}, first100=${JSON.stringify(raw.slice(0, 100))}`)
 
