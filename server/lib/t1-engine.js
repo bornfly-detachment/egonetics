@@ -62,13 +62,15 @@ async function call(messages, opts = {}) {
     try {
       const resp = await _client.messages.create(params)
       // MiniMax may return 'thinking' blocks before/instead of 'text' blocks.
-      // Extract text from the first 'text' block; if none, concatenate all
-      // blocks that have a .text property (covers thinking + text variants).
+      // Extract text from the first 'text' block; fallback to last block with .text
       const textBlock = resp.content.find(b => b.type === 'text')
-      const content = textBlock?.text
-        ?? resp.content.filter(b => b.text && b.type !== 'thinking').map(b => b.text).join('')
-        || resp.content.filter(b => b.text).map(b => b.text).pop()
-        || ''
+      let content = ''
+      if (textBlock) {
+        content = textBlock.text
+      } else {
+        const withText = resp.content.filter(b => b.text)
+        content = withText.length > 0 ? withText[withText.length - 1].text : ''
+      }
       return {
         content,
         usage:      resp.usage,
