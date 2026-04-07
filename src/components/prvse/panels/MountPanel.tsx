@@ -51,7 +51,7 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
                 {data.aopHooks.map(hook => (
                   <div key={hook.id} className="flex items-center gap-2 text-[10px]">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${hook.active ? 'bg-emerald-400' : 'bg-white/15'}`} />
-                    <span className="font-mono text-white/35 w-10 shrink-0">{hook.type}</span>
+                    <span className="font-mono text-white/45 w-10 shrink-0">{hook.type}</span>
                     <span className="font-mono text-white/50 truncate">{hook.target}</span>
                   </div>
                 ))}
@@ -73,7 +73,7 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
                     <div key={binding.ruleId} className="flex items-center gap-2 text-[10px]">
                       <span className="shrink-0">{st.icon}</span>
                       <span className="font-mono text-white/50 w-16 shrink-0">{binding.ruleId}</span>
-                      <span className="text-white/35 truncate">{binding.description}</span>
+                      <span className="text-white/45 truncate">{binding.description}</span>
                     </div>
                   )
                 })}
