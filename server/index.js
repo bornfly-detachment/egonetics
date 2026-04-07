@@ -54,6 +54,7 @@ const gatewayWs          = require('./routes/gateway-ws');
 const freeCodeWs         = require('./routes/free-code-ws');
 const heartbeat          = require('./lib/heartbeat');
 const perceiverRouter    = require('./routes/perceiver');
+const prvseChronicleRouter = require('./routes/prvse-chronicle');
 const resourcePerceiver  = require('./lib/resource-perceiver');
 const schedulerRouter    = require('./routes/scheduler');
 const controllerModule   = require('./routes/controller');
