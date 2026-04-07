@@ -202,21 +202,32 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
     const { readTree, flattenTree } = require('./tags')
     const tier = req.body.tier || 'T1'
 
-    // Build tag-tree context for the LLM — dynamic, not hardcoded.
-    // IMPORTANT: exclude origin and state tags — those are context-derived
-    // metadata set by the system at creation time, NOT content-derived.
-    // AI can only classify: physical, level, communication.
+    // Build tag-tree context as INDENTED TREE (not flat list).
+    // LLM sees the full hierarchy and picks LEAF-LEVEL tags directly.
+    // Exclude origin/state — those are context-derived, not content-derived.
     const EXCLUDE_PREFIXES = ['tag-p-ori', 'tag-p-state', 'tag-p-st-']
     let tagTreeContext = ''
     try {
       const tree = readTree()
       const pTree = tree.P
       if (pTree) {
-        const flat = flattenTree(pTree, 0, [])
-        tagTreeContext = flat
-          .filter(t => !EXCLUDE_PREFIXES.some(p => t.id.startsWith(p)))
-          .map(t => `${'  '.repeat(t.depth)}[${t.id}] ${t.name}`)
-          .join('\n')
+        const lines = []
+        const walk = (node, depth) => {
+          if (!node) return
+          const id = node.id || ''
+          if (EXCLUDE_PREFIXES.some(p => id.startsWith(p))) return
+          const name = node.name || ''
+          const kids = Array.isArray(node.children) ? node.children
+            : node.children && typeof node.children === 'object' ? Object.values(node.children)
+            : []
+          const validKids = kids.filter(k => k && typeof k === 'object' && !EXCLUDE_PREFIXES.some(p => (k.id || '').startsWith(p)))
+          const isLeaf = validKids.length === 0
+          // Mark leaves with * so LLM knows to pick these
+          lines.push(`${'  '.repeat(depth)}${isLeaf ? '* ' : ''}[${id}] ${name}`)
+          for (const kid of validKids) walk(kid, depth + 1)
+        }
+        walk(pTree, 0)
+        tagTreeContext = 'Tag tree (select the MOST SPECIFIC leaf nodes marked with *, one per dimension):\n' + lines.join('\n')
       }
     } catch { /* fallback: llmLex uses its built-in prompt */ }
 
