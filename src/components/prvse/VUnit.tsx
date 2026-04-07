@@ -58,7 +58,7 @@ function MetricBar({ metric }: { metric: Metric }) {
       </div>
       <span className="text-[9px] font-mono text-white/40 w-12 text-right shrink-0">
         {typeof metric.value === 'number' ? metric.value.toFixed(2) : metric.value}
-        {metric.unit && <span className="text-white/20 ml-0.5">{metric.unit}</span>}
+        {metric.unit && <span className="text-white/40 ml-0.5">{metric.unit}</span>}
       </span>
     </div>
   )
@@ -145,7 +145,7 @@ export default function VUnit({
           {vs.label}
         </span>
 
-        {collapsed ? <ChevronRight size={12} className="text-white/20" /> : <ChevronDown size={12} className="text-white/20" />}
+        {collapsed ? <ChevronRight size={12} className="text-white/40" /> : <ChevronDown size={12} className="text-white/40" />}
       </button>
 
       {/* ── Body ── */}
