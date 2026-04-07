@@ -199,6 +199,9 @@ const RouteSync: React.FC = () => {
       case 'free-code':
         targetPath = '/free-code'
         break
+      case 'prv-demo':
+        targetPath = '/prv-demo'
+        break
       default:
         targetPath = '/memory'
     }
