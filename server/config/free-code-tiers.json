@@ -25,7 +25,7 @@
       },
       "session_prefix": "freecode-t0",
       "model_hint": "qwen3.5-0.8b",
-      "startup_flags": ["--dangerously-skip-permissions"]
+      "startup_flags": ["--dangerously-skip-permissions", "--add-dir", "/Users/Shared/reference"]
     },
 
     "T1": {
