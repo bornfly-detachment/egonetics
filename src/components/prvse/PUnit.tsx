@@ -118,7 +118,7 @@ interface PUnitProps {
 export default function PUnit({
   data, provenance, resources, mounts,
   collapsed: controlledCollapsed, onToggle,
-  onUpdate, onStateTransition, onFork, onFreeze,
+  onUpdate, onStateTransition, onFork, onFreeze, onClassify,
 }: PUnitProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(true)
   const collapsed = controlledCollapsed ?? internalCollapsed
