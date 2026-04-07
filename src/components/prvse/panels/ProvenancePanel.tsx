@@ -104,7 +104,7 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
                   ))}
                 </div>
                 {data.chronicle.sourceRef && (
-                  <div className="text-[9px] font-mono text-white/20 truncate">
+                  <div className="text-[9px] font-mono text-white/40 truncate">
                     ref: {data.chronicle.sourceRef}
                   </div>
                 )}
