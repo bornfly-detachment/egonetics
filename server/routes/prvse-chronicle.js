@@ -202,34 +202,31 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
     const { readTree, flattenTree } = require('./tags')
     const tier = req.body.tier || 'T1'
 
-    // Build tag-tree context as INDENTED TREE (not flat list).
-    // LLM sees the full hierarchy and picks LEAF-LEVEL tags directly.
-    // Exclude origin/state — those are context-derived, not content-derived.
-    const EXCLUDE_PREFIXES = ['tag-p-ori', 'tag-p-state', 'tag-p-st-']
+    // Build COMPACT tag-tree context — only classification dimensions.
+    // MiniMax has limited output budget; full tree causes thinking overflow.
+    // Send only: physical (flat), level (with subtree), communication (flat).
+    const { findById } = require('./tags')
     let tagTreeContext = ''
     try {
       const tree = readTree()
-      const pTree = tree.P
-      if (pTree) {
-        const lines = []
-        const walk = (node, depth) => {
-          if (!node) return
-          const id = node.id || ''
-          if (EXCLUDE_PREFIXES.some(p => id.startsWith(p))) return
-          const name = node.name || ''
-          const kids = Array.isArray(node.children) ? node.children
-            : node.children && typeof node.children === 'object' ? Object.values(node.children)
-            : []
-          const validKids = kids.filter(k => k && typeof k === 'object' && !EXCLUDE_PREFIXES.some(p => (k.id || '').startsWith(p)))
-          const isLeaf = validKids.length === 0
-          // Mark leaves with * so LLM knows to pick these
-          lines.push(`${'  '.repeat(depth)}${isLeaf ? '* ' : ''}[${id}] ${name}`)
-          for (const kid of validKids) walk(kid, depth + 1)
-        }
-        walk(pTree, 0)
-        tagTreeContext = 'Tag tree (select the MOST SPECIFIC leaf nodes marked with *, one per dimension):\n' + lines.join('\n')
+      const lines = []
+      const walk = (node, depth) => {
+        if (!node || !node.id) return
+        const kids = Array.isArray(node.children) ? node.children
+          : node.children && typeof node.children === 'object' ? Object.values(node.children) : []
+        const isLeaf = kids.filter(k => k && k.id).length === 0
+        lines.push(`${'  '.repeat(depth)}${isLeaf ? '* ' : ''}[${node.id}] ${node.name || ''}`)
+        for (const kid of kids) { if (kid && kid.id) walk(kid, depth + 1) }
       }
-    } catch { /* fallback: llmLex uses its built-in prompt */ }
+      // Only include the 3 classification dimensions
+      for (const dimId of ['tag-p-physical', 'tag-p-level', 'tag-p-comm']) {
+        const found = findById(tree, dimId)
+        if (found) walk(found.node, 0)
+      }
+      if (lines.length > 0) {
+        tagTreeContext = 'Tag tree (pick MOST SPECIFIC leaf nodes marked *):\n' + lines.join('\n')
+      }
+    } catch (e) { console.warn('[classify] tag-tree context failed:', e.message) }
 
     const result = await llmLex(existing.rawContent, { tier, tagTreeContext })
 
