@@ -202,29 +202,26 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
     const { readTree, flattenTree } = require('./tags')
     const tier = req.body.tier || 'T1'
 
-    // Build COMPACT tag-tree context — only classification dimensions.
-    // MiniMax has limited output budget; full tree causes thinking overflow.
-    // Send only: physical (flat), level (with subtree), communication (flat).
+    // Build COMPACT tag-tree context. MiniMax thinking overflows with long prompts.
+    // Only send the LEVEL subtree (has depth); physical/comm are flat enums in prompt.
     const { findById } = require('./tags')
     let tagTreeContext = ''
     try {
       const tree = readTree()
-      const lines = []
-      const walk = (node, depth) => {
-        if (!node || !node.id) return
-        const kids = Array.isArray(node.children) ? node.children
-          : node.children && typeof node.children === 'object' ? Object.values(node.children) : []
-        const isLeaf = kids.filter(k => k && k.id).length === 0
-        lines.push(`${'  '.repeat(depth)}${isLeaf ? '* ' : ''}[${node.id}] ${node.name || ''}`)
-        for (const kid of kids) { if (kid && kid.id) walk(kid, depth + 1) }
-      }
-      // Only include the 3 classification dimensions
-      for (const dimId of ['tag-p-physical', 'tag-p-level', 'tag-p-comm']) {
-        const found = findById(tree, dimId)
-        if (found) walk(found.node, 0)
-      }
-      if (lines.length > 0) {
-        tagTreeContext = 'Tag tree (pick MOST SPECIFIC leaf nodes marked *):\n' + lines.join('\n')
+      const levelNode = findById(tree, 'tag-p-level')
+      if (levelNode) {
+        const lines = []
+        const walk = (node, depth) => {
+          if (!node || !node.id) return
+          const kids = Array.isArray(node.children) ? node.children
+            : node.children && typeof node.children === 'object' ? Object.values(node.children) : []
+          const validKids = kids.filter(k => k && k.id)
+          const isLeaf = validKids.length === 0
+          lines.push(`${'  '.repeat(depth)}${isLeaf ? '* ' : ''}[${node.id}] ${node.name || ''}`)
+          for (const kid of validKids) walk(kid, depth + 1)
+        }
+        walk(levelNode.node, 0)
+        tagTreeContext = 'Level tag tree (pick MOST SPECIFIC leaf marked *):\n' + lines.join('\n')
       }
     } catch (e) { console.warn('[classify] tag-tree context failed:', e.message) }
 
