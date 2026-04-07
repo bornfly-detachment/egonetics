@@ -10,7 +10,7 @@ import type {
   PatternData, PatternState, InfoLevel, PhysicalType, Communication,
   ProvenanceData, ResourceData, MountData,
 } from '@prvse/types'
-import { narrowingCount, derivedAuthority, derivedTier, L_COLORS, STATE_VISUALS } from '@prvse/types'
+import { narrowingCount, derivedAuthority, L_COLORS, STATE_VISUALS } from '@prvse/types'
 import ProvenancePanel from './panels/ProvenancePanel'
 import ResourcePanel from './panels/ResourcePanel'
 import MountPanel from './panels/MountPanel'
