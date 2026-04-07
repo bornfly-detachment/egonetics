@@ -57,7 +57,7 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
       >
         <GitBranch size={11} style={{ color: accentColor }} className="opacity-60" />
         <span className="text-[10px] font-mono text-white/40">溯源 + Chronicle</span>
-        <span className="ml-auto flex items-center gap-1.5 text-[9px] text-white/25">
+        <span className="ml-auto flex items-center gap-1.5 text-[9px] text-white/40">
           v{data.version ?? 1}
           {data.frozen && <Lock size={8} className="text-amber-400/50" />}
           {open ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
@@ -68,7 +68,7 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
         <div className="px-3 pb-3 space-y-3">
           {/* 溯源链 */}
           <div>
-            <div className="text-[9px] text-white/25 mb-1 uppercase tracking-wider">Origin Chain</div>
+            <div className="text-[9px] text-white/40 mb-1 uppercase tracking-wider">Origin Chain</div>
             <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] px-2 py-1.5">
               <OriginNode origin={data.origin} />
             </div>
@@ -77,7 +77,7 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
           {/* Chronicle 快照 */}
           {data.chronicle && (
             <div>
-              <div className="text-[9px] text-white/25 mb-1 uppercase tracking-wider">Chronicle Snapshot</div>
+              <div className="text-[9px] text-white/40 mb-1 uppercase tracking-wider">Chronicle Snapshot</div>
               <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] px-2.5 py-2 space-y-1.5">
                 <div>
                   <span className="text-[9px] text-white/30">设计思路: </span>
