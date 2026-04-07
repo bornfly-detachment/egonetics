@@ -204,27 +204,27 @@ export default function PUnit({
             <StateBar state={data.state} onTransition={onStateTransition} />
           </div>
 
-          {/* 分类属性 */}
+          {/* 分类属性 — AI 自动识别 */}
           <div className="px-3 pb-2 space-y-1">
-            <div className="text-xs font-semibold text-white/80 mb-1.5">分类（缩窄 {nc}/3）</div>
-            <ClassificationRow
-              label="物理"
-              value={data.physical.value}
-              options={PHYSICAL_OPTIONS}
-              onChange={onUpdate ? v => onUpdate({ physical: { resolved: true, value: v } }) : undefined}
-            />
-            <ClassificationRow
-              label="级别"
-              value={data.level.value}
-              options={LEVEL_OPTIONS}
-              onChange={onUpdate ? v => onUpdate({ level: { resolved: true, value: v } }) : undefined}
-            />
-            <ClassificationRow
-              label="通信"
-              value={data.communication.value}
-              options={COMM_OPTIONS}
-              onChange={onUpdate ? v => onUpdate({ communication: { resolved: true, value: v } }) : undefined}
-            />
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-xs font-semibold text-white/80">分类（缩窄 {nc}/3）</span>
+              {onClassify && nc < 3 && (
+                <button
+                  onClick={onClassify}
+                  className="text-[10px] px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-300 font-mono hover:bg-violet-500/25 transition-colors"
+                >
+                  AI 识别
+                </button>
+              )}
+              {(data as any)._classification?.source === 'ai' && (
+                <span className="text-[9px] text-violet-400/60 font-mono">
+                  {(data as any)._classification?.summary}
+                </span>
+              )}
+            </div>
+            <ClassificationRow label="物理" value={data.physical.value} resolved={data.physical.resolved} source={(data as any)._classification?.source} />
+            <ClassificationRow label="级别" value={data.level.value} resolved={data.level.resolved} source={(data as any)._classification?.source} />
+            <ClassificationRow label="通信" value={data.communication.value} resolved={data.communication.resolved} source={(data as any)._classification?.source} />
           </div>
 
           {/* ── 三个通用面板 ── */}
