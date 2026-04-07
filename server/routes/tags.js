@@ -163,6 +163,39 @@ function genId() {
   return `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
+// ── scope 过滤 + classify 辅助 ────────────────────────────────
+
+/** 递归过滤：只保留 scope 包含指定级别的节点（按 name 中的 L0/L1/L2 推断） */
+function filterByScope(node, scope) {
+  if (!node) return null
+  // 检查节点名称是否包含目标 scope 级别
+  const nameHasScope = node.name && (
+    node.name.includes(scope) ||
+    node.name.includes('L0') && scope === 'L0' ||
+    node.name.includes('L1') && scope === 'L1' ||
+    node.name.includes('L2') && scope === 'L2'
+  )
+  // 递归过滤子节点
+  const filteredChildren = (node.children || [])
+    .map(c => filterByScope(c, scope))
+    .filter(Boolean)
+  // 保留：自身匹配 OR 有匹配的子节点 OR 是根/分类节点
+  if (nameHasScope || filteredChildren.length > 0) {
+    return { ...node, children: filteredChildren.length ? filteredChildren : undefined }
+  }
+  return null
+}
+
+/** 收集标签树为 {id, name, path} 扁平列表，供 classify prompt 使用 */
+function collectClassifyTags(node, parentPath, result) {
+  if (!node) return
+  const myPath = parentPath ? `${parentPath} > ${node.name}` : node.name
+  if (node.id) result.push({ id: node.id, name: node.name, path: myPath })
+  for (const child of node.children || []) {
+    collectClassifyTags(child, myPath, result)
+  }
+}
+
 // ── 路由 ──────────────────────────────────────────────────────
 
 // GET /api/tag-trees — 返回 TagNode[] 格式（前端兼容）
