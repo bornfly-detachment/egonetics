@@ -53,12 +53,22 @@ async function llmLex(content, opts = {}) {
   const startTime = Date.now()
   const model = tier === 'T0' ? 'seai' : tier === 'T1' ? 'MiniMax-M2.7' : 'claude-sonnet-4-6'
 
-  // When tag-tree context is provided, use a compact prompt — the tree
-  // itself defines all classification options.  The verbose LEXER_SYSTEM_PROMPT
-  // combined with the tree overflows MiniMax's thinking budget.
+  // When tag-tree context is provided, use a compact prompt.
+  // The verbose LEXER_SYSTEM_PROMPT + full tree overflows MiniMax thinking budget.
   let systemPrompt
   if (tagTreeContext) {
-    systemPrompt = `Classify input. Return ONLY JSON, no text.\n{"physical":"…","level":"L0_atom|L1_molecule|L2_gene","communication":"bottom_up|top_down|lateral","summary":"one line","tagIds":["leaf IDs from tree"]}\n\n${tagTreeContext}`
+    systemPrompt = [
+      'You are a classifier. Analyze the input and return a JSON object.',
+      'Pick the MOST SPECIFIC leaf tag IDs (marked with *) from the tree below.',
+      'Return ONLY valid JSON with these keys:',
+      '- physical: one of text/number/code/structured/image/audio/video/stream/mixed',
+      '- level: one of L0_atom/L1_molecule/L2_gene',
+      '- communication: one of bottom_up/top_down/lateral',
+      '- summary: one sentence describing the input',
+      '- tagIds: array of the most specific leaf [tag-xxx] IDs that match',
+      '',
+      tagTreeContext,
+    ].join('\n')
   } else {
     systemPrompt = LEXER_SYSTEM_PROMPT
   }
