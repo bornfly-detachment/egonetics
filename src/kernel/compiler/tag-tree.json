@@ -13,9 +13,18 @@
         "description": "外部→内部的唯一路径是实践检验。系统内部产生的思想实验/规则也必须经测试验证。",
         "select_mode": "single",
         "children": [
-          { "id": "tag-p-st-external", "name": "外部态（未经L0校验的原始信息）" },
-          { "id": "tag-p-st-candidate", "name": "候选态（通过L0校验，未经实践检验）" },
-          { "id": "tag-p-st-internal", "name": "内部态（经实践检验，具备确定性和工程可控性）" }
+          {
+            "id": "tag-p-st-external",
+            "name": "外部态（未经L0校验的原始信息）"
+          },
+          {
+            "id": "tag-p-st-candidate",
+            "name": "候选态（通过L0校验，未经实践检验）"
+          },
+          {
+            "id": "tag-p-st-internal",
+            "name": "内部态（经实践检验，具备确定性和工程可控性）"
+          }
         ]
       },
       "origin": {
@@ -27,21 +36,48 @@
             "id": "tag-p-ori-internal",
             "name": "内部来源（天然合法，可溯源、有主体、通信有方向）",
             "children": [
-              { "id": "tag-p-ori-user", "name": "用户输入（人类主体操作）" },
-              { "id": "tag-p-ori-model", "name": "内部模型调用（AI推理/生成）" },
-              { "id": "tag-p-ori-module", "name": "内部模块产生（组件输出/执行结果）" },
-              { "id": "tag-p-ori-event", "name": "系统事件（状态变化/调度触发）" },
-              { "id": "tag-p-ori-memory", "name": "过程记忆（chronicle/生命记忆）" }
+              {
+                "id": "tag-p-ori-user",
+                "name": "用户输入（人类主体操作）"
+              },
+              {
+                "id": "tag-p-ori-model",
+                "name": "内部模型调用（AI推理/生成）"
+              },
+              {
+                "id": "tag-p-ori-module",
+                "name": "内部模块产生（组件输出/执行结果）"
+              },
+              {
+                "id": "tag-p-ori-event",
+                "name": "系统事件（状态变化/调度触发）"
+              },
+              {
+                "id": "tag-p-ori-memory",
+                "name": "过程记忆（chronicle/生命记忆）"
+              }
             ]
           },
           "external_source": {
             "id": "tag-p-ori-external",
             "name": "外部来源（需控制论过滤改造，按信任基础分类）",
             "children": [
-              { "id": "tag-p-ori-computable", "name": "可计算溯源（代码仓库/数据库/API返回/数学计算——确定性高、来源链完整）" },
-              { "id": "tag-p-ori-verifiable", "name": "可验证溯源（论文/实验数据/权威文档——可查证但需人/AI判断）" },
-              { "id": "tag-p-ori-narrative", "name": "叙事溯源（社交媒体/个人表达/AI生成内容——来源是主体主观表达）" },
-              { "id": "tag-p-ori-sensor", "name": "环境感知（传感器/监控/自动采集——来源是物理世界信号）" }
+              {
+                "id": "tag-p-ori-computable",
+                "name": "可计算溯源（代码仓库/数据库/API返回/数学计算——确定性高、来源链完整）"
+              },
+              {
+                "id": "tag-p-ori-verifiable",
+                "name": "可验证溯源（论文/实验数据/权威文档——可查证但需人/AI判断）"
+              },
+              {
+                "id": "tag-p-ori-narrative",
+                "name": "叙事溯源（社交媒体/个人表达/AI生成内容——来源是主体主观表达）"
+              },
+              {
+                "id": "tag-p-ori-sensor",
+                "name": "环境感知（传感器/监控/自动采集——来源是物理世界信号）"
+              }
             ]
           }
         }
@@ -52,15 +88,42 @@
         "description": "L0层回答的基础分类。纯规则判断，不需要语义理解。",
         "select_mode": "single",
         "children": [
-          { "id": "tag-p-phy-text", "name": "文本（自然语言）" },
-          { "id": "tag-p-phy-number", "name": "数值（数字/度量）" },
-          { "id": "tag-p-phy-code", "name": "代码（程序/脚本/配置）" },
-          { "id": "tag-p-phy-structured", "name": "结构化数据（JSON/表格/数据库记录）" },
-          { "id": "tag-p-phy-image", "name": "图像" },
-          { "id": "tag-p-phy-audio", "name": "音频" },
-          { "id": "tag-p-phy-video", "name": "视频" },
-          { "id": "tag-p-phy-stream", "name": "流式数据（实时事件流/传感器流）" },
-          { "id": "tag-p-phy-mixed", "name": "混合体（代码+注释/图文混排/多模态）" }
+          {
+            "id": "tag-p-phy-text",
+            "name": "文本（自然语言）"
+          },
+          {
+            "id": "tag-p-phy-number",
+            "name": "数值（数字/度量）"
+          },
+          {
+            "id": "tag-p-phy-code",
+            "name": "代码（程序/脚本/配置）"
+          },
+          {
+            "id": "tag-p-phy-structured",
+            "name": "结构化数据（JSON/表格/数据库记录）"
+          },
+          {
+            "id": "tag-p-phy-image",
+            "name": "图像"
+          },
+          {
+            "id": "tag-p-phy-audio",
+            "name": "音频"
+          },
+          {
+            "id": "tag-p-phy-video",
+            "name": "视频"
+          },
+          {
+            "id": "tag-p-phy-stream",
+            "name": "流式数据（实时事件流/传感器流）"
+          },
+          {
+            "id": "tag-p-phy-mixed",
+            "name": "混合体（代码+注释/图文混排/多模态）"
+          }
         ]
       },
       "level": {
@@ -72,17 +135,220 @@
           {
             "id": "tag-p-lv-l0",
             "name": "L0 原子（最小完备信息单元）",
-            "description": "具体、完备、含有价值信息量。L0负责完备性+合法性：格式转换、链式溯源、基础分类。程序化筛查+T0/T1模型一致性判断。过滤垃圾/广告/黑名单。"
+            "description": "具体、完备、含有价值信息量。L0负责完备性+合法性：格式转换、链式溯源、基础分类。程序化筛查+T0/T1模型一致性判断。过滤垃圾/广告/黑名单。",
+            "children": [
+              {
+                "id": "tag-1775583387879-yi9xp",
+                "name": "内部信息（系统自产）",
+                "select_mode": "multi",
+                "children": [
+                  {
+                    "id": "tag-1775583387907-woroi",
+                    "name": "代码段/文件/模块",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583387936-4b0el",
+                    "name": "UI 组件内容",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583387966-bd262",
+                    "name": "用户输入",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583387995-s05vy",
+                    "name": "需审核的冲突",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388026-1cwyf",
+                    "name": "函数/感知器实现",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388056-42mco",
+                    "name": "JSONL 历史记录",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388086-u3mxj",
+                    "name": "Value 函数",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388115-fv507",
+                    "name": "配置/宪法条目",
+                    "select_mode": "multi"
+                  }
+                ]
+              },
+              {
+                "id": "tag-1775583388145-hwd7g",
+                "name": "候选信息（待验证）",
+                "select_mode": "multi",
+                "children": [
+                  {
+                    "id": "tag-1775583388175-fdm13",
+                    "name": "LLM API 调用响应",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388203-nrpv6",
+                    "name": "外部信息初加工",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388233-mz8tv",
+                    "name": "未经实践检验的推理",
+                    "select_mode": "multi"
+                  }
+                ]
+              },
+              {
+                "id": "tag-1775583388262-fck1k",
+                "name": "外部信息（开集，AI 自动扩展分类）",
+                "select_mode": "multi",
+                "children": [
+                  {
+                    "id": "tag-1775583388292-d92f9",
+                    "name": "文章/书籍/文档",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388322-4qc77",
+                    "name": "外部代码库/开源项目",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388351-yx5g4",
+                    "name": "API/服务/工具文档",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775583388381-iytwa",
+                    "name": "对话/讨论/反馈",
+                    "select_mode": "multi"
+                  }
+                ]
+              }
+            ]
           },
           {
             "id": "tag-p-lv-l1",
             "name": "L1 分子（P+R+V组合结构）",
-            "description": "高内聚低耦合的工程模块。L1负责信息分配：逐级走V+R判断，对触发它的链式源头负责。不触发状态变化=丢弃。现实约束下实现目标的实践层。"
+            "description": "高内聚低耦合的工程模块。L1负责信息分配：逐级走V+R判断，对触发它的链式源头负责。不触发状态变化=丢弃。现实约束下实现目标的实践层。",
+            "children": [
+              {
+                "id": "tag-1775581265457-9eu83",
+                "name": "宪法体系",
+                "select_mode": "multi"
+              },
+              {
+                "id": "tag-1775581265510-i7ook",
+                "name": "目标管理",
+                "select_mode": "multi"
+              },
+              {
+                "id": "tag-1775581265563-fopt7",
+                "name": "PRVSE 组成 Egonetics",
+                "select_mode": "multi"
+              },
+              {
+                "id": "tag-1775581265614-edjpt",
+                "name": "资源/权限/通信管理",
+                "select_mode": "multi"
+              }
+            ]
           },
           {
             "id": "tag-p-lv-l2",
             "name": "L2 基因（L1实践的抽象）",
-            "description": "最少内容，最大覆盖。L2负责全局最优化价值分析。通过L1宪法规则的Pattern进入全局分析。可从被L1搁置的Pattern中发现进化价值。只有统计学价值的高概率模式涌现时才触发E更新系统。"
+            "description": "最少内容，最大覆盖。L2负责全局最优化价值分析。通过L1宪法规则的Pattern进入全局分析。可从被L1搁置的Pattern中发现进化价值。只有统计学价值的高概率模式涌现时才触发E更新系统。",
+            "children": [
+              {
+                "id": "tag-1775581265667-u6ze1",
+                "name": "确定性提升",
+                "select_mode": "multi",
+                "children": [
+                  {
+                    "id": "tag-1775581265823-c6q5t",
+                    "name": "自然语言→机器语言编译器",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581265875-gtlng",
+                    "name": "物理引擎",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581265927-zyjqu",
+                    "name": "分级策略",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581265979-cj5rm",
+                    "name": "PRVSE 图结构信息编码",
+                    "select_mode": "multi"
+                  }
+                ]
+              },
+              {
+                "id": "tag-1775581265720-sahp1",
+                "name": "正反馈迭代",
+                "select_mode": "multi",
+                "children": [
+                  {
+                    "id": "tag-1775581266030-6cfzt",
+                    "name": "人机协同进化系统 OS",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581266080-vaxnl",
+                    "name": "下一代 AI 研发（标注训练闭环）",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581266131-mp0jx",
+                    "name": "AB 测试",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581266182-jjzx1",
+                    "name": "系统自身进化（V 和 E 的完善）",
+                    "select_mode": "multi"
+                  }
+                ]
+              },
+              {
+                "id": "tag-1775581265772-1vpoe",
+                "name": "外部信息转化",
+                "select_mode": "multi",
+                "children": [
+                  {
+                    "id": "tag-1775581266233-m26h7",
+                    "name": "外部 Pattern→内部 Pattern 控制论流程",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581266285-gg35j",
+                    "name": "外部优质信息源扩展",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581266336-wg4gh",
+                    "name": "提升信息量和信息转化率",
+                    "select_mode": "multi"
+                  },
+                  {
+                    "id": "tag-1775581266389-j40d3",
+                    "name": "扩展对外实践的渠道和经验",
+                    "select_mode": "multi"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -92,9 +358,18 @@
         "description": "Pattern支持双向通信。高层级不代表有更大权力，不代表控制下层。",
         "select_mode": "single",
         "children": [
-          { "id": "tag-p-comm-up", "name": "自底向上（L1涌现→L2候选，需规则校验+人二次确认）" },
-          { "id": "tag-p-comm-down", "name": "自顶向下（高层抽象指导实践）" },
-          { "id": "tag-p-comm-lateral", "name": "同层通信（由R+宪法决定共享，A→B/广播）" }
+          {
+            "id": "tag-p-comm-up",
+            "name": "自底向上（L1涌现→L2候选，需规则校验+人二次确认）"
+          },
+          {
+            "id": "tag-p-comm-down",
+            "name": "自顶向下（高层抽象指导实践）"
+          },
+          {
+            "id": "tag-p-comm-lateral",
+            "name": "同层通信（由R+宪法决定共享，A→B/广播）"
+          }
         ]
       }
     }
@@ -172,9 +447,18 @@
             "name": "主体性叙事（主体沿时空演化的关系）",
             "description": "主体在时空中的实践轨迹、自我认知演化、意义建构。叙事赋予经验以合法性和连贯性。",
             "children": [
-              { "id": "tag-r-l2-nar-trajectory", "name": "实践轨迹（主体行动的时空序列）" },
-              { "id": "tag-r-l2-nar-identity", "name": "自我认知（主体对自身状态的理解演化）" },
-              { "id": "tag-r-l2-nar-meaning", "name": "意义建构（经验转化为叙事的过程）" }
+              {
+                "id": "tag-r-l2-nar-trajectory",
+                "name": "实践轨迹（主体行动的时空序列）"
+              },
+              {
+                "id": "tag-r-l2-nar-identity",
+                "name": "自我认知（主体对自身状态的理解演化）"
+              },
+              {
+                "id": "tag-r-l2-nar-meaning",
+                "name": "意义建构（经验转化为叙事的过程）"
+              }
             ]
           },
           "dialectic": {
@@ -182,9 +466,18 @@
             "name": "矛盾关系（辩证唯物论的对立统一）",
             "description": "矛盾是事物发展的根本动力。对立、转化、统一是矛盾关系的三个组成要素。",
             "children": [
-              { "id": "tag-r-l2-oppose", "name": "对立（根本矛盾，如可控-失控、有限-无限）" },
-              { "id": "tag-r-l2-transform", "name": "转化（矛盾双方在条件下相互转化）" },
-              { "id": "tag-r-l2-unify", "name": "统一（矛盾在更高层面的整合）" }
+              {
+                "id": "tag-r-l2-oppose",
+                "name": "对立（根本矛盾，如可控-失控、有限-无限）"
+              },
+              {
+                "id": "tag-r-l2-transform",
+                "name": "转化（矛盾双方在条件下相互转化）"
+              },
+              {
+                "id": "tag-r-l2-unify",
+                "name": "统一（矛盾在更高层面的整合）"
+              }
             ]
           }
         }
@@ -314,16 +607,46 @@
             "name": "客观度量指标",
             "description": "100%可计算的客观数值",
             "children": [
-              { "id": "tag-v-l0-accuracy", "name": "准确率（Accuracy）" },
-              { "id": "tag-v-l0-recall", "name": "召回率（Recall）" },
-              { "id": "tag-v-l0-precision", "name": "精确率（Precision）" },
-              { "id": "tag-v-l0-f1", "name": "F1 Score" },
-              { "id": "tag-v-l0-counter", "name": "计数器（执行/错误/调用次数）" },
-              { "id": "tag-v-l0-timer", "name": "计时器（响应/执行/超时）" },
-              { "id": "tag-v-l0-resource", "name": "资源消耗（Token/内存/存储/API成本）" },
-              { "id": "tag-v-l0-binary", "name": "二值判断（通过/不通过）" },
-              { "id": "tag-v-l0-roi", "name": "投入产出比（ROI = output_value / input_cost）" },
-              { "id": "tag-v-l0-marginal", "name": "边际收益（每多投入一单位资源的产出增量，趋近0则该停）" }
+              {
+                "id": "tag-v-l0-accuracy",
+                "name": "准确率（Accuracy）"
+              },
+              {
+                "id": "tag-v-l0-recall",
+                "name": "召回率（Recall）"
+              },
+              {
+                "id": "tag-v-l0-precision",
+                "name": "精确率（Precision）"
+              },
+              {
+                "id": "tag-v-l0-f1",
+                "name": "F1 Score"
+              },
+              {
+                "id": "tag-v-l0-counter",
+                "name": "计数器（执行/错误/调用次数）"
+              },
+              {
+                "id": "tag-v-l0-timer",
+                "name": "计时器（响应/执行/超时）"
+              },
+              {
+                "id": "tag-v-l0-resource",
+                "name": "资源消耗（Token/内存/存储/API成本）"
+              },
+              {
+                "id": "tag-v-l0-binary",
+                "name": "二值判断（通过/不通过）"
+              },
+              {
+                "id": "tag-v-l0-roi",
+                "name": "投入产出比（ROI = output_value / input_cost）"
+              },
+              {
+                "id": "tag-v-l0-marginal",
+                "name": "边际收益（每多投入一单位资源的产出增量，趋近0则该停）"
+              }
             ]
           },
           "rule_checklist": {
@@ -331,11 +654,26 @@
             "name": "规则校验清单（宪法约束）",
             "description": "清单N条必须全部满足，少1条就不通过。只涉及L0逻辑关系。",
             "children": [
-              { "id": "tag-v-l0-chk-result", "name": "结果测试（输出是否符合预期）" },
-              { "id": "tag-v-l0-chk-function", "name": "功能测试（功能是否完整实现）" },
-              { "id": "tag-v-l0-chk-effect", "name": "效果测试（实际效果是否达标）" },
-              { "id": "tag-v-l0-chk-extreme", "name": "极端case测试（边界/异常/压力）" },
-              { "id": "tag-v-l0-chk-format", "name": "格式校验（数据完整性/合法性）" }
+              {
+                "id": "tag-v-l0-chk-result",
+                "name": "结果测试（输出是否符合预期）"
+              },
+              {
+                "id": "tag-v-l0-chk-function",
+                "name": "功能测试（功能是否完整实现）"
+              },
+              {
+                "id": "tag-v-l0-chk-effect",
+                "name": "效果测试（实际效果是否达标）"
+              },
+              {
+                "id": "tag-v-l0-chk-extreme",
+                "name": "极端case测试（边界/异常/压力）"
+              },
+              {
+                "id": "tag-v-l0-chk-format",
+                "name": "格式校验（数据完整性/合法性）"
+              }
             ]
           }
         }
@@ -354,10 +692,22 @@
                 "name": "资源预分配",
                 "description": "生命周期建立时的资源预算：时间deadline、AI资源、存储资源、内存资源",
                 "children": [
-                  { "id": "tag-v-l1-budget-time", "name": "时间预算（deadline）" },
-                  { "id": "tag-v-l1-budget-ai", "name": "AI资源预算（模型调用/Token）" },
-                  { "id": "tag-v-l1-budget-storage", "name": "存储资源预算" },
-                  { "id": "tag-v-l1-budget-memory", "name": "内存资源预算" }
+                  {
+                    "id": "tag-v-l1-budget-time",
+                    "name": "时间预算（deadline）"
+                  },
+                  {
+                    "id": "tag-v-l1-budget-ai",
+                    "name": "AI资源预算（模型调用/Token）"
+                  },
+                  {
+                    "id": "tag-v-l1-budget-storage",
+                    "name": "存储资源预算"
+                  },
+                  {
+                    "id": "tag-v-l1-budget-memory",
+                    "name": "内存资源预算"
+                  }
                 ]
               },
               "perceiver": {
@@ -404,13 +754,34 @@
             "name": "Reward函数集合（可动态增加）",
             "description": "L1 V = Reward函数集合。各种指标动态组合。",
             "children": [
-              { "id": "tag-v-l1-rw-info", "name": "信息量计算" },
-              { "id": "tag-v-l1-rw-align", "name": "目标对齐度（对目标的理解程度）" },
-              { "id": "tag-v-l1-rw-rank", "name": "方案排序（多方案择优）" },
-              { "id": "tag-v-l1-rw-relevance", "name": "信息相关性/价值（对目标的信息量）" },
-              { "id": "tag-v-l1-rw-optimality", "name": "最优性检测（局部vs全局）" },
-              { "id": "tag-v-l1-rw-constitution", "name": "宪法原则校验（主观抽象→转为校验清单）" },
-              { "id": "tag-v-l1-rw-opportunity", "name": "机会成本（选A路径放弃B路径的价值量化，防止沉没成本谬误）" }
+              {
+                "id": "tag-v-l1-rw-info",
+                "name": "信息量计算"
+              },
+              {
+                "id": "tag-v-l1-rw-align",
+                "name": "目标对齐度（对目标的理解程度）"
+              },
+              {
+                "id": "tag-v-l1-rw-rank",
+                "name": "方案排序（多方案择优）"
+              },
+              {
+                "id": "tag-v-l1-rw-relevance",
+                "name": "信息相关性/价值（对目标的信息量）"
+              },
+              {
+                "id": "tag-v-l1-rw-optimality",
+                "name": "最优性检测（局部vs全局）"
+              },
+              {
+                "id": "tag-v-l1-rw-constitution",
+                "name": "宪法原则校验（主观抽象→转为校验清单）"
+              },
+              {
+                "id": "tag-v-l1-rw-opportunity",
+                "name": "机会成本（选A路径放弃B路径的价值量化，防止沉没成本谬误）"
+              }
             ]
           }
         }
@@ -425,9 +796,18 @@
             "name": "实践检验（最强V）",
             "description": "设计实践检验清单，给固定资源跑AB测试一段时间才能证明。有快有慢，终归通过设计实践检验清单做判断。",
             "children": [
-              { "id": "tag-v-l2-ab-test", "name": "AB测试（固定资源+时间运行对比）" },
-              { "id": "tag-v-l2-extreme-val", "name": "极端case验证（列举所有极端case）" },
-              { "id": "tag-v-l2-generalize", "name": "泛化性测试（测试集/验证集分布一致性）" }
+              {
+                "id": "tag-v-l2-ab-test",
+                "name": "AB测试（固定资源+时间运行对比）"
+              },
+              {
+                "id": "tag-v-l2-extreme-val",
+                "name": "极端case验证（列举所有极端case）"
+              },
+              {
+                "id": "tag-v-l2-generalize",
+                "name": "泛化性测试（测试集/验证集分布一致性）"
+              }
             ]
           },
           {
@@ -452,9 +832,18 @@
         "name": "V的独立性保障（宪法级）",
         "description": "V的独立性是整个控制论系统可控性的前提。V失效=E和S无法工作。",
         "children": [
-          { "id": "tag-v-indep-neutral", "name": "中立性（对目标/宪法/资源负责，不对任何单一组件负责）" },
-          { "id": "tag-v-indep-anti", "name": "防渗透（不被其他组件的AI影响判断）" },
-          { "id": "tag-v-indep-kernel", "name": "内核直接负责（直接对自我控制论内核负责）" }
+          {
+            "id": "tag-v-indep-neutral",
+            "name": "中立性（对目标/宪法/资源负责，不对任何单一组件负责）"
+          },
+          {
+            "id": "tag-v-indep-anti",
+            "name": "防渗透（不被其他组件的AI影响判断）"
+          },
+          {
+            "id": "tag-v-indep-kernel",
+            "name": "内核直接负责（直接对自我控制论内核负责）"
+          }
         ]
       }
     }
@@ -469,10 +858,22 @@
         "name": "战略驱动力（L2层产生，驱动L1任务）",
         "select_mode": "single",
         "children": [
-          { "id": "tag-s-s1", "name": "S1 任务驱动（具体目标分解的执行任务）" },
-          { "id": "tag-s-s2", "name": "S2 生存驱动（系统自我维护、资源不足、健康检查）" },
-          { "id": "tag-s-s3", "name": "S3 进化驱动（系统改进自身、架构升级）" },
-          { "id": "tag-s-s4", "name": "S4 探索驱动（尝试新可能性、信息获取）" }
+          {
+            "id": "tag-s-s1",
+            "name": "S1 任务驱动（具体目标分解的执行任务）"
+          },
+          {
+            "id": "tag-s-s2",
+            "name": "S2 生存驱动（系统自我维护、资源不足、健康检查）"
+          },
+          {
+            "id": "tag-s-s3",
+            "name": "S3 进化驱动（系统改进自身、架构升级）"
+          },
+          {
+            "id": "tag-s-s4",
+            "name": "S4 探索驱动（尝试新可能性、信息获取）"
+          }
         ]
       },
       "L0_deterministic": {
@@ -485,12 +886,30 @@
             "name": "L0运行时状态（确定性基础设施）",
             "select_mode": "single",
             "children": [
-              { "id": "tag-s-l0-building", "name": "构建中（初始化/编译/部署）" },
-              { "id": "tag-s-l0-running", "name": "运行中（正常服务）" },
-              { "id": "tag-s-l0-updating", "name": "更新中（版本升级/热更新）" },
-              { "id": "tag-s-l0-maintaining", "name": "维护中（例行检查/优化）" },
-              { "id": "tag-s-l0-bug", "name": "故障（异常/错误/需修复）" },
-              { "id": "tag-s-l0-blocked", "name": "阻塞（等待依赖/资源不足）" }
+              {
+                "id": "tag-s-l0-building",
+                "name": "构建中（初始化/编译/部署）"
+              },
+              {
+                "id": "tag-s-l0-running",
+                "name": "运行中（正常服务）"
+              },
+              {
+                "id": "tag-s-l0-updating",
+                "name": "更新中（版本升级/热更新）"
+              },
+              {
+                "id": "tag-s-l0-maintaining",
+                "name": "维护中（例行检查/优化）"
+              },
+              {
+                "id": "tag-s-l0-bug",
+                "name": "故障（异常/错误/需修复）"
+              },
+              {
+                "id": "tag-s-l0-blocked",
+                "name": "阻塞（等待依赖/资源不足）"
+              }
             ]
           },
           "transition_rules": {
@@ -498,8 +917,14 @@
             "name": "L0状态转移规则",
             "description": "确定性转移：条件满足→转移确定。编译通过→running，测试失败→bug，依赖就绪→unblock。",
             "children": [
-              { "id": "tag-s-l0-tr-guard", "name": "守卫条件（V的L0规则清单必须全部通过）" },
-              { "id": "tag-s-l0-tr-reversible", "name": "可逆性标记（bug→building可逆，archived不可逆）" }
+              {
+                "id": "tag-s-l0-tr-guard",
+                "name": "守卫条件（V的L0规则清单必须全部通过）"
+              },
+              {
+                "id": "tag-s-l0-tr-reversible",
+                "name": "可逆性标记（bug→building可逆，archived不可逆）"
+              }
             ]
           }
         }
@@ -514,15 +939,42 @@
             "name": "L1任务生命周期状态",
             "select_mode": "single",
             "children": [
-              { "id": "tag-s-l1-research", "name": "技术调研（调研最强算法/最佳模型/对应代码库）" },
-              { "id": "tag-s-l1-proposal", "name": "方案构建（L2确认可行后制定实施方案）" },
-              { "id": "tag-s-l1-building", "name": "构建中（资源分配+生命周期启动）" },
-              { "id": "tag-s-l1-executing", "name": "实践执行中（消耗资源运行）" },
-              { "id": "tag-s-l1-testing", "name": "V测试中（测评器验收）" },
-              { "id": "tag-s-l1-feedback", "name": "反馈迭代中（测试不通过→分析→调整方案）" },
-              { "id": "tag-s-l1-delivered", "name": "版本交付（V0/V1/V2...阶段性成果）" },
-              { "id": "tag-s-l1-suspended", "name": "挂起（等待外部依赖/资源补充/L2决策）" },
-              { "id": "tag-s-l1-archived", "name": "归档（成功完成或资源耗尽，保留上下文可复盘）" }
+              {
+                "id": "tag-s-l1-research",
+                "name": "技术调研（调研最强算法/最佳模型/对应代码库）"
+              },
+              {
+                "id": "tag-s-l1-proposal",
+                "name": "方案构建（L2确认可行后制定实施方案）"
+              },
+              {
+                "id": "tag-s-l1-building",
+                "name": "构建中（资源分配+生命周期启动）"
+              },
+              {
+                "id": "tag-s-l1-executing",
+                "name": "实践执行中（消耗资源运行）"
+              },
+              {
+                "id": "tag-s-l1-testing",
+                "name": "V测试中（测评器验收）"
+              },
+              {
+                "id": "tag-s-l1-feedback",
+                "name": "反馈迭代中（测试不通过→分析→调整方案）"
+              },
+              {
+                "id": "tag-s-l1-delivered",
+                "name": "版本交付（V0/V1/V2...阶段性成果）"
+              },
+              {
+                "id": "tag-s-l1-suspended",
+                "name": "挂起（等待外部依赖/资源补充/L2决策）"
+              },
+              {
+                "id": "tag-s-l1-archived",
+                "name": "归档（成功完成或资源耗尽，保留上下文可复盘）"
+              }
             ]
           },
           "feedback_loop": {
@@ -530,10 +982,22 @@
             "name": "反馈迭代机制",
             "description": "L1的核心：执行→V测试→不通过→L1+L2联合分析→构建新方案→继续执行。资源约束下的迭代逼近过程。",
             "children": [
-              { "id": "tag-s-l1-fb-positive", "name": "正反馈（V测试通过/指标提升→继续推进）" },
-              { "id": "tag-s-l1-fb-negative", "name": "负反馈（V测试不通过→分析原因：实践问题？方案问题？数据量？训练方式？）" },
-              { "id": "tag-s-l1-fb-version", "name": "版本迭代记录（V0→V1→V2，每次迭代的方案变更和效果delta）" },
-              { "id": "tag-s-l1-fb-circuit-breaker", "name": "熔断机制（连续N次负反馈/资源耗尽→强制归档或上报L2）" }
+              {
+                "id": "tag-s-l1-fb-positive",
+                "name": "正反馈（V测试通过/指标提升→继续推进）"
+              },
+              {
+                "id": "tag-s-l1-fb-negative",
+                "name": "负反馈（V测试不通过→分析原因：实践问题？方案问题？数据量？训练方式？）"
+              },
+              {
+                "id": "tag-s-l1-fb-version",
+                "name": "版本迭代记录（V0→V1→V2，每次迭代的方案变更和效果delta）"
+              },
+              {
+                "id": "tag-s-l1-fb-circuit-breaker",
+                "name": "熔断机制（连续N次负反馈/资源耗尽→强制归档或上报L2）"
+              }
             ]
           },
           "resource_binding": {
@@ -541,8 +1005,14 @@
             "name": "资源绑定",
             "description": "L1任务启动时由V的L1生命周期管理分配资源预算，运行时由感知器监控消耗。",
             "children": [
-              { "id": "tag-s-l1-res-budget", "name": "资源预算（关联V的VL1ResourceBudget）" },
-              { "id": "tag-s-l1-res-monitor", "name": "消耗监控（关联V的VL1Perceiver）" }
+              {
+                "id": "tag-s-l1-res-budget",
+                "name": "资源预算（关联V的VL1ResourceBudget）"
+              },
+              {
+                "id": "tag-s-l1-res-monitor",
+                "name": "消耗监控（关联V的VL1Perceiver）"
+              }
             ]
           }
         }
@@ -557,12 +1027,30 @@
             "name": "L2战略目标状态",
             "select_mode": "single",
             "children": [
-              { "id": "tag-s-l2-active", "name": "正反馈推进（天时地利人和，增加投入和资源调度）" },
-              { "id": "tag-s-l2-shelved", "name": "搁置+学习器（时机不成熟，保留信息监听，持续评估条件概率）" },
-              { "id": "tag-s-l2-resistance", "name": "阻力判断（方向阻力极大，判断当下不可行）" },
-              { "id": "tag-s-l2-decomposing", "name": "拆解下发（战略目标→短期目标→L1任务调度）" },
-              { "id": "tag-s-l2-achieved", "name": "已达成（战略目标实现）" },
-              { "id": "tag-s-l2-abandoned", "name": "放弃（长期评估后确认不可行/不再需要）" }
+              {
+                "id": "tag-s-l2-active",
+                "name": "正反馈推进（天时地利人和，增加投入和资源调度）"
+              },
+              {
+                "id": "tag-s-l2-shelved",
+                "name": "搁置+学习器（时机不成熟，保留信息监听，持续评估条件概率）"
+              },
+              {
+                "id": "tag-s-l2-resistance",
+                "name": "阻力判断（方向阻力极大，判断当下不可行）"
+              },
+              {
+                "id": "tag-s-l2-decomposing",
+                "name": "拆解下发（战略目标→短期目标→L1任务调度）"
+              },
+              {
+                "id": "tag-s-l2-achieved",
+                "name": "已达成（战略目标实现）"
+              },
+              {
+                "id": "tag-s-l2-abandoned",
+                "name": "放弃（长期评估后确认不可行/不再需要）"
+              }
             ]
           },
           "learner": {
@@ -570,9 +1058,18 @@
             "name": "搁置目标的学习器",
             "description": "搁置目标保留被动信息采集能力。监听外部信息源，寻找对目标重启有价值的信息，评估条件概率，提升置信度，达到阈值则建议重启。",
             "children": [
-              { "id": "tag-s-l2-learn-monitor", "name": "信息监听源（外部信息→判断对搁置目标的信息量）" },
-              { "id": "tag-s-l2-learn-prob", "name": "条件概率评估（该信息对目标重启的条件概率）" },
-              { "id": "tag-s-l2-learn-confidence", "name": "置信度累积（持续累积，超过阈值建议重启）" }
+              {
+                "id": "tag-s-l2-learn-monitor",
+                "name": "信息监听源（外部信息→判断对搁置目标的信息量）"
+              },
+              {
+                "id": "tag-s-l2-learn-prob",
+                "name": "条件概率评估（该信息对目标重启的条件概率）"
+              },
+              {
+                "id": "tag-s-l2-learn-confidence",
+                "name": "置信度累积（持续累积，超过阈值建议重启）"
+              }
             ]
           },
           "goal_decomposition": {
@@ -580,9 +1077,18 @@
             "name": "目标分解与任务调度",
             "description": "L2战略目标按关系(R)做划分，分解为短期目标，再分解为L1任务。关联关系决定优先级和依赖。",
             "children": [
-              { "id": "tag-s-l2-dec-strategic", "name": "战略目标（长期，主体性叙事驱动）" },
-              { "id": "tag-s-l2-dec-shortterm", "name": "短期目标（战略目标的阶段分解）" },
-              { "id": "tag-s-l2-dec-task", "name": "L1任务产生（具体可执行的任务实例）" }
+              {
+                "id": "tag-s-l2-dec-strategic",
+                "name": "战略目标（长期，主体性叙事驱动）"
+              },
+              {
+                "id": "tag-s-l2-dec-shortterm",
+                "name": "短期目标（战略目标的阶段分解）"
+              },
+              {
+                "id": "tag-s-l2-dec-task",
+                "name": "L1任务产生（具体可执行的任务实例）"
+              }
             ]
           }
         }
@@ -592,11 +1098,26 @@
         "name": "状态转移效果（跨层触发）",
         "description": "状态转移产生的副作用，驱动系统其他部分响应。",
         "children": [
-          { "id": "tag-s-eff-perception", "name": "触发感知（V的Perceiver更新）" },
-          { "id": "tag-s-eff-execution", "name": "触发执行（启动下游L0/L1任务）" },
-          { "id": "tag-s-eff-evolution", "name": "触发进化记录（E记录状态变更）" },
-          { "id": "tag-s-eff-communication", "name": "触发通信（通知相关节点）" },
-          { "id": "tag-s-eff-escalate", "name": "触发上报（L1→L2，需要战略决策）" }
+          {
+            "id": "tag-s-eff-perception",
+            "name": "触发感知（V的Perceiver更新）"
+          },
+          {
+            "id": "tag-s-eff-execution",
+            "name": "触发执行（启动下游L0/L1任务）"
+          },
+          {
+            "id": "tag-s-eff-evolution",
+            "name": "触发进化记录（E记录状态变更）"
+          },
+          {
+            "id": "tag-s-eff-communication",
+            "name": "触发通信（通知相关节点）"
+          },
+          {
+            "id": "tag-s-eff-escalate",
+            "name": "触发上报（L1→L2，需要战略决策）"
+          }
         ]
       }
     }
@@ -615,10 +1136,22 @@
             "id": "tag-e-l0-triggers",
             "name": "进化触发条件",
             "children": [
-              { "id": "tag-e-l0-trig-unknown", "name": "未知Pattern（无法编译归类）" },
-              { "id": "tag-e-l0-trig-freq", "name": "同类型错误高频出现（无法转化有价值P）" },
-              { "id": "tag-e-l0-trig-unsupported", "name": "理论可执行但Kernel不支持" },
-              { "id": "tag-e-l0-trig-bottleneck", "name": "过往设计成为未来优化的不可忽视阻碍" }
+              {
+                "id": "tag-e-l0-trig-unknown",
+                "name": "未知Pattern（无法编译归类）"
+              },
+              {
+                "id": "tag-e-l0-trig-freq",
+                "name": "同类型错误高频出现（无法转化有价值P）"
+              },
+              {
+                "id": "tag-e-l0-trig-unsupported",
+                "name": "理论可执行但Kernel不支持"
+              },
+              {
+                "id": "tag-e-l0-trig-bottleneck",
+                "name": "过往设计成为未来优化的不可忽视阻碍"
+              }
             ]
           },
           "update_types": {
@@ -641,17 +1174,32 @@
             "id": "tag-e-l0-scope",
             "name": "更新影响范围",
             "children": [
-              { "id": "tag-e-l0-scope-l0", "name": "L0层PRVS定义更新" },
-              { "id": "tag-e-l0-scope-l1", "name": "L1层联动更新（L0更新触发L1同步新增/修改）" }
+              {
+                "id": "tag-e-l0-scope-l0",
+                "name": "L0层PRVS定义更新"
+              },
+              {
+                "id": "tag-e-l0-scope-l1",
+                "name": "L1层联动更新（L0更新触发L1同步新增/修改）"
+              }
             ]
           },
           "principles": {
             "id": "tag-e-l0-principles",
             "name": "更新原则",
             "children": [
-              { "id": "tag-e-l0-prin-extend", "name": "平行扩展优先（从设计之初就为灵活性和动态性增加空间）" },
-              { "id": "tag-e-l0-prin-cohesion", "name": "高内聚低耦合（不影响系统已有功能）" },
-              { "id": "tag-e-l0-prin-three", "name": "三思后行（冲突？耦合？需求明确？）" }
+              {
+                "id": "tag-e-l0-prin-extend",
+                "name": "平行扩展优先（从设计之初就为灵活性和动态性增加空间）"
+              },
+              {
+                "id": "tag-e-l0-prin-cohesion",
+                "name": "高内聚低耦合（不影响系统已有功能）"
+              },
+              {
+                "id": "tag-e-l0-prin-three",
+                "name": "三思后行（冲突？耦合？需求明确？）"
+              }
             ]
           }
         }
@@ -666,10 +1214,22 @@
             "name": "AI模型训练",
             "description": "L1主要工作：训练本地AI模型。探索下一代深度学习范式。",
             "children": [
-              { "id": "tag-e-l1-train-local", "name": "本地模型训练（替代外部API调用）" },
-              { "id": "tag-e-l1-train-paradigm", "name": "深度学习范式探索（下一代算法/架构）" },
-              { "id": "tag-e-l1-train-experiment", "name": "对照实验（控制变量、AB测试）" },
-              { "id": "tag-e-l1-train-data", "name": "训练数据管理（收集/清洗/标注/分布管理）" }
+              {
+                "id": "tag-e-l1-train-local",
+                "name": "本地模型训练（替代外部API调用）"
+              },
+              {
+                "id": "tag-e-l1-train-paradigm",
+                "name": "深度学习范式探索（下一代算法/架构）"
+              },
+              {
+                "id": "tag-e-l1-train-experiment",
+                "name": "对照实验（控制变量、AB测试）"
+              },
+              {
+                "id": "tag-e-l1-train-data",
+                "name": "训练数据管理（收集/清洗/标注/分布管理）"
+              }
             ]
           },
           "optimization": {
@@ -677,9 +1237,18 @@
             "name": "现有流程迭代优化",
             "description": "提升当前任务效率。过去调用外部API的工作→训练本地小模型支持。更好地使用大厂API。",
             "children": [
-              { "id": "tag-e-l1-opt-replace", "name": "外部API→本地模型替代" },
-              { "id": "tag-e-l1-opt-usage", "name": "API使用优化（更好地利用大厂模型能力）" },
-              { "id": "tag-e-l1-opt-pipeline", "name": "流程链路优化（减少冗余/提升吞吐）" }
+              {
+                "id": "tag-e-l1-opt-replace",
+                "name": "外部API→本地模型替代"
+              },
+              {
+                "id": "tag-e-l1-opt-usage",
+                "name": "API使用优化（更好地利用大厂模型能力）"
+              },
+              {
+                "id": "tag-e-l1-opt-pipeline",
+                "name": "流程链路优化（减少冗余/提升吞吐）"
+              }
             ]
           },
           "capability_expansion": {
@@ -687,10 +1256,22 @@
             "name": "能力扩展",
             "description": "新增系统不具备的能力。每一种新能力的上线都是进化产出。",
             "children": [
-              { "id": "tag-e-l1-cap-video", "name": "视频生成能力" },
-              { "id": "tag-e-l1-cap-voice", "name": "语音生成能力" },
-              { "id": "tag-e-l1-cap-multimodal", "name": "多模态能力扩展" },
-              { "id": "tag-e-l1-cap-custom", "name": "自定义能力（动态注册）" }
+              {
+                "id": "tag-e-l1-cap-video",
+                "name": "视频生成能力"
+              },
+              {
+                "id": "tag-e-l1-cap-voice",
+                "name": "语音生成能力"
+              },
+              {
+                "id": "tag-e-l1-cap-multimodal",
+                "name": "多模态能力扩展"
+              },
+              {
+                "id": "tag-e-l1-cap-custom",
+                "name": "自定义能力（动态注册）"
+              }
             ]
           },
           "evolution_output": {
@@ -698,10 +1279,22 @@
             "name": "进化产出",
             "description": "E的L1工作产出，交给S上线运行。",
             "children": [
-              { "id": "tag-e-l1-out-model", "name": "训练完成的本地模型" },
-              { "id": "tag-e-l1-out-pipeline", "name": "优化后的流程" },
-              { "id": "tag-e-l1-out-capability", "name": "新增的系统能力" },
-              { "id": "tag-e-l1-out-knowledge", "name": "消化后的外部知识（内化为内部结构）" }
+              {
+                "id": "tag-e-l1-out-model",
+                "name": "训练完成的本地模型"
+              },
+              {
+                "id": "tag-e-l1-out-pipeline",
+                "name": "优化后的流程"
+              },
+              {
+                "id": "tag-e-l1-out-capability",
+                "name": "新增的系统能力"
+              },
+              {
+                "id": "tag-e-l1-out-knowledge",
+                "name": "消化后的外部知识（内化为内部结构）"
+              }
             ]
           }
         }
@@ -716,9 +1309,18 @@
             "name": "主体性引擎",
             "description": "长期运行组件，维护系统的自我认同和叙事完整性。",
             "children": [
-              { "id": "tag-e-l2-sub-narrative", "name": "内部叙事维护器（自我叙事与外部控制论叙事隔离）" },
-              { "id": "tag-e-l2-sub-simulator", "name": "主体性模拟器（模拟产生主体性行为和判断）" },
-              { "id": "tag-e-l2-sub-anti", "name": "反渗透/反洗脑/反幻觉（防止外部叙事侵蚀内部认同）" }
+              {
+                "id": "tag-e-l2-sub-narrative",
+                "name": "内部叙事维护器（自我叙事与外部控制论叙事隔离）"
+              },
+              {
+                "id": "tag-e-l2-sub-simulator",
+                "name": "主体性模拟器（模拟产生主体性行为和判断）"
+              },
+              {
+                "id": "tag-e-l2-sub-anti",
+                "name": "反渗透/反洗脑/反幻觉（防止外部叙事侵蚀内部认同）"
+              }
             ]
           },
           "shengbianlun_engine": {
@@ -726,9 +1328,18 @@
             "name": "生变论引擎",
             "description": "深度理解并应用bornfly的生变论，持续更新。生变论是系统进化的哲学基础。",
             "children": [
-              { "id": "tag-e-l2-sbl-understand", "name": "理解（深度学习生变论核心思想）" },
-              { "id": "tag-e-l2-sbl-apply", "name": "应用（将生变论指导实践决策）" },
-              { "id": "tag-e-l2-sbl-update", "name": "更新（基于实践反馈更新生变论的理解）" }
+              {
+                "id": "tag-e-l2-sbl-understand",
+                "name": "理解（深度学习生变论核心思想）"
+              },
+              {
+                "id": "tag-e-l2-sbl-apply",
+                "name": "应用（将生变论指导实践决策）"
+              },
+              {
+                "id": "tag-e-l2-sbl-update",
+                "name": "更新（基于实践反馈更新生变论的理解）"
+              }
             ]
           },
           "cognitive_engine": {
@@ -758,10 +1369,22 @@
             "name": "人-AI协同进化",
             "description": "更新人与AI协同进化的方式。收集整理人打标训练数据（主观+客观）→训练进模型。基于实践结果反馈训练模型在控制论高频场景中缺失的能力。",
             "children": [
-              { "id": "tag-e-l2-coevo-interaction", "name": "交互产品更新（改进人机协作界面和流程）" },
-              { "id": "tag-e-l2-coevo-data", "name": "人打标训练数据收集整理（主观数据+客观数据）" },
-              { "id": "tag-e-l2-coevo-train", "name": "主观+客观数据混合训练（让模型具备人的能力）" },
-              { "id": "tag-e-l2-coevo-feedback", "name": "实践反馈训练（控制论高频场景缺失能力补充）" }
+              {
+                "id": "tag-e-l2-coevo-interaction",
+                "name": "交互产品更新（改进人机协作界面和流程）"
+              },
+              {
+                "id": "tag-e-l2-coevo-data",
+                "name": "人打标训练数据收集整理（主观数据+客观数据）"
+              },
+              {
+                "id": "tag-e-l2-coevo-train",
+                "name": "主观+客观数据混合训练（让模型具备人的能力）"
+              },
+              {
+                "id": "tag-e-l2-coevo-feedback",
+                "name": "实践反馈训练（控制论高频场景缺失能力补充）"
+              }
             ]
           }
         }
@@ -776,27 +1399,54 @@
             "name": "信息分级（宪法定义）",
             "description": "分级是工程状态快照。E负责监控置信度触发级别迁移。",
             "children": [
-              { "id": "tag-e-info-l0", "name": "L0 信号层（客观确定性>=99%，规则路由）" },
-              { "id": "tag-e-info-l1", "name": "L1 客观规律层（可复现可验证，目标转化为L0）" },
-              { "id": "tag-e-info-l2", "name": "L2 主观认知层（警惕幻觉，必须经验证）" }
+              {
+                "id": "tag-e-info-l0",
+                "name": "L0 信号层（客观确定性>=99%，规则路由）"
+              },
+              {
+                "id": "tag-e-info-l1",
+                "name": "L1 客观规律层（可复现可验证，目标转化为L0）"
+              },
+              {
+                "id": "tag-e-info-l2",
+                "name": "L2 主观认知层（警惕幻觉，必须经验证）"
+              }
             ]
           },
           "permission": {
             "id": "tag-e-perm",
             "name": "权限分级（对外三级）",
             "children": [
-              { "id": "tag-e-perm-t0", "name": "T0 执行/实践（所有底层agent）" },
-              { "id": "tag-e-perm-t1", "name": "T1 推理/控制（AI级PRVSE引擎）" },
-              { "id": "tag-e-perm-t2", "name": "T2 进化权威（人机协同，目标/宪法/资源）" }
+              {
+                "id": "tag-e-perm-t0",
+                "name": "T0 执行/实践（所有底层agent）"
+              },
+              {
+                "id": "tag-e-perm-t1",
+                "name": "T1 推理/控制（AI级PRVSE引擎）"
+              },
+              {
+                "id": "tag-e-perm-t2",
+                "name": "T2 进化权威（人机协同，目标/宪法/资源）"
+              }
             ]
           },
           "communication": {
             "id": "tag-e-comm",
             "name": "通信机制",
             "children": [
-              { "id": "tag-e-comm-l0", "name": "L0 信号通信（感知器传递、规则路由触发）" },
-              { "id": "tag-e-comm-l1", "name": "L1 请求型通信（自底向上，diff处理）" },
-              { "id": "tag-e-comm-l2", "name": "L2 控制型通信（自顶向下，任务执行/系统改造）" }
+              {
+                "id": "tag-e-comm-l0",
+                "name": "L0 信号通信（感知器传递、规则路由触发）"
+              },
+              {
+                "id": "tag-e-comm-l1",
+                "name": "L1 请求型通信（自底向上，diff处理）"
+              },
+              {
+                "id": "tag-e-comm-l2",
+                "name": "L2 控制型通信（自顶向下，任务执行/系统改造）"
+              }
             ]
           },
           "mutation_type": {
@@ -804,10 +1454,22 @@
             "name": "变更类型",
             "select_mode": "single",
             "children": [
-              { "id": "tag-e-mut-create", "name": "创建" },
-              { "id": "tag-e-mut-update", "name": "更新" },
-              { "id": "tag-e-mut-delete", "name": "删除" },
-              { "id": "tag-e-mut-transition", "name": "状态迁移" }
+              {
+                "id": "tag-e-mut-create",
+                "name": "创建"
+              },
+              {
+                "id": "tag-e-mut-update",
+                "name": "更新"
+              },
+              {
+                "id": "tag-e-mut-delete",
+                "name": "删除"
+              },
+              {
+                "id": "tag-e-mut-transition",
+                "name": "状态迁移"
+              }
             ]
           }
         }
