@@ -106,6 +106,7 @@ async function llmLex(content, opts = {}) {
     infoLevel: parsed.infoLevel || 'L2_subjective',
     relationLevel: parsed.relationLevel || null,
     summary: parsed.summary || '',
+    tagIds: Array.isArray(parsed.tagIds) ? parsed.tagIds : [],
     _meta: {
       tier,
       model,
