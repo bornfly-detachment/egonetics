@@ -61,15 +61,32 @@ async function call(messages, opts = {}) {
   while (attempt < MAX_RETRIES) {
     try {
       const resp = await _client.messages.create(params)
-      // MiniMax may return 'thinking' blocks before/instead of 'text' blocks.
-      // Extract text from the first 'text' block; fallback to last block with .text
+      // MiniMax may return only 'thinking' blocks with no 'text' block —
+      // the model reasons but never emits a final answer.  Fallback chain:
+      //   1. First 'text' block (standard)
+      //   2. Any block with .text property
+      //   3. Extract from 'thinking' block (parse last JSON object found)
       const textBlock = resp.content.find(b => b.type === 'text')
       let content = ''
       if (textBlock) {
         content = textBlock.text
       } else {
-        const withText = resp.content.filter(b => b.text)
-        content = withText.length > 0 ? withText[withText.length - 1].text : ''
+        // Try any block with .text
+        const withText = resp.content.filter(b => b.text && b.type !== 'thinking')
+        if (withText.length > 0) {
+          content = withText[withText.length - 1].text
+        } else {
+          // Last resort: extract from thinking block
+          const thinking = resp.content.find(b => b.type === 'thinking')
+          if (thinking && thinking.thinking) {
+            // Find the last JSON object in the thinking text
+            const jsonMatches = thinking.thinking.match(/\{[^{}]*\}/g)
+            if (jsonMatches) {
+              content = jsonMatches[jsonMatches.length - 1]
+              console.log('[T1] extracted JSON from thinking block')
+            }
+          }
+        }
       }
       return {
         content,
