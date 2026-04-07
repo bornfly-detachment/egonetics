@@ -183,7 +183,7 @@ export default function PUnit({
         <span className="text-[9px] font-mono text-white/25 shrink-0">{authority}</span>
 
         {/* 展开控制 */}
-        {collapsed ? <ChevronRight size={12} className="text-white/20" /> : <ChevronDown size={12} className="text-white/20" />}
+        {collapsed ? <ChevronRight size={12} className="text-white/40" /> : <ChevronDown size={12} className="text-white/40" />}
       </button>
 
       {/* ── Body（展开后） ── */}
