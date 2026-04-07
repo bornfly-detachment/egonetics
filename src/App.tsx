@@ -216,6 +216,7 @@ const RouteSync: React.FC = () => {
 const AppContent: React.FC = () => {
   const { uiState, initialize } = useChronicleStore()
   const [chatOpen, setChatOpen] = useState(false)
+  const { isMobile } = useViewport()
 
   useEffect(() => {
     console.log('Egonetics App initializing...')
@@ -224,13 +225,23 @@ const AppContent: React.FC = () => {
   }, [initialize])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950">
-      <div className="flex h-screen">
-        {/* Sidebar */}
+    <div
+      className="overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950"
+      style={{ height: 'var(--app-height, 100dvh)' }}
+    >
+      <div className="flex h-full">
+        {/* Sidebar — hidden on mobile, shown md+ */}
         <Sidebar />
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main
+          className="flex-1 overflow-y-auto p-4 md:p-6"
+          style={{
+            paddingBottom: isMobile
+              ? 'calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 1rem)'
+              : undefined,
+          }}
+        >
           {!uiState ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -252,9 +263,6 @@ const AppContent: React.FC = () => {
               <Route path="/tasks" element={<KanbanBoard />} />
               <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
               <Route path="/blog" element={<BlogPage />} />
-              {/* <Route path="/old-blog" element={<BlogEditor />} /> */}
-              {/* <Route path="/editor1" element={<NewNotionStyleEditor />} /> */}
-              {/* <Route path="/editor2" element={<NotionStyleEditor />} /> */}
               <Route path="/agents" element={<AgentsView />} />
               <Route path="/cybernetics" element={<CyberneticsSystemView />} />
               <Route path="/tag-tree" element={<TagTreeView />} />
@@ -263,10 +271,10 @@ const AppContent: React.FC = () => {
               <Route path="/protocol" element={<ProtocolView />} />
               <Route path="/protocol/builder" element={<ProtocolBuilderView />} />
               <Route path="/lab" element={<LabView />} />
-              <Route path="/mq" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><MQView /></div>} />
+              <Route path="/mq" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><MQView /></div>} />
               <Route path="/recycle" element={<RecycleBinView />} />
-              <Route path="/prvse-world" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><PrvseWorldView /></div>} />
-              <Route path="/free-code" element={<div className="-m-6 w-[calc(100%+3rem)] h-[calc(100vh-3rem)]"><FreeCodeTerminal /></div>} />
+              <Route path="/prvse-world" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><PrvseWorldView /></div>} />
+              <Route path="/free-code" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><FreeCodeTerminal /></div>} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
@@ -276,7 +284,13 @@ const AppContent: React.FC = () => {
       {/* Global LLM Chat */}
       <button
         onClick={() => setChatOpen(v => !v)}
-        className="fixed bottom-14 right-5 z-40 w-10 h-10 rounded-full flex items-center justify-center bg-violet-600/25 border border-violet-500/40 text-violet-400 hover:bg-violet-600/40 shadow-lg shadow-violet-900/30 transition-all"
+        className="fixed z-40 w-10 h-10 rounded-full flex items-center justify-center bg-violet-600/25 border border-violet-500/40 text-violet-400 hover:bg-violet-600/40 shadow-lg shadow-violet-900/30 transition-all"
+        style={{
+          bottom: isMobile
+            ? 'calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 0.75rem)'
+            : '3.5rem',
+          right: '1.25rem',
+        }}
         title="AI 对话助手"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -285,8 +299,8 @@ const AppContent: React.FC = () => {
       </button>
       <LLMChatDialog open={chatOpen} onClose={() => setChatOpen(false)} title="AI 助手" />
 
-      {/* Status Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/50 backdrop-blur-lg border-t border-white/10 p-3">
+      {/* Status Bar — desktop only */}
+      <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-black/50 backdrop-blur-lg border-t border-white/10 p-3">
         <div className="container mx-auto flex items-center justify-between text-sm">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
@@ -308,6 +322,9 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Bottom Nav — mobile only */}
+      {isMobile && <BottomNav />}
     </div>
   )
 }
