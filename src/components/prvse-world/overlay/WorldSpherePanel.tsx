@@ -575,7 +575,7 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
     <div
       className="absolute z-40 flex flex-col transition-all duration-300 overflow-hidden"
       style={{
-        ...MODE_STYLES[mode],
+        ...panelStyle,
         background: `linear-gradient(180deg, rgba(${rgb},0.08) 0%, rgba(${rgb},0.03) 12%, rgba(4,5,10,0.97) 30%, rgba(4,5,10,0.97) 100%)`,
         backdropFilter: 'blur(28px)',
         boxShadow: mode === 'side'
