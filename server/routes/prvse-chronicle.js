@@ -187,6 +187,48 @@ router.post('/prvse/:type/:id/fork', (req, res) => {
   res.status(201).json(forked)
 })
 
+// CLASSIFY — AI auto-classification via prvse-compiler lexer
+router.post('/prvse/:type/:id/classify', async (req, res) => {
+  const dir = typeDir(req.params.type)
+  if (!dir) return res.status(400).json({ error: `Invalid type` })
+
+  const filePath = path.join(dir, `${req.params.id}.yaml`)
+  const existing = readYaml(filePath)
+  if (!existing) return res.status(404).json({ error: 'Not found' })
+  if (!existing.rawContent) return res.status(400).json({ error: 'No rawContent to classify' })
+
+  try {
+    const { _internals: { llmLex } } = require('../lib/prvse-compiler')
+    const tier = req.body.tier || 'T1'
+    const result = await llmLex(existing.rawContent, { tier })
+
+    // Map compiler level format to PatternData format
+    const levelMap = { L0_atom: 'L0', L1_molecule: 'L1', L2_gene: 'L2' }
+
+    const classified = {
+      ...existing,
+      physical: { resolved: true, value: result.physical },
+      level: { resolved: true, value: levelMap[result.level] || result.level },
+      communication: { resolved: true, value: result.communication },
+      _classification: {
+        summary: result.summary,
+        infoLevel: result.infoLevel,
+        relationLevel: result.relationLevel,
+        meta: result._meta,
+        classifiedAt: Date.now(),
+        source: 'ai',
+      },
+      timestamp: Date.now(),
+    }
+
+    writeYaml(filePath, classified)
+    res.json(classified)
+  } catch (err) {
+    console.error(`[prvse-chronicle] classify failed:`, err.message)
+    res.status(500).json({ error: `Classification failed: ${err.message}` })
+  }
+})
+
 // FREEZE
 router.post('/prvse/:type/:id/freeze', (req, res) => {
   const dir = typeDir(req.params.type)
