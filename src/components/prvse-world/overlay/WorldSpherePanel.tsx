@@ -537,6 +537,7 @@ const MODE_BUTTONS: { id: PanelMode; icon: React.ReactNode; title: string }[] = 
 ]
 
 export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: WorldSpherePanelProps) {
+  const panelStyle = usePanelDimensions(mode)
   const children = node.children ?? []
 
   // Group direct children by their meta.layer
