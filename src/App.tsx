@@ -242,8 +242,8 @@ const AppContent: React.FC = () => {
       style={{ height: 'var(--app-height, 100dvh)' }}
     >
       <div className="flex h-full">
-        {/* Sidebar — hidden on mobile, shown md+ */}
-        <Sidebar />
+        {/* Sidebar — desktop only, BottomNav handles mobile */}
+        {!isMobile && <Sidebar />}
 
         {/* Main Content */}
         <main
@@ -266,7 +266,7 @@ const AppContent: React.FC = () => {
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/home" element={<HomeView />} />
               <Route path="/memory" element={<MemoryView />} />
-              <Route path="/theory" element={<TheoryPageView />} />
+              <Route path="/theory" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><TheoryPageView /></div>} />
               <Route path="/chronicle" element={<ChronicleView />} />
               <Route path="/egonetics" element={<EgoneticsView />} />
               <Route path="/egonetics/canvas/:canvasId" element={<CanvasView />} />

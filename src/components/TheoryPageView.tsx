@@ -91,7 +91,7 @@ const TheoryPageView: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#191919]">
+    <div className="h-full flex flex-col bg-[#191919]">
       {/* 顶部导航栏 */}
       <div className="h-14 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 shrink-0">
         <div className="flex items-center gap-2">

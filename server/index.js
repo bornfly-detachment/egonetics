@@ -167,6 +167,7 @@ app.use('/api', proposalsModule.init(pagesDb));
 app.use('/api', nodeChatRouter.init(pagesDb))
 app.use('/api', protocolRouter.init(pagesDb));
 app.use('/api', protocolBuilderModule.init(pagesDb));
+app.use('/api', prvseChronicleRouter);
 app.use('/api', kernelRouter.init(kernelRuntime));
 app.use('/api', mqRouter);
 app.use('/api', aopModule.init(pagesDb));

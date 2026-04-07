@@ -478,7 +478,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           </div>
 
           {/* Tier picker — segmented control */}
-          <div className="ml-3 flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.02] p-0.5" role="radiogroup" aria-label="Model tier">
+          <div className="hidden md:flex ml-3 items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.02] p-0.5" role="radiogroup" aria-label="Model tier">
             <Cpu className="ml-1 h-3 w-3 text-slate-500" aria-hidden="true" />
             {tiers.map((tier) => (
               <TierButton
@@ -491,7 +491,7 @@ export default function FreeCodeTerminal({ wsUrl }: FreeCodeTerminalProps) {
           </div>
 
           {/* Workspace picker */}
-          <div className="relative ml-3 min-w-0" ref={pickerRef}>
+          <div className="hidden md:block relative ml-3 min-w-0" ref={pickerRef}>
             <button
               type="button"
               onClick={() => setPickerOpen((v) => !v)}

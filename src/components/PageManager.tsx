@@ -533,7 +533,9 @@ export default function PageManager({
   const [blockLoading, setBlockLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(240)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768
+  )
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   // ── 导入弹窗 ──

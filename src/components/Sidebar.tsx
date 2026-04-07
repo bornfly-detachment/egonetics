@@ -61,7 +61,7 @@ const Sidebar: React.FC = () => {
   return (
     <aside
       className={`
-        hidden md:flex flex-col h-full
+        flex flex-col h-full
         bg-[#111111] border-r border-white/[0.06]
         transition-all duration-300 ease-in-out
         ${open ? 'w-56' : 'w-[60px]'}
