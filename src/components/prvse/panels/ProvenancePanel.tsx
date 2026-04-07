@@ -24,10 +24,10 @@ function OriginNode({ origin, depth = 0 }: { origin: Origin; depth?: number }) {
       <div className="flex items-center gap-1.5 py-1">
         {depth > 0 && <span className="text-white/15 text-[10px]">└→</span>}
         {domainIcon}
-        {sourceIcon[origin.source] ?? <Box size={10} className="text-white/30" />}
+        {sourceIcon[origin.source] ?? <Box size={10} className="text-white/45" />}
         <span className="text-[10px] font-mono text-white/50">{origin.source}</span>
         {origin.label && (
-          <span className="text-[10px] text-white/30 truncate max-w-[180px]">{origin.label}</span>
+          <span className="text-[10px] text-white/45 truncate max-w-[180px]">{origin.label}</span>
         )}
       </div>
       {origin.chain?.map((child, i) => (
@@ -80,15 +80,15 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
               <div className="text-[9px] text-white/40 mb-1 uppercase tracking-wider">Chronicle Snapshot</div>
               <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] px-2.5 py-2 space-y-1.5">
                 <div>
-                  <span className="text-[9px] text-white/30">设计思路: </span>
+                  <span className="text-[9px] text-white/45">设计思路: </span>
                   <span className="text-[10px] text-white/55">{data.chronicle.designRationale}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-white/30">功能: </span>
+                  <span className="text-[9px] text-white/45">功能: </span>
                   <span className="text-[10px] text-white/55">{data.chronicle.functionalSpec}</span>
                 </div>
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[9px] text-white/30">依赖: </span>
+                  <span className="text-[9px] text-white/45">依赖: </span>
                   {data.chronicle.dependencies.map(d => (
                     <span key={d} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/40 border border-white/[0.06]">
                       {d}
@@ -96,7 +96,7 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
                   ))}
                 </div>
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[9px] text-white/30">宪法: </span>
+                  <span className="text-[9px] text-white/45">宪法: </span>
                   {data.chronicle.constitutionBindings.map(c => (
                     <span key={c} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/[0.06] text-emerald-400/50 border border-emerald-500/[0.12]">
                       {c}
