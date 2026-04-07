@@ -484,7 +484,7 @@ const MODE_STYLES: Record<PanelMode, React.CSSProperties> = {
   center: {
     top: '50%', left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: '720px', maxHeight: '78vh',
+    width: '720px', height: '78vh',
     borderRadius: '18px',
   },
   fullscreen: {
