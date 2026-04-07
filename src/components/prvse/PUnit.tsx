@@ -112,6 +112,7 @@ interface PUnitProps {
   onStateTransition?: (next: PatternState) => void
   onFork?: () => void
   onFreeze?: () => void
+  onClassify?: () => void
 }
 
 export default function PUnit({
