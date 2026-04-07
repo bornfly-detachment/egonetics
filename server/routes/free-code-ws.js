@@ -217,7 +217,36 @@ function attach(httpServer) {
           send({ type: 'output', data: `\x1b[?2026h${batchBuf}\x1b[?2026l` })
           batchBuf = ''
         }
+
+        // For isolated tiers (T0/T1): the PTY slave is owned by bornfly and
+        // sudo+tmux run as egonetics-lX.  Even with the stty -echo wrapper,
+        // there is a brief window between pty.spawn() and tmux enabling raw
+        // mode where input would be echoed or mishandled.  Delay `ready`
+        // (which gates frontend input via isReadyRef) until the first PTY
+        // output chunk arrives — at that point tmux is running and the
+        // terminal is configured correctly.
+        const readyPayload = {
+          type: 'ready',
+          cwd,
+          session: sessionName,
+          tier: currentTier,
+          isolation: {
+            isolated: spawnPlan.isolated,
+            user: spawnPlan.effectiveUser,
+            fallbackReason: spawnPlan.fallbackReason || null,
+          },
+        }
+        // Non-isolated tiers (T2): send ready immediately — tmux starts fast
+        // and there is no sudo handoff latency.
+        let readySent = !spawnPlan.isolated
+        if (!spawnPlan.isolated) send(readyPayload)
+
         ptyProcess.onData((data) => {
+          // Isolated tiers: ungate input on first real output from the PTY.
+          if (!readySent) {
+            readySent = true
+            send(readyPayload)
+          }
           batchBuf += data
           if (batchBuf.length >= BATCH_MAX) {
             if (batchTimer) { clearTimeout(batchTimer); batchTimer = null }
@@ -232,18 +261,6 @@ function attach(httpServer) {
           // keeps the session alive unless the user explicitly killed it.
           send({ type: 'exit', code: exitCode, signal })
           ptyProcess = null
-        })
-
-        send({
-          type: 'ready',
-          cwd,
-          session: sessionName,
-          tier: currentTier,
-          isolation: {
-            isolated: spawnPlan.isolated,
-            user: spawnPlan.effectiveUser,
-            fallbackReason: spawnPlan.fallbackReason || null,
-          },
         })
         const tag = spawnPlan.isolated
           ? `as ${spawnPlan.effectiveUser}`
