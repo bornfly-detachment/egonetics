@@ -5,7 +5,7 @@
  * 通用面板：ProvenancePanel + ResourcePanel + MountPanel
  */
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Network, ArrowRight, Layers } from 'lucide-react'
+import { ChevronDown, ChevronRight, Network, Layers } from 'lucide-react'
 import type {
   RelationData, RelationEdge, RelationLevel, EdgeType,
   ProvenanceData, ResourceData, MountData,
