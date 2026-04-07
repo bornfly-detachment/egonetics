@@ -81,11 +81,11 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
               <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] px-2.5 py-2 space-y-1.5">
                 <div>
                   <span className="text-[9px] text-white/45">设计思路: </span>
-                  <span className="text-[10px] text-white/55">{data.chronicle.designRationale}</span>
+                  <span className="text-[10px] text-white/65">{data.chronicle.designRationale}</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-white/45">功能: </span>
-                  <span className="text-[10px] text-white/55">{data.chronicle.functionalSpec}</span>
+                  <span className="text-[10px] text-white/65">{data.chronicle.functionalSpec}</span>
                 </div>
                 <div className="flex items-center gap-1 flex-wrap">
                   <span className="text-[9px] text-white/45">依赖: </span>
