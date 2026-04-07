@@ -45,7 +45,7 @@ function EdgeRow({ edge }: { edge: RelationEdge }) {
         style={{ color: lc.primary, borderColor: `${lc.primary}30`, background: `${lc.primary}08` }}>
         {lc.label}
       </span>
-      <span className="text-white/20 text-[8px] truncate">
+      <span className="text-white/40 text-[8px] truncate">
         {edge.certainty} · {edge.temporal}
         {edge.strength === 'negative' && ' · 负'}
       </span>
@@ -72,7 +72,7 @@ function GraphSummary({ data, viewLevel, onViewLevelChange }: {
       <div className="flex gap-4 text-[10px] font-mono">
         <span className="text-white/30">{data.nodes.length} 节点</span>
         <span className="text-white/30">{data.edges.length} 边</span>
-        <span className="text-white/20">
+        <span className="text-white/40">
           L0:{edgesByLevel.L0.length} L1:{edgesByLevel.L1.length} L2:{edgesByLevel.L2.length}
         </span>
       </div>
@@ -158,8 +158,8 @@ export default function RUnit({
         <span className="text-[9px] font-mono text-white/25 shrink-0">
           {data.nodes.length}n·{data.edges.length}e
         </span>
-        <Network size={11} className="text-white/20 shrink-0" />
-        {collapsed ? <ChevronRight size={12} className="text-white/20" /> : <ChevronDown size={12} className="text-white/20" />}
+        <Network size={11} className="text-white/40 shrink-0" />
+        {collapsed ? <ChevronRight size={12} className="text-white/40" /> : <ChevronDown size={12} className="text-white/40" />}
       </button>
 
       {/* ── Body ── */}
@@ -181,7 +181,7 @@ export default function RUnit({
             </div>
             <div className="rounded-lg bg-black/20 border border-white/[0.05] px-2 py-1 max-h-[200px] overflow-y-auto">
               {visibleEdges.length === 0 ? (
-                <div className="text-[10px] text-white/20 py-2 text-center">此级别无边</div>
+                <div className="text-[10px] text-white/40 py-2 text-center">此级别无边</div>
               ) : (
                 visibleEdges.map(edge => <EdgeRow key={edge.id} edge={edge} />)
               )}
