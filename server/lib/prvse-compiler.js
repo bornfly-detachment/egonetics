@@ -53,10 +53,14 @@ async function llmLex(content, opts = {}) {
   const startTime = Date.now()
   const model = tier === 'T0' ? 'seai' : tier === 'T1' ? 'MiniMax-M2.7' : 'claude-sonnet-4-6'
 
-  // Build prompt: base schema + optional tag-tree for tag ID matching
-  let systemPrompt = LEXER_SYSTEM_PROMPT
+  // When tag-tree context is provided, use a compact prompt — the tree
+  // itself defines all classification options.  The verbose LEXER_SYSTEM_PROMPT
+  // combined with the tree overflows MiniMax's thinking budget.
+  let systemPrompt
   if (tagTreeContext) {
-    systemPrompt += `\n\nAvailable tag-tree nodes (pick the most specific matching tag IDs and return them in a "tagIds" array):\n${tagTreeContext}`
+    systemPrompt = `Classify input. Return ONLY JSON, no text.\n{"physical":"…","level":"L0_atom|L1_molecule|L2_gene","communication":"bottom_up|top_down|lateral","summary":"one line","tagIds":["leaf IDs from tree"]}\n\n${tagTreeContext}`
+  } else {
+    systemPrompt = LEXER_SYSTEM_PROMPT
   }
 
   const msg = await engine.call(
