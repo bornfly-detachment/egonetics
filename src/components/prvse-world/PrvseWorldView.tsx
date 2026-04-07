@@ -90,6 +90,7 @@ export default function PrvseWorldView() {
 
   type PanelMode = 'side' | 'center' | 'fullscreen'
   const [panelMode, setPanelMode] = useState<PanelMode>(() => {
+    if (window.innerWidth < 768) return 'fullscreen'
     const saved = localStorage.getItem('prvse_panel_mode')
     return (saved === 'side' || saved === 'center' || saved === 'fullscreen') ? saved : 'side'
   })
