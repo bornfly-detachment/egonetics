@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@prvse': path.resolve(__dirname, '../prvse_world_workspace/src'),
     },
   },
   server: {
