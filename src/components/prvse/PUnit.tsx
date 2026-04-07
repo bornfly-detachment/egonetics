@@ -132,7 +132,6 @@ export default function PUnit({
   const sv = STATE_VISUALS[data.state]
   const nc = narrowingCount(data)
   const authority = derivedAuthority(data)
-  const tier = derivedTier(data)
 
   const PHYSICAL_OPTIONS: PhysicalType[] = ['text', 'number', 'code', 'structured', 'image', 'audio', 'video', 'stream', 'mixed']
   const LEVEL_OPTIONS: InfoLevel[] = ['L0', 'L1', 'L2']
