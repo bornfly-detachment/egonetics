@@ -42,15 +42,15 @@ export default function ResourcePanel({ data, accentColor = '#60a5fa' }: Resourc
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02] transition-colors"
       >
         <HardDrive size={11} style={{ color: accentColor }} className="opacity-60" />
-        <span className="text-[10px] font-mono text-white/40">资源</span>
-        <span className="ml-auto flex items-center gap-2 text-[9px]">
+        <span className="text-sm font-mono text-white/70">资源</span>
+        <span className="ml-auto flex items-center gap-2 text-sm">
           <span className="font-mono px-1.5 py-0.5 rounded border" style={{ color: a.color, borderColor: `${a.color}30`, background: `${a.color}08` }}>
             {a.label}
           </span>
           <span className="font-mono px-1.5 py-0.5 rounded border" style={{ color: t.color, borderColor: `${t.color}30`, background: `${t.color}08` }}>
             {t.label}
           </span>
-          {open ? <ChevronDown size={10} className="text-white/40" /> : <ChevronRight size={10} className="text-white/40" />}
+          {open ? <ChevronDown size={10} className="text-white/70" /> : <ChevronRight size={10} className="text-white/70" />}
         </span>
       </button>
 
@@ -58,32 +58,32 @@ export default function ResourcePanel({ data, accentColor = '#60a5fa' }: Resourc
         <div className="px-3 pb-3 space-y-2">
           {/* 文件路径 */}
           <div className="flex items-center gap-1.5">
-            <FolderOpen size={10} className="text-white/40 shrink-0" />
-            <span className="text-[9px] font-mono text-white/45 truncate">{data.filePath}</span>
+            <FolderOpen size={10} className="text-white/70 shrink-0" />
+            <span className="text-xs font-mono text-white/75 truncate">{data.filePath}</span>
           </div>
 
           {/* 权限 + AI */}
           <div className="flex gap-3">
             <div className="flex items-center gap-1.5">
-              <Shield size={10} className="text-white/40" />
-              <span className="text-[10px] font-mono" style={{ color: a.color }}>{a.label}</span>
+              <Shield size={10} className="text-white/70" />
+              <span className="text-sm font-mono" style={{ color: a.color }}>{a.label}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Cpu size={10} className="text-white/40" />
-              <span className="text-[10px] font-mono" style={{ color: t.color }}>{t.label}</span>
+              <Cpu size={10} className="text-white/70" />
+              <span className="text-sm font-mono" style={{ color: t.color }}>{t.label}</span>
             </div>
           </div>
 
           {/* 存储/内存 */}
-          <div className="flex gap-4 text-[10px] font-mono">
+          <div className="flex gap-4 text-sm font-mono">
             <div>
-              <span className="text-white/40">存储: </span>
-              <span className="text-white/50">{formatBytes(data.storage)}</span>
+              <span className="text-white/70">存储: </span>
+              <span className="text-white/65">{formatBytes(data.storage)}</span>
             </div>
             {data.memoryUsage != null && (
               <div>
-                <span className="text-white/40">内存: </span>
-                <span className="text-white/50">{formatBytes(data.memoryUsage)}</span>
+                <span className="text-white/70">内存: </span>
+                <span className="text-white/65">{formatBytes(data.memoryUsage)}</span>
               </div>
             )}
           </div>
@@ -92,12 +92,12 @@ export default function ResourcePanel({ data, accentColor = '#60a5fa' }: Resourc
           {data.dependencies.length > 0 && (
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <Link size={9} className="text-white/40" />
-                <span className="text-[9px] text-white/40">依赖</span>
+                <Link size={9} className="text-white/70" />
+                <span className="text-xs text-white/70">依赖</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {data.dependencies.map(dep => (
-                  <span key={dep} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/40 border border-white/[0.06]">
+                  <span key={dep} className="text-xs font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/70 border border-white/[0.06]">
                     {dep}
                   </span>
                 ))}

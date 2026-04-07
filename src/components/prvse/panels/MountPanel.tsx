@@ -31,8 +31,8 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02] transition-colors"
       >
         <Plug size={11} style={{ color: accentColor }} className="opacity-60" />
-        <span className="text-[10px] font-mono text-white/40">挂载</span>
-        <span className="ml-auto flex items-center gap-1.5 text-[9px] text-white/40">
+        <span className="text-sm font-mono text-white/70">挂载</span>
+        <span className="ml-auto flex items-center gap-1.5 text-sm text-white/70">
           {activeCount} active
           {open ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
         </span>
@@ -45,14 +45,14 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <Zap size={9} className="text-amber-400/50" />
-                <span className="text-[9px] text-white/40 uppercase tracking-wider">AOP / Hook</span>
+                <span className="text-xs text-white/70 uppercase tracking-wider">AOP / Hook</span>
               </div>
               <div className="space-y-0.5">
                 {data.aopHooks.map(hook => (
-                  <div key={hook.id} className="flex items-center gap-2 text-[10px]">
+                  <div key={hook.id} className="flex items-center gap-2 text-sm">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${hook.active ? 'bg-emerald-400' : 'bg-white/15'}`} />
-                    <span className="font-mono text-white/45 w-10 shrink-0">{hook.type}</span>
-                    <span className="font-mono text-white/50 truncate">{hook.target}</span>
+                    <span className="font-mono text-white/75 w-10 shrink-0">{hook.type}</span>
+                    <span className="font-mono text-white/65 truncate">{hook.target}</span>
                   </div>
                 ))}
               </div>
@@ -64,16 +64,16 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <Anchor size={9} className="text-emerald-400/50" />
-                <span className="text-[9px] text-white/40 uppercase tracking-wider">宪法</span>
+                <span className="text-xs text-white/70 uppercase tracking-wider">宪法</span>
               </div>
               <div className="space-y-0.5">
                 {data.constitutionBindings.map(binding => {
                   const st = STATUS_ICON[binding.status]
                   return (
-                    <div key={binding.ruleId} className="flex items-center gap-2 text-[10px]">
+                    <div key={binding.ruleId} className="flex items-center gap-2 text-sm">
                       <span className="shrink-0">{st.icon}</span>
-                      <span className="font-mono text-white/50 w-16 shrink-0">{binding.ruleId}</span>
-                      <span className="text-white/45 truncate">{binding.description}</span>
+                      <span className="font-mono text-white/65 w-16 shrink-0">{binding.ruleId}</span>
+                      <span className="text-white/75 truncate">{binding.description}</span>
                     </div>
                   )
                 })}
@@ -86,17 +86,17 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <Plug size={9} className="text-blue-400/50" />
-                <span className="text-[9px] text-white/40 uppercase tracking-wider">端口</span>
+                <span className="text-xs text-white/70 uppercase tracking-wider">端口</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {data.ports.map((port, i) => (
                   <span
                     key={i}
-                    className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border bg-white/[0.03] text-white/40 border-white/[0.08]"
+                    className="flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded border bg-white/[0.03] text-white/70 border-white/[0.08]"
                   >
                     {port.direction === 'out' ? <ArrowRight size={8} /> : <ArrowLeft size={8} />}
                     {port.targetType}:{port.target}
-                    <span className="text-white/40">{port.edgeType}</span>
+                    <span className="text-white/70">{port.edgeType}</span>
                   </span>
                 ))}
               </div>
@@ -108,16 +108,16 @@ export default function MountPanel({ data, accentColor = '#60a5fa' }: MountPanel
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <Wrench size={9} className="text-purple-400/50" />
-                <span className="text-[9px] text-white/40 uppercase tracking-wider">Skill / 工具</span>
+                <span className="text-xs text-white/70 uppercase tracking-wider">Skill / 工具</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {data.skills.map(skill => (
                   <span
                     key={skill.id}
-                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                    className={`text-xs font-mono px-1.5 py-0.5 rounded border ${
                       skill.active
                         ? 'bg-purple-500/[0.06] text-purple-400/60 border-purple-500/20'
-                        : 'bg-white/[0.03] text-white/40 border-white/[0.06]'
+                        : 'bg-white/[0.03] text-white/70 border-white/[0.06]'
                     }`}
                   >
                     {skill.name}

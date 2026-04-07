@@ -72,7 +72,7 @@ function StateBar({ state, onTransition }: {
                 fill={active ? (s === 'internal' ? '#4ade80' : s === 'candidate' ? '#60a5fa' : '#f59e0b') : 'transparent'}
                 stroke={active ? 'none' : 'rgba(255,255,255,0.2)'}
               />
-              <span className="text-[9px] font-mono text-white/50">{vis.label}</span>
+              <span className="text-xs font-mono text-white/65">{vis.label}</span>
             </button>
           </div>
         )
@@ -87,18 +87,18 @@ function ClassificationRow<T extends string>({ label, value, options, onChange }
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[9px] text-white/45 w-10 shrink-0">{label}</span>
+      <span className="text-xs text-white/75 w-10 shrink-0">{label}</span>
       {onChange ? (
         <select
           value={value ?? ''}
           onChange={e => onChange(e.target.value as T)}
-          className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-white/50 outline-none"
+          className="text-sm font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-0.5 text-white/65 outline-none"
         >
           <option value="">未解析</option>
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
-        <span className="text-[10px] font-mono text-white/50">{value ?? '未解析'}</span>
+        <span className="text-sm font-mono text-white/65">{value ?? '未解析'}</span>
       )}
     </div>
   )
@@ -155,20 +155,20 @@ export default function PUnit({
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
       >
         {/* P 标志 */}
-        <span className="text-[11px] font-black font-mono shrink-0" style={{ color: '#f59e0b' }}>P</span>
+        <span className="text-xs font-black font-mono shrink-0" style={{ color: '#f59e0b' }}>P</span>
 
         {/* L 级别 */}
-        <span className="text-[10px] font-mono shrink-0" style={{ color: lc.primary }}>
+        <span className="text-sm font-mono shrink-0" style={{ color: lc.primary }}>
           {lv}
         </span>
 
         {/* 物理类型 */}
         {data.physical.resolved && (
-          <span className="text-[9px] font-mono text-white/45">·{data.physical.value}</span>
+          <span className="text-sm font-mono text-white/75">·{data.physical.value}</span>
         )}
 
         {/* 内容预览 */}
-        <span className="flex-1 text-[10px] text-white/50 truncate text-left min-w-0">
+        <span className="flex-1 text-sm text-white/65 truncate text-left min-w-0">
           {data.rawContent.slice(0, 60)}{data.rawContent.length > 60 ? '...' : ''}
         </span>
 
@@ -180,10 +180,10 @@ export default function PUnit({
         />
 
         {/* 权限 + Tier */}
-        <span className="text-[9px] font-mono text-white/40 shrink-0">{authority}</span>
+        <span className="text-sm font-mono text-white/70 shrink-0">{authority}</span>
 
         {/* 展开控制 */}
-        {collapsed ? <ChevronRight size={12} className="text-white/40" /> : <ChevronDown size={12} className="text-white/40" />}
+        {collapsed ? <ChevronRight size={12} className="text-white/70" /> : <ChevronDown size={12} className="text-white/70" />}
       </button>
 
       {/* ── Body（展开后） ── */}
@@ -196,20 +196,20 @@ export default function PUnit({
               onChange={e => onUpdate?.({ rawContent: e.target.value })}
               readOnly={!onUpdate || data.frozen}
               rows={3}
-              className="w-full text-[11px] font-mono bg-black/20 border border-white/[0.06] rounded-lg px-2.5 py-2 text-white/60 outline-none resize-y focus:border-white/15"
+              className="w-full text-sm font-mono bg-black/20 border border-white/[0.06] rounded-lg px-2.5 py-2 text-white/75 outline-none resize-y focus:border-white/15"
               spellCheck={false}
             />
           </div>
 
           {/* 三态 */}
           <div className="px-3 pb-2">
-            <div className="text-[9px] text-white/40 mb-1">状态</div>
+            <div className="text-xs text-white/70 mb-1">状态</div>
             <StateBar state={data.state} onTransition={onStateTransition} />
           </div>
 
           {/* 分类属性 */}
           <div className="px-3 pb-2 space-y-1">
-            <div className="text-[9px] text-white/40 mb-1">分类（缩窄 {nc}/3）</div>
+            <div className="text-xs text-white/70 mb-1">分类（缩窄 {nc}/3）</div>
             <ClassificationRow
               label="物理"
               value={data.physical.value}
