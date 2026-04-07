@@ -107,6 +107,7 @@ function PSection() {
   const [selected, setSelected] = useState<PatternData | null>(null)
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [classifying, setClassifying] = useState(false)
   const [newContent, setNewContent] = useState('')
 
   const loadList = useCallback(async () => {
