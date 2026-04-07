@@ -49,4 +49,10 @@ export const prvseApi = {
 
   freeze: <T = PatternData | RelationData | ValueData>(type: PrvseType, id: string) =>
     authFetch<T>(`/prvse/${type}/${id}/freeze`, { method: 'POST' }),
+
+  classify: <T = PatternData>(type: PrvseType, id: string, tier?: string) =>
+    authFetch<T>(`/prvse/${type}/${id}/classify`, {
+      method: 'POST',
+      body: JSON.stringify({ tier: tier || 'T1' }),
+    }),
 }
