@@ -202,7 +202,11 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
     const { readTree, flattenTree } = require('./tags')
     const tier = req.body.tier || 'T1'
 
-    // Build tag-tree context for the LLM — dynamic, not hardcoded
+    // Build tag-tree context for the LLM — dynamic, not hardcoded.
+    // IMPORTANT: exclude origin and state tags — those are context-derived
+    // metadata set by the system at creation time, NOT content-derived.
+    // AI can only classify: physical, level, communication.
+    const EXCLUDE_PREFIXES = ['tag-p-ori', 'tag-p-state', 'tag-p-st-']
     let tagTreeContext = ''
     try {
       const tree = readTree()
@@ -210,6 +214,7 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
       if (pTree) {
         const flat = flattenTree(pTree, 0, [])
         tagTreeContext = flat
+          .filter(t => !EXCLUDE_PREFIXES.some(p => t.id.startsWith(p)))
           .map(t => `${'  '.repeat(t.depth)}[${t.id}] ${t.name}`)
           .join('\n')
       }
