@@ -187,7 +187,7 @@ router.post('/prvse/:type/:id/fork', (req, res) => {
   res.status(201).json(forked)
 })
 
-// CLASSIFY — AI auto-classification via prvse-compiler lexer
+// CLASSIFY — AI auto-classification via prvse-compiler lexer + tag-tree
 router.post('/prvse/:type/:id/classify', async (req, res) => {
   const dir = typeDir(req.params.type)
   if (!dir) return res.status(400).json({ error: `Invalid type` })
@@ -199,8 +199,23 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
 
   try {
     const { _internals: { llmLex } } = require('../lib/prvse-compiler')
+    const { readTree, flattenTree } = require('./tags')
     const tier = req.body.tier || 'T1'
-    const result = await llmLex(existing.rawContent, { tier })
+
+    // Build tag-tree context for the LLM — dynamic, not hardcoded
+    let tagTreeContext = ''
+    try {
+      const tree = readTree()
+      const pTree = tree.P
+      if (pTree) {
+        const flat = flattenTree(pTree, 0, [])
+        tagTreeContext = flat
+          .map(t => `${'  '.repeat(t.depth)}[${t.id}] ${t.name}`)
+          .join('\n')
+      }
+    } catch { /* fallback: llmLex uses its built-in prompt */ }
+
+    const result = await llmLex(existing.rawContent, { tier, tagTreeContext })
 
     // Map compiler level format to PatternData format
     const levelMap = { L0_atom: 'L0', L1_molecule: 'L1', L2_gene: 'L2' }
@@ -210,10 +225,12 @@ router.post('/prvse/:type/:id/classify', async (req, res) => {
       physical: { resolved: true, value: result.physical },
       level: { resolved: true, value: levelMap[result.level] || result.level },
       communication: { resolved: true, value: result.communication },
+      classificationTags: result.tagIds || [],
       _classification: {
         summary: result.summary,
         infoLevel: result.infoLevel,
         relationLevel: result.relationLevel,
+        tagIds: result.tagIds || [],
         meta: result._meta,
         classifiedAt: Date.now(),
         source: 'ai',
