@@ -152,6 +152,12 @@ function PSection() {
       setNewContent('')
       setSelected(data)
       await loadList()
+      // AI auto-classify — fire and update in background
+      setClassifying(true)
+      prvseApi.classify<PatternData>('P', data.id)
+        .then(classified => setSelected(classified))
+        .catch(err => console.error('[PRVDemo] classify failed:', err))
+        .finally(() => setClassifying(false))
     } finally {
       setCreating(false)
     }
