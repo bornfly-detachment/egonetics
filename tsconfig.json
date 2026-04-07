@@ -17,9 +17,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@prvse/*": ["../prvse_world_workspace/src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../prvse_world_workspace/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
