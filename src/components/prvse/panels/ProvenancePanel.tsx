@@ -56,7 +56,7 @@ export default function ProvenancePanel({ data, accentColor = '#60a5fa', onFork,
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02] transition-colors"
       >
         <GitBranch size={11} style={{ color: accentColor }} className="opacity-60" />
-        <span className="text-sm font-mono text-white/70">溯源 + Chronicle</span>
+        <span className="text-sm font-semibold font-mono text-white/80">溯源 + Chronicle</span>
         <span className="ml-auto flex items-center gap-1.5 text-sm text-white/70">
           v{data.version ?? 1}
           {data.frozen && <Lock size={8} className="text-amber-400/50" />}

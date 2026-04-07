@@ -170,7 +170,7 @@ export default function PRVDemo() {
 
       {/* P — Pattern */}
       <div>
-        <div className="text-xs text-amber-400/50 font-mono mb-2 uppercase tracking-wider">P — Pattern 信息原语</div>
+        <div className="text-sm font-bold text-amber-400/70 font-mono mb-3 uppercase tracking-wider">P — Pattern 信息原语</div>
         <PUnit
           data={pattern}
           provenance={mockProvenance}
@@ -185,7 +185,7 @@ export default function PRVDemo() {
 
       {/* R — Relation */}
       <div>
-        <div className="text-xs text-violet-400/50 font-mono mb-2 uppercase tracking-wider">R — Relation 图结构</div>
+        <div className="text-sm font-bold text-violet-400/70 font-mono mb-3 uppercase tracking-wider">R — Relation 图结构</div>
         <RUnit
           data={mockRelation}
           provenance={{ ...mockProvenance, chronicle: { ...mockProvenance.chronicle!, designRationale: 'PRV Demo 的关系拓扑', functionalSpec: '展示 PRVSE 循环边和 L 级别递进' } }}
@@ -200,7 +200,7 @@ export default function PRVDemo() {
 
       {/* V — Value */}
       <div>
-        <div className="text-xs text-orange-400/50 font-mono mb-2 uppercase tracking-wider">V — Value 裁判</div>
+        <div className="text-sm font-bold text-orange-400/70 font-mono mb-3 uppercase tracking-wider">V — Value 裁判</div>
         <VUnit
           data={mockValue}
           provenance={{ ...mockProvenance, chronicle: { ...mockProvenance.chronicle!, designRationale: 'P-001 的入库验证清单', functionalSpec: 'L0 确定性验证 + Reward 评估' } }}

@@ -119,7 +119,7 @@ export default function VUnit({
         onClick={toggle}
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
       >
-        <span className="text-xs font-black font-mono shrink-0" style={{ color: '#fb923c' }}>V</span>
+        <span className="text-sm font-black font-mono shrink-0" style={{ color: '#fb923c' }}>V</span>
 
         {/* 裁决级别 */}
         <span className="text-sm font-mono shrink-0 text-white/70">
@@ -174,7 +174,7 @@ export default function VUnit({
             <div className="px-3 pb-2">
               <div className="flex items-center gap-1 mb-1.5">
                 <TrendingUp size={9} className="text-emerald-400/50" />
-                <span className="text-xs text-white/70 uppercase tracking-wider">Reward</span>
+                <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">Reward</span>
               </div>
               <div className="space-y-1.5">
                 {data.rewards.map(r => <RewardRow key={r.type} reward={r} />)}

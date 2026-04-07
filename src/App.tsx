@@ -205,6 +205,9 @@ const RouteSync: React.FC = () => {
       case 'prv-demo':
         targetPath = '/prv-demo'
         break
+      case 'font-compare':
+        targetPath = '/font-compare'
+        break
       default:
         targetPath = '/memory'
     }

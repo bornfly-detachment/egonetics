@@ -80,7 +80,7 @@ function GraphSummary({ data, viewLevel, onViewLevelChange }: {
       {/* L 级别切换（R 的核心能力：递进展开） */}
       <div className="flex items-center gap-1">
         <Layers size={10} className="text-white/70" />
-        <span className="text-xs text-white/70 mr-1">视图</span>
+        <span className="text-xs font-semibold text-white/80 mr-1">视图</span>
         {levels.map(lv => {
           const active = viewLevel === lv
           const lc = L_COLORS[lv]
@@ -150,7 +150,7 @@ export default function RUnit({
         onClick={toggle}
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
       >
-        <span className="text-xs font-black font-mono shrink-0" style={{ color: '#a78bfa' }}>R</span>
+        <span className="text-sm font-black font-mono shrink-0" style={{ color: '#a78bfa' }}>R</span>
         <span className="text-sm font-mono shrink-0" style={{ color: lc.primary }}>{lc.label}</span>
         <span className="flex-1 text-sm text-white/65 truncate text-left min-w-0">
           {data.label}
@@ -175,7 +175,7 @@ export default function RUnit({
 
           {/* 边列表（按当前视图级别过滤） */}
           <div className="px-3 pb-2">
-            <div className="text-xs text-white/70 mb-1">
+            <div className="text-xs font-semibold text-white/80 mb-1.5">
               边 ({visibleEdges.length}/{data.edges.length})
               {viewLevel !== 'L0' && <span className="text-white/15"> — {viewLevel} 视图已压缩</span>}
             </div>

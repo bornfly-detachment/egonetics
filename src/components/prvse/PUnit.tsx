@@ -155,7 +155,7 @@ export default function PUnit({
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
       >
         {/* P 标志 */}
-        <span className="text-xs font-black font-mono shrink-0" style={{ color: '#f59e0b' }}>P</span>
+        <span className="text-sm font-black font-mono shrink-0" style={{ color: '#f59e0b' }}>P</span>
 
         {/* L 级别 */}
         <span className="text-sm font-mono shrink-0" style={{ color: lc.primary }}>
@@ -203,13 +203,13 @@ export default function PUnit({
 
           {/* 三态 */}
           <div className="px-3 pb-2">
-            <div className="text-xs text-white/70 mb-1">状态</div>
+            <div className="text-xs font-semibold text-white/80 mb-1.5">状态</div>
             <StateBar state={data.state} onTransition={onStateTransition} />
           </div>
 
           {/* 分类属性 */}
           <div className="px-3 pb-2 space-y-1">
-            <div className="text-xs text-white/70 mb-1">分类（缩窄 {nc}/3）</div>
+            <div className="text-xs font-semibold text-white/80 mb-1.5">分类（缩窄 {nc}/3）</div>
             <ClassificationRow
               label="物理"
               value={data.physical.value}

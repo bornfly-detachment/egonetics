@@ -42,7 +42,7 @@ export default function ResourcePanel({ data, accentColor = '#60a5fa' }: Resourc
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02] transition-colors"
       >
         <HardDrive size={11} style={{ color: accentColor }} className="opacity-60" />
-        <span className="text-sm font-mono text-white/70">资源</span>
+        <span className="text-sm font-semibold font-mono text-white/80">资源</span>
         <span className="ml-auto flex items-center gap-2 text-sm">
           <span className="font-mono px-1.5 py-0.5 rounded border" style={{ color: a.color, borderColor: `${a.color}30`, background: `${a.color}08` }}>
             {a.label}
