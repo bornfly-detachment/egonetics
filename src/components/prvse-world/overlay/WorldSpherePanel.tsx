@@ -479,12 +479,13 @@ interface WorldSpherePanelProps {
 
 const MODE_STYLES: Record<PanelMode, React.CSSProperties> = {
   side: {
-    top: 0, right: 0, height: '100%', width: '380px',
+    top: 0, right: 0, height: '100%',
+    width: 'min(380px, 100vw)',
   },
   center: {
     top: '50%', left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: '720px', height: '78vh',
+    width: 'min(720px, 96vw)', height: 'min(78vh, 96dvh)',
     borderRadius: '18px',
   },
   fullscreen: {
