@@ -126,15 +126,18 @@ ${tagTreeText}
 }`
 
   try {
-    const { content: text } = await t1.call(
-      [{ role: 'user', content: userPrompt }],
-      { maxTokens: 1024, system: systemPrompt }
-    )
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const resp = await ai.call({
+      tier: 'T1',
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+      maxTokens: 1024,
+      purpose: 'aop-t1-verify',
+    })
+    const jsonMatch = resp.content.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('T1 返回非 JSON')
-    return { ok: true, result: JSON.parse(jsonMatch[0]), model: t1.MODEL }
+    return { ok: true, result: JSON.parse(jsonMatch[0]), model: resp.model }
   } catch (err) {
-    return { ok: false, error: err.message, result: null, model: t1.MODEL }
+    return { ok: false, error: err.message, result: null, model: 'MiniMax-M2.7' }
   }
 }
 
