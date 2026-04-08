@@ -80,14 +80,17 @@ ${tagTreeText}
 }`
 
   try {
-    const { content: text } = await t0.call(
-      [{ role: 'user', content: userPrompt }],
-      { maxTokens: 1024, system: systemPrompt }
-    )
-    // 提取 JSON（T0 可能输出带注释的文本）
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('T0 返回非 JSON: ' + text.slice(0, 200))
-    return { ok: true, result: JSON.parse(jsonMatch[0]), model: 'qwen3.5-0.8b' }
+    const resp = await ai.call({
+      tier: 'T0',
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+      maxTokens: 1024,
+      purpose: 'aop-t0-classify',
+      enableThinking: true,
+    })
+    const jsonMatch = resp.content.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('T0 返回非 JSON: ' + resp.content.slice(0, 200))
+    return { ok: true, result: JSON.parse(jsonMatch[0]), model: resp.model }
   } catch (err) {
     return { ok: false, error: err.message, result: null, model: 'qwen3.5-0.8b' }
   }
