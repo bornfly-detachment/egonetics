@@ -16,6 +16,7 @@ const fs   = require('fs')
 const path = require('path')
 const { randomUUID } = require('crypto')
 const { DEFAULT_MAX_TOKENS } = require('./llm')
+// TODO: migrate streaming to ai-resource-manager once ai.stream() is added
 const t0Engine = require('./t0-engine')
 const t1Engine = require('./t1-engine')
 
