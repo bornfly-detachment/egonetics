@@ -75,7 +75,7 @@ async function llmLex(content, opts = {}) {
 
   const msg = await engine.call(
     [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
-    { maxTokens: 1024 }
+    { maxTokens: 4096 }
   )
   // engine.call() may return { content: "string" } or { content: [{type:'text',text:'...'}] }
   const raw = typeof msg.content === 'string' ? msg.content
