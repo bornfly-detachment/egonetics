@@ -40,13 +40,16 @@ async function checkSEAIHealth() {
 }
 
 async function callSEAI(prompt, opts = {}) {
-  const messages = []
-  if (opts.system) messages.push({ role: 'system', content: opts.system })
-  messages.push({ role: 'user', content: prompt })
-  const { content: text, usage } = await t0Engine.call(messages, {
+  const messages = [{ role: 'user', content: prompt }]
+  const resp = await ai.call({
+    tier: 'T0',
+    system: opts.system,
+    messages,
     maxTokens: opts.max_tokens || 2048,
+    purpose: 'executor-t0',
+    enableThinking: true,
   })
-  return { text, tokensPerSecond: usage?.tokens_per_second ?? 0 }
+  return { text: resp.content, tokensPerSecond: 0 }
 }
 
 async function callSEAIJudge(question, context = {}, constitutionHint = null) {
