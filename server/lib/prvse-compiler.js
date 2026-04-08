@@ -48,10 +48,7 @@ async function llmLex(content, opts = {}) {
   const tier = opts.tier || 'T1'
   const tagTreeContext = opts.tagTreeContext || ''
 
-  const startTime = Date.now()
-  const model = tier === 'T0' ? 'qwen3.5-0.8b' : tier === 'T1' ? 'MiniMax-M2.7' : 'claude-sonnet-4-6'
-
-  // When tag-tree context is provided, use a compact prompt.
+  // Build system prompt: compact when tag-tree is present, full otherwise
   let systemPrompt
   if (tagTreeContext) {
     systemPrompt = [
@@ -70,71 +67,33 @@ async function llmLex(content, opts = {}) {
     systemPrompt = LEXER_SYSTEM_PROMPT
   }
 
-  let msg
-  if (tier === 'T0') {
-    // T0: call mlx_lm.server directly via OpenAI protocol (preserves messages
-    // structure + enables Qwen3.5 thinking mode for better reasoning).
-    // t0-engine._extractPrompt strips messages → loses context → bad classification.
-    const T0_PORT = process.env.T0_INFERENCE_PORT || '8100'
-    const resp = await fetch(`http://localhost:${T0_PORT}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: content },
-        ],
-        max_tokens: 4096,
-        temperature: 0.6,
-        top_p: 0.95,
-        top_k: 20,
-        enable_thinking: true,
-      }),
-      signal: AbortSignal.timeout(30000),
-    })
-    const data = await resp.json()
-    if (data.error) throw new Error(`T0: ${data.error}`)
-    // Extract text from choices (OpenAI format)
-    const choice = data.choices?.[0]?.message
-    msg = { content: choice?.content || '' }
-  } else {
-    // T1/T2: use engine.call (Anthropic protocol)
-    const engine = t1Engine
-    msg = await engine.call(
-      [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
-      { maxTokens: 4096 }
-    )
-  }
-  // engine.call() may return { content: "string" } or { content: [{type:'text',text:'...'}] }
-  const raw = typeof msg.content === 'string' ? msg.content
-    : Array.isArray(msg.content) ? msg.content.map(b => b.text || '').join('')
-    : typeof msg === 'string' ? msg : ''
-  const elapsed = Date.now() - startTime
-  console.log(`[compiler/lexer] raw length=${raw.length}, first100=${JSON.stringify(raw.slice(0, 100))}`)
+  // Unified call through ai-resource-manager (queue + protocol + logging)
+  const result = await ai.call({
+    tier,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: content }],
+    maxTokens: 4096,
+    purpose: 'lexer-classify',
+    enableThinking: tier === 'T0',
+  })
+
+  const raw = result.content || ''
+  console.log(`[compiler/lexer] tier=${tier} raw length=${raw.length}, first100=${JSON.stringify(raw.slice(0, 100))}`)
 
   // Parse LLM response — extract JSON from possible markdown wrapping
   let parsed
   try {
-    // Try multiple extraction strategies
     let jsonStr = raw.trim()
-
-    // Strategy 1: strip markdown code fence
     const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (fenceMatch) jsonStr = fenceMatch[1].trim()
-
-    // Strategy 2: extract outermost { ... }
     const braceMatch = jsonStr.match(/\{[\s\S]*\}/)
     if (braceMatch) jsonStr = braceMatch[0]
-
-    // Strategy 3: if jsonStr contains | (from prompt echo), clean it
     jsonStr = jsonStr.replace(/"\s*\|\s*"/g, '" | "')
-
     parsed = JSON.parse(jsonStr)
     console.log(`[compiler/lexer] OK: level=${parsed.level}, infoLevel=${parsed.infoLevel}`)
   } catch (parseErr) {
     console.error(`[compiler/lexer] JSON parse failed: ${parseErr.message}`)
     console.error(`[compiler/lexer] raw: ${JSON.stringify(raw.slice(0, 300))}`)
-    // LLM returned unparseable output — fallback to minimal classification
     parsed = {
       physical: 'text',
       level: 'L0_atom',
@@ -155,10 +114,10 @@ async function llmLex(content, opts = {}) {
     tagIds: Array.isArray(parsed.tagIds) ? parsed.tagIds : [],
     _meta: {
       tier,
-      model,
-      elapsed,
-      inputTokens: msg.usage?.input_tokens || 0,
-      outputTokens: msg.usage?.output_tokens || 0,
+      model: result.model,
+      elapsed: result.latencyMs,
+      inputTokens: result.usage?.inputTokens || 0,
+      outputTokens: result.usage?.outputTokens || 0,
     },
   }
 }
