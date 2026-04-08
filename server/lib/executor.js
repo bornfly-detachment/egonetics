@@ -32,7 +32,7 @@ const TIER_ORDER = ['T0', 'T1', 'T2', 'human']
 
 // ── T0: 本地 Qwen 推理（via Egonetics 内部端点）──
 
-const t0Engine = require('./t0-engine')
+const ai = require('./ai-resource-manager')
 
 async function checkSEAIHealth() {
   // T0 按需启动，直接返回 true；实际调用失败时 executor 会自动降级 T1
