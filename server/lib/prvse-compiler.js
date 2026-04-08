@@ -46,15 +46,13 @@ relationLevel(only if content describes a relation): L0=pure-logic(1+1=2), L1=ca
  * Returns resolved fields (LLM does the semantic heavy lifting).
  */
 async function llmLex(content, opts = {}) {
-  const tier   = opts.tier || 'T1'
-  const engine = tier === 'T0' ? t0Engine : t1Engine
+  const tier = opts.tier || 'T1'
   const tagTreeContext = opts.tagTreeContext || ''
 
   const startTime = Date.now()
-  const model = tier === 'T0' ? 'seai' : tier === 'T1' ? 'MiniMax-M2.7' : 'claude-sonnet-4-6'
+  const model = tier === 'T0' ? 'qwen3.5-0.8b' : tier === 'T1' ? 'MiniMax-M2.7' : 'claude-sonnet-4-6'
 
   // When tag-tree context is provided, use a compact prompt.
-  // The verbose LEXER_SYSTEM_PROMPT + full tree overflows MiniMax thinking budget.
   let systemPrompt
   if (tagTreeContext) {
     systemPrompt = [
@@ -73,10 +71,41 @@ async function llmLex(content, opts = {}) {
     systemPrompt = LEXER_SYSTEM_PROMPT
   }
 
-  const msg = await engine.call(
-    [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
-    { maxTokens: 4096 }
-  )
+  let msg
+  if (tier === 'T0') {
+    // T0: call mlx_lm.server directly via OpenAI protocol (preserves messages
+    // structure + enables Qwen3.5 thinking mode for better reasoning).
+    // t0-engine._extractPrompt strips messages → loses context → bad classification.
+    const T0_PORT = process.env.T0_INFERENCE_PORT || '8100'
+    const resp = await fetch(`http://localhost:${T0_PORT}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: content },
+        ],
+        max_tokens: 4096,
+        temperature: 0.6,
+        top_p: 0.95,
+        top_k: 20,
+        enable_thinking: true,
+      }),
+      signal: AbortSignal.timeout(30000),
+    })
+    const data = await resp.json()
+    if (data.error) throw new Error(`T0: ${data.error}`)
+    // Extract text from choices (OpenAI format)
+    const choice = data.choices?.[0]?.message
+    msg = { content: choice?.content || '' }
+  } else {
+    // T1/T2: use engine.call (Anthropic protocol)
+    const engine = t1Engine
+    msg = await engine.call(
+      [{ role: 'user', content: `[System]\n${systemPrompt}\n\n[Input to classify]\n${content}` }],
+      { maxTokens: 4096 }
+    )
+  }
   // engine.call() may return { content: "string" } or { content: [{type:'text',text:'...'}] }
   const raw = typeof msg.content === 'string' ? msg.content
     : Array.isArray(msg.content) ? msg.content.map(b => b.text || '').join('')
