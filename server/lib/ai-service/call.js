@@ -1,5 +1,7 @@
 /**
- * ai-resource-manager/call.js
+ * @prvse P-L0-IMPL_ai-call
+ * @parent P-L1_ai-service
+ * @chronicle prvse_world_workspace/chronicle/P/P-L1_ai-service.yaml
  *
  * 统一 AI 按次调用接口 — 替代分散的 t0-engine / t1-engine / t2-client
  *
