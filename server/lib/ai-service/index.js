@@ -19,6 +19,7 @@ const { allocator, platform } = require('../resource-manager')
 const queue = require('./queue')
 const { call, TIER_CONFIG } = require('./call')
 const logger = require('./logger')
+const registry = require('./registry')
 
 let _started = false
 
