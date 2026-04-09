@@ -1,20 +1,24 @@
 /**
  * harness-manager/index.js
  *
- * 运行环境管理层 — tmux session + CLI 生命周期
+ * 运行环境管理层 — 所有 AI CLI session 的生命周期管理
  *
- * 职责：创建/管理长期运行的 AI 工作环境（free-code sessions）。
+ * 职责：创建/管理长期运行的 AI 工作环境
  * 依赖：resource-manager（查询 session 配额）
  * 不依赖：ai-service（不直接调 LLM）
  *
- * 接口：
- *   harness.canCreate()          → boolean
- *   harness.createSession(opts)  → { sessionId, tier, pid }
- *   harness.listSessions()      → [{ id, tier, pid, rss, uptime }]
- *   harness.killSession(id)     → void
- *   harness.status()            → { sessions, capacity }
+ * 包含：
+ *   runner    — T0/T1/T2 free-code tmux session（从 harness-runner.js 迁入）
+ *   t2Spawn  — T2 code-agent claude spawn（从 t2-client.js 迁入）
  *
- * TODO Phase 2: migrate harness-runner.js + free-code-ws.js logic here
+ * 接口：
+ *   harness.canCreate()                → boolean
+ *   harness.listSessions()             → [{ pid, rssMb, command }]
+ *   harness.status()                   → { current, max, canCreate, sessions }
+ *   harness.registerSession(id, meta)  → void
+ *   harness.unregisterSession(id)      → void
+ *   harness.runner.*                   → tmux spawn 工具（buildTmuxSpawn, listTiers, ...）
+ *   harness.t2Spawn.*                  → claude spawn 工具（runQuery, checkT2Health, ...）
  */
 
 'use strict'
@@ -22,9 +26,13 @@
 const { allocator } = require('../resource-manager')
 const logger = require('../ai-service/logger')
 
+// Sub-modules
+const runner = require('./runner')
+const t2Spawn = require('./t2-spawn')
+
 // ── Session 注册表（内存，进程重启后从 ps 重建）─────────────────
 
-const _sessions = new Map()  // sessionId → { tier, pid, createdAt, lastActive }
+const _sessions = new Map()
 
 function canCreate() {
   return allocator.canCreateSession()
@@ -68,10 +76,15 @@ function touchSession(sessionId) {
 }
 
 module.exports = {
+  // Session lifecycle
   canCreate,
   listSessions,
   status,
   registerSession,
   unregisterSession,
   touchSession,
+
+  // Sub-modules (preserve full API for consumers)
+  runner,     // buildTmuxSpawn, listTiers, resolveTier, ...
+  t2Spawn,    // runQuery, checkT2Health, getSessionId, ...
 }
