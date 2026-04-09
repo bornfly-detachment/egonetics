@@ -74,28 +74,37 @@ const TIER_CONFIG = {
 
 async function callOpenAI(config, messages, system, maxTokens, enableThinking) {
   const endpoint = config.getEndpoint()
-  if (!platform.isPortListening(parseInt(new URL(endpoint).port, 10))) {
-    throw new Error(`T0 server not running at ${endpoint}`)
+  const port = parseInt(new URL(endpoint).port, 10)
+  if (!platform.isPortListening(port)) {
+    throw new Error(`T0 server not running at ${endpoint}. Start: mlx_lm.server --model <path> --port ${port}`)
   }
 
   const msgs = []
   if (system) msgs.push({ role: 'system', content: system })
   msgs.push(...messages)
 
+  // Select params based on thinking mode (Qwen3.5 official recommendations)
+  const useThinking = enableThinking && config.supportsThinking
+  const params = useThinking ? config.defaultParams : (config.nonThinkingParams || config.defaultParams)
+
   const body = {
     messages: msgs,
     max_tokens: maxTokens,
-    ...config.defaultParams,
+    ...params,
   }
-  if (enableThinking && config.supportsThinking) {
+  if (useThinking) {
     body.enable_thinking = true
   }
+
+  // Qwen3.5-0.8B is prone to thinking loops — use a shorter timeout
+  // and AbortSignal to interrupt runaway generation.
+  const timeoutMs = useThinking ? 30000 : 60000
 
   const resp = await fetch(`${endpoint}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(60000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!resp.ok) {
