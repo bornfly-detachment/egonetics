@@ -1,5 +1,7 @@
 /**
- * ai-service/registry.js
+ * @prvse P-L0-DATA_ai-registry
+ * @parent P-L1_ai-service
+ * @chronicle prvse_world_workspace/chronicle/P/P-L1_ai-service.yaml
  *
  * AI 服务注册表 — 服务提供方 + 消费者 + 日志位置 的唯一清单
  *
