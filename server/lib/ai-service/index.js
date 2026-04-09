@@ -79,4 +79,5 @@ module.exports = {
   status,
   queue,
   logger,
+  registry,
 }
