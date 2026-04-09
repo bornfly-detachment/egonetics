@@ -49,6 +49,7 @@ const mqRouter           = require('./routes/mq');
 const aopModule          = require('./routes/aop');
 const seaiRouter         = require('./routes/seai');
 const aiWorldRouter      = require('./routes/ai-world');
+const resourceStatusRouter = require('./routes/resource-status');
 const webhookRouter      = require('./routes/webhook');
 const gatewayWs          = require('./routes/gateway-ws');
 const freeCodeWs         = require('./routes/free-code-ws');
