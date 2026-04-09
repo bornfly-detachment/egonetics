@@ -111,7 +111,7 @@ function getIsolationStatus() {
 
 // ── Tier registry (loaded from server/config/free-code-tiers.json) ──
 
-const TIERS_CONFIG_PATH = path.join(__dirname, '..', 'config', 'free-code-tiers.json')
+const TIERS_CONFIG_PATH = path.join(__dirname, '..', '..', 'config', 'free-code-tiers.json')
 let _tiersCache = null
 let _tiersCacheMtime = 0
 
