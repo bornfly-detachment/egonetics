@@ -28,6 +28,7 @@ const SERVER_ROOT = path.resolve(__dirname, '../..')
 
 const PROVIDERS = {
   T0: {
+    id: 'P-svc-t0',
     tier: 'T0',
     model: 'Qwen3.5-0.8B',
     protocol: 'openai',
