@@ -57,16 +57,15 @@ function status() {
         today: today.tiers.T1 || null,
       },
       T2: {
-        // T2 有两种调用模式：
-        // - CLI session（Claude Max 订阅，通过 cli-dev）→ 始终可用
-        // - 按次调用（Anthropic SDK，需要 ANTHROPIC_API_KEY）→ 需要 key
-        aliveSession: true,  // CLI session 通过 Max 订阅，始终在线
-        aliveApi: !!process.env.ANTHROPIC_API_KEY,
-        alive: true,  // 至少 session 模式可用
+        // T2 调用方式：
+        // - CLI spawn（claude -p，Max 订阅）→ 始终可用（code-agent 用这个）
+        // - CLI session（cli-dev in tmux）→ 始终可用（free-code 用这个）
+        // - Anthropic SDK（需要 API Key）→ 可选，用于 ai.call({ tier:'T2' })
+        alive: true,
         model: TIER_CONFIG.T2.model(),
+        callMode: process.env.ANTHROPIC_API_KEY ? 'sdk+cli' : 'cli',
         queue: queues.T2,
         today: today.tiers.T2 || null,
-        note: process.env.ANTHROPIC_API_KEY ? null : 'API Key 未设置，仅 CLI session 可用',
       },
     },
     timestamp: limits.timestamp,
