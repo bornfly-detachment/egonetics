@@ -71,6 +71,7 @@ export interface UIState {
     | 'free-code'
     | 'prv-demo'
     | 'font-compare'
+    | 'resources'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'
