@@ -74,7 +74,7 @@ async function llmLex(content, opts = {}) {
     messages: [{ role: 'user', content: content }],
     maxTokens: 4096,
     purpose: 'lexer-classify',
-    enableThinking: tier === 'T0',
+    enableThinking: false,  // 分类是简单 JSON 输出，不需要 thinking（T0 开 thinking 27s→<1s）
   })
 
   const raw = result.content || ''
