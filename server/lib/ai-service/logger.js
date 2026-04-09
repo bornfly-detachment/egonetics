@@ -1,5 +1,7 @@
 /**
- * ai-service/logger.js
+ * @prvse P-L0-AOP_ai-logger
+ * @parent P-L1_ai-service
+ * @chronicle prvse_world_workspace/chronicle/P/P-L1_ai-service.yaml
  *
  * AI 调用日志 — 按日期分文件，永久保留
  *
