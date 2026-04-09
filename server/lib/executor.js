@@ -77,9 +77,13 @@ function buildT0Prompt(taskDesc) {
 // ── T1: MiniMax 云端 ──
 
 async function callMiniMax(messages, opts = {}) {
-  const t1Engine = require('./t1-engine')
-  const { content: text, usage } = await t1Engine.call(messages, { maxTokens: opts.max_tokens || 16384 })
-  return { text, usage }
+  const resp = await ai.call({
+    tier: 'T1',
+    messages,
+    maxTokens: opts.max_tokens || 16384,
+    purpose: 'executor-t1',
+  })
+  return { text: resp.content, usage: resp.usage }
 }
 
 function buildT1Prompt(taskDesc, prevSteps) {
