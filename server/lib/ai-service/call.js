@@ -254,9 +254,18 @@ async function call(opts) {
   const startTime = Date.now()
   const model = config.model()
 
+  // Build identity block — every log record is a self-describing L0 Pattern
+  const identity = {
+    tier,
+    model,
+    endpoint: config.getEndpoint(),
+    protocol: config.protocol,
+    harness: purpose.startsWith('legacy-') ? 'legacy-adapter' : 'ai.call',
+    purpose,
+    caller,
+  }
+
   let result
-  let success = true
-  let error = null
   try {
     result = await queue.run(tier, async () => {
       if (config.protocol === 'openai') {
@@ -266,21 +275,15 @@ async function call(opts) {
       }
     })
   } catch (err) {
-    success = false
-    error = err.message
-    // Log failure then rethrow
     const latencyMs = Date.now() - startTime
-    logger.logCall({ tier, model, purpose, caller, inputTokens: 0, outputTokens: 0, latencyMs, success: false, error })
+    logger.logCall({ ...identity, inputTokens: 0, outputTokens: 0, latencyMs, success: false, error: err.message })
     throw err
   }
 
   const latencyMs = Date.now() - startTime
 
   logger.logCall({
-    tier,
-    model,
-    purpose,
-    caller,
+    ...identity,
     inputTokens: result.usage.inputTokens,
     outputTokens: result.usage.outputTokens,
     latencyMs,
