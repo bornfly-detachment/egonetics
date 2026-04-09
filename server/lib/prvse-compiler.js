@@ -22,7 +22,7 @@
  * Design: "编译不通过就不运行" — blocked = no execution, period.
  */
 
-const ai = require('./ai-resource-manager')
+const ai = require('./ai-service')
 const crypto = require('crypto')
 
 // ── LLM Lexer System Prompt ─────────────────────────────────

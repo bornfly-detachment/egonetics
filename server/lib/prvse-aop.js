@@ -11,7 +11,7 @@
  *   6. 结果写回 prvse_classifications
  */
 
-const ai = require('./ai-resource-manager')
+const ai = require('./ai-service')
 const { readTree, flattenTree, findById } = require('../routes/tags')
 
 // ── 从 JSON 文件加载完整 tag 树（扁平 + 树形两份）────────────────────
