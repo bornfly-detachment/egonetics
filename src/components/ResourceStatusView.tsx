@@ -107,6 +107,7 @@ function TierCard({ tier, status }: { tier: string; status: TierStatus }) {
         </div>
       )}
       {!today && <div className="text-xs text-white/25 italic">今日无调用</div>}
+      {(status as any).note && <div className="text-[10px] text-amber-400/60">{(status as any).note}</div>}
     </div>
   )
 }
