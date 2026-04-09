@@ -57,10 +57,16 @@ function status() {
         today: today.tiers.T1 || null,
       },
       T2: {
-        alive: !!process.env.ANTHROPIC_API_KEY,
+        // T2 有两种调用模式：
+        // - CLI session（Claude Max 订阅，通过 cli-dev）→ 始终可用
+        // - 按次调用（Anthropic SDK，需要 ANTHROPIC_API_KEY）→ 需要 key
+        aliveSession: true,  // CLI session 通过 Max 订阅，始终在线
+        aliveApi: !!process.env.ANTHROPIC_API_KEY,
+        alive: true,  // 至少 session 模式可用
         model: TIER_CONFIG.T2.model(),
         queue: queues.T2,
         today: today.tiers.T2 || null,
+        note: process.env.ANTHROPIC_API_KEY ? null : 'API Key 未设置，仅 CLI session 可用',
       },
     },
     timestamp: limits.timestamp,
