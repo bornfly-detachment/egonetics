@@ -103,7 +103,7 @@ app.use('/api', (req, res, next) => {
 
   // SSE 无法设置 Authorization header，支持 ?token= query param
   if (req.path === '/events' || req.path === '/code-agent/chat' ||
-      req.originalUrl?.startsWith('/api/acp/runs/stream')) {
+      false) {  // acp-gateway removed (dead code)
     const qToken = req.query.token;
     if (qToken && !req.headers.authorization) {
       req.headers.authorization = `Bearer ${qToken}`;
