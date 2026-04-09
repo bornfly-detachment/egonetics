@@ -1,5 +1,7 @@
 /**
- * ai-service/index.js
+ * @prvse P-L1_ai-service
+ * @parent P-L2_resource
+ * @chronicle prvse_world_workspace/chronicle/P/P-L1_ai-service.yaml
  *
  * AI 调用服务层 — 协议适配 + 队列 + 日志
  *
