@@ -28,7 +28,26 @@ const TIER_CONFIG = {
     getEndpoint: () => `http://localhost:${process.env.T0_INFERENCE_PORT || '8100'}`,
     model: () => process.env.T0_MODEL || 'qwen3.5-0.8b',
     defaultMaxTokens: 4096,
-    defaultParams: { temperature: 0.6, top_p: 0.95, top_k: 20 },
+    // Qwen3.5-0.8B official recommended parameters:
+    // - temperature=1.0 (not 0.6 — low temp suppresses reasoning)
+    // - presence_penalty=1.5 (critical for 0.8B to avoid repetition loops)
+    // - top_k=20, top_p=0.95 for thinking; top_p=1.0 for non-thinking
+    // WARNING: 0.8B is prone to thinking loops. Use streaming + timeout to detect.
+    defaultParams: {
+      temperature: 1.0,
+      top_p: 0.95,
+      top_k: 20,
+      presence_penalty: 1.5,
+      repetition_penalty: 1.0,
+    },
+    // Non-thinking params (used when enableThinking=false)
+    nonThinkingParams: {
+      temperature: 1.0,
+      top_p: 1.0,
+      top_k: 20,
+      presence_penalty: 2.0,
+      repetition_penalty: 1.0,
+    },
     supportsThinking: true,
   },
   T1: {
