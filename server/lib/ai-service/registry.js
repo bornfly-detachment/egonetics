@@ -130,16 +130,18 @@ const CONSUMERS = [
 
 // ── 日志存储位置 ─────────────────────────────────────────────────
 
+const WORKSPACE = process.env.EGONETICS_WORKSPACE || '/Users/Shared/prvse_world_workspace'
+
 const LOG_PATHS = {
   calls: {
-    path: 'server/data/ai-call-log.jsonl',
-    absolutePath: path.join(SERVER_ROOT, 'data/ai-call-log.jsonl'),
+    path: 'prvse_world_workspace/L2/logs/ai-call-log.jsonl',
+    absolutePath: path.join(WORKSPACE, 'L2/logs/ai-call-log.jsonl'),
     format: 'JSONL — { ts, tier, model, purpose, caller, inputTokens, outputTokens, latencyMs, success, error? }',
     rotation: 'none (TODO: daily rotation)',
   },
   sessions: {
-    path: 'server/data/ai-session-log.jsonl',
-    absolutePath: path.join(SERVER_ROOT, 'data/ai-session-log.jsonl'),
+    path: 'prvse_world_workspace/L2/logs/ai-session-log.jsonl',
+    absolutePath: path.join(WORKSPACE, 'L2/logs/ai-session-log.jsonl'),
     format: 'JSONL — { ts, action, sessionId, tier, ... }',
     rotation: 'none (TODO)',
   },
