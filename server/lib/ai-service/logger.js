@@ -1,9 +1,9 @@
 /**
- * ai-resource-manager/logger.js
+ * ai-service/logger.js
  *
  * AI 调用日志 — 所有 tier 的按次调用和 session 事件写入 JSONL
  *
- * 存储：server/data/ai-call-log.jsonl（追加写入，Git 不跟踪）
+ * 存储：prvse_world_workspace/L2/logs/（数据归 workspace，不归 Egonetics）
  * 格式：每行一个 JSON 对象
  */
 
@@ -12,7 +12,8 @@
 const fs = require('fs')
 const path = require('path')
 
-const LOG_DIR = path.resolve(__dirname, '../../data')
+const WORKSPACE = process.env.EGONETICS_WORKSPACE || '/Users/Shared/prvse_world_workspace'
+const LOG_DIR = path.join(WORKSPACE, 'L2', 'logs')
 const CALL_LOG = path.join(LOG_DIR, 'ai-call-log.jsonl')
 const SESSION_LOG = path.join(LOG_DIR, 'ai-session-log.jsonl')
 
