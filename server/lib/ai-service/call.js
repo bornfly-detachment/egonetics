@@ -406,6 +406,16 @@ async function* stream(opts) {
   const startTime = Date.now()
   const model = config.model()
 
+  const identity = {
+    tier,
+    model,
+    endpoint: config.getEndpoint(),
+    protocol: config.protocol,
+    harness: purpose.startsWith('legacy-') ? 'legacy-adapter' : 'ai.stream',
+    purpose,
+    caller,
+  }
+
   await queue.acquire(tier)
   let outputTokens = 0
   try {
@@ -422,9 +432,9 @@ async function* stream(opts) {
       }
     }
 
-    logger.logCall({ tier, model, purpose, caller, inputTokens: 0, outputTokens, latencyMs: Date.now() - startTime, success: true })
+    logger.logCall({ ...identity, inputTokens: 0, outputTokens, latencyMs: Date.now() - startTime, success: true })
   } catch (err) {
-    logger.logCall({ tier, model, purpose, caller, inputTokens: 0, outputTokens: 0, latencyMs: Date.now() - startTime, success: false, error: err.message })
+    logger.logCall({ ...identity, inputTokens: 0, outputTokens: 0, latencyMs: Date.now() - startTime, success: false, error: err.message })
     throw err
   } finally {
     queue.release(tier)
