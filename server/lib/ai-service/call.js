@@ -219,30 +219,68 @@ async function callAnthropic(config, messages, system, maxTokens) {
  * @param {boolean} [opts.enableThinking]   — 启用模型思考模式（Qwen / MiniMax）
  * @returns {Promise<{ content, reasoning, usage, latencyMs, model, tier }>}
  */
+/**
+ * Extract caller location (file:line) from Error stack.
+ * Skips frames inside ai-service/ to find the real caller.
+ */
+function _getCallerSite() {
+  const stack = new Error().stack || ''
+  const lines = stack.split('\n').slice(1) // skip "Error" line
+  const selfDir = __dirname.replace(/\\/g, '/')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    // Skip frames inside ai-service/
+    if (trimmed.includes(selfDir)) continue
+    // Extract file:line from "at ... (/path/file.js:42:10)" or "at /path/file.js:42:10"
+    const m = trimmed.match(/\(([^)]+)\)/) || trimmed.match(/at\s+(.+)/)
+    if (m) {
+      // Normalize: strip project root for readability
+      const loc = m[1].replace(/^.*\/server\//, 'server/').replace(/:\d+$/, '')
+      return loc
+    }
+  }
+  return 'unknown'
+}
+
 async function call(opts) {
   const { tier = 'T1', messages, system, purpose = 'unknown', enableThinking } = opts
   const maxTokens = opts.maxTokens || TIER_CONFIG[tier]?.defaultMaxTokens || 4096
   const config = TIER_CONFIG[tier]
   if (!config) throw new Error(`Unknown tier: ${tier}`)
 
+  // Auto-capture caller file:line for traceability
+  const caller = opts.caller || _getCallerSite()
+
   const startTime = Date.now()
   const model = config.model()
 
-  const result = await queue.run(tier, async () => {
-    if (config.protocol === 'openai') {
-      return callOpenAI(config, messages, system, maxTokens, enableThinking)
-    } else {
-      return callAnthropic(config, messages, system, maxTokens)
-    }
-  })
+  let result
+  let success = true
+  let error = null
+  try {
+    result = await queue.run(tier, async () => {
+      if (config.protocol === 'openai') {
+        return callOpenAI(config, messages, system, maxTokens, enableThinking)
+      } else {
+        return callAnthropic(config, messages, system, maxTokens)
+      }
+    })
+  } catch (err) {
+    success = false
+    error = err.message
+    // Log failure then rethrow
+    const latencyMs = Date.now() - startTime
+    logger.logCall({ tier, model, purpose, caller, inputTokens: 0, outputTokens: 0, latencyMs, success: false, error })
+    throw err
+  }
 
   const latencyMs = Date.now() - startTime
 
-  // 记录日志
   logger.logCall({
     tier,
     model,
     purpose,
+    caller,
     inputTokens: result.usage.inputTokens,
     outputTokens: result.usage.outputTokens,
     latencyMs,
@@ -254,6 +292,7 @@ async function call(opts) {
     latencyMs,
     model,
     tier,
+    caller,
   }
 }
 
