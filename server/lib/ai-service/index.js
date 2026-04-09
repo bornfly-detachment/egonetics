@@ -76,6 +76,7 @@ module.exports = {
   start,
   stop,
   call,
+  stream,
   status,
   queue,
   logger,
