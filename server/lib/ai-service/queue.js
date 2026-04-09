@@ -1,5 +1,7 @@
 /**
- * ai-resource-manager/queue.js
+ * @prvse P-L0-AOP_ai-queue
+ * @parent P-L1_ai-service
+ * @chronicle prvse_world_workspace/chronicle/P/P-L1_ai-service.yaml
  *
  * 统一请求队列 — 所有 AI 按次调用必经此队列
  *
