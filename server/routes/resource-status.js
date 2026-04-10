@@ -76,4 +76,56 @@ router.get('/resources/logs/summary', (req, res) => {
   res.json(ai.logger.todaySummary(req.query.date))
 })
 
+// GET /api/resources/graph — PR Graph (nodes + edges from chronicle)
+router.get('/resources/graph', (_req, res) => {
+  try {
+    const graphGen = require('../../prvse_world_workspace/chronicle/compiler/prvse-graph')
+    // prvse-graph.js doesn't export functions yet — use child_process
+  } catch { /* fallback below */ }
+
+  // Direct load from chronicle YAML
+  const path = require('path')
+  const fs = require('fs')
+  const WORKSPACE = process.env.EGONETICS_WORKSPACE || '/Users/Shared/prvse_world_workspace'
+  const yamlLib = require('js-yaml')
+
+  const nodes = []
+  const pDir = path.join(WORKSPACE, 'chronicle', 'P')
+  if (fs.existsSync(pDir)) {
+    for (const f of fs.readdirSync(pDir).filter(f => f.endsWith('.yaml'))) {
+      try {
+        const doc = yamlLib.load(fs.readFileSync(path.join(pDir, f), 'utf8'))
+        if (!doc?.id || /^P-[0-9a-f]{8}$/.test(doc.id)) continue
+        nodes.push({
+          id: doc.id, level: doc.level || 'unknown',
+          type: doc.sub_type || doc.type || 'unknown',
+          parent: doc.parent_L1 || doc.parent_L2 || null,
+          description: (doc.what?.description || '').split('\n')[0],
+          file: doc.what?.file || null,
+          children: doc.children_L0 || doc.children_L1 || [],
+        })
+      } catch { /* skip */ }
+    }
+  }
+
+  const edges = []
+  const rDir = path.join(WORKSPACE, 'chronicle', 'R')
+  if (fs.existsSync(rDir)) {
+    for (const f of fs.readdirSync(rDir).filter(f => f.endsWith('.yaml'))) {
+      try {
+        const doc = yamlLib.load(fs.readFileSync(path.join(rDir, f), 'utf8'))
+        if (!doc?.id) continue
+        edges.push({
+          id: doc.id, level: doc.level || 'unknown',
+          type: doc.type, from: doc.from, to: doc.to,
+          condition: doc.condition || null,
+          mechanism: doc.mechanism || null,
+        })
+      } catch { /* skip */ }
+    }
+  }
+
+  res.json({ nodes, edges, generated: new Date().toISOString() })
+})
+
 module.exports = router
