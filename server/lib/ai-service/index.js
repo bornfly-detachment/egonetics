@@ -19,7 +19,8 @@
 
 const { allocator, platform } = require('../resource-manager')
 const queue = require('./queue')
-const { call, stream, TIER_CONFIG } = require('./call')
+const { call, TIER_CONFIG } = require('./call')
+const { stream } = require('./stream')
 const logger = require('./logger')
 const registry = require('./registry')
 
