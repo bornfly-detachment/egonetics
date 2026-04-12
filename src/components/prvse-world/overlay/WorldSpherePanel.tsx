@@ -656,7 +656,7 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
 
       {/* Content — specialized panels per sphere, tree view as fallback */}
       {node.id === 'dim-resources' ? (
-        <div className="flex flex-col shrink-0" style={{ maxHeight: '52%' }}>
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Segmented control — centered, Apple HIG style */}
           <div className="flex justify-center px-4 py-2.5 shrink-0">
             <div
