@@ -76,101 +76,91 @@ router.get('/resources/logs/summary', (req, res) => {
   res.json(ai.logger.todaySummary(req.query.date))
 })
 
-// GET /api/resources/graph — PR Graph (分级懒加载)
-//   ?level=L2           → 只返回 L2 节点 + R-L2（初始视图）
-//   ?level=L1&parent=P-L2_resource → 指定 L2 下的 L1 子节点 + R-L1
-//   ?level=L0&parent=P-L1_ai-service → 指定 L1 下的 L0 子节点 + R-L0
-//   无参数              → 全量（向后兼容）
+// GET /api/resources/graph — 直接读 pr-graph.json（唯一数据源）
+//   ?level=L2                       → L2 节点 + R
+//   ?level=L1&parent=P-L2_resource  → 指定 L2 下的 L1 子节点 + R
+//   ?level=L0&parent=P-L1_ai-service → 指定 L1 下的 L0 子节点 + R
+//   ?id=P-L0-IMPL_ai-call          → 单个节点详情
+//   无参数                          → 全量
 router.get('/resources/graph', (req, res) => {
   const path = require('path')
   const fs = require('fs')
   const WORKSPACE = process.env.EGONETICS_WORKSPACE || '/Users/Shared/prvse_world_workspace'
-  const yamlLib = require('js-yaml')
+  const graphPath = path.join(WORKSPACE, 'chronicle', 'pr-graph.json')
 
-  const level = req.query.level || null    // 'L0' | 'L1' | 'L2' | null(全量)
-  const parent = req.query.parent || null  // 父节点 ID，缩小范围
-
-  // 加载所有 P
-  const allNodes = []
-  const pDir = path.join(WORKSPACE, 'chronicle', 'P')
-  if (fs.existsSync(pDir)) {
-    for (const f of fs.readdirSync(pDir).filter(f => f.endsWith('.yaml'))) {
-      try {
-        const doc = yamlLib.load(fs.readFileSync(path.join(pDir, f), 'utf8'))
-        if (!doc?.id || /^P-[0-9a-f]{8}$/.test(doc.id)) continue
-        allNodes.push({
-          id: doc.id,
-          level: doc.level || 'unknown',
-          type: doc.sub_type || doc.type || 'unknown',
-          parent: doc.parent_L1 || doc.parent_L2 || null,
-          description: (doc.what?.description || '').split('\n')[0],
-          file: doc.what?.file || null,
-          children: doc.children_L0 || doc.children_L1 || [],
-          // L0 额外信息（完整展开时用）
-          ...(doc.level === 'L0' ? {
-            exports: doc.what?.exports || [],
-            code_range: doc.what?.file || null,
-          } : {}),
-          // L2 额外信息
-          ...(doc.level === 'L2' ? {
-            why: (doc.why || '').split('\n')[0],
-            scope: doc.what?.scope || [],
-          } : {}),
-        })
-      } catch { /* skip */ }
-    }
+  if (!fs.existsSync(graphPath)) {
+    return res.status(404).json({ error: 'pr-graph.json not found' })
   }
 
-  // 加载所有 R
-  const allEdges = []
-  const rDir = path.join(WORKSPACE, 'chronicle', 'R')
-  if (fs.existsSync(rDir)) {
-    for (const f of fs.readdirSync(rDir).filter(f => f.endsWith('.yaml'))) {
-      try {
-        const doc = yamlLib.load(fs.readFileSync(path.join(rDir, f), 'utf8'))
-        if (!doc?.id) continue
-        allEdges.push({
-          id: doc.id,
-          level: doc.level || 'unknown',
-          type: doc.type,
-          from: doc.from,
-          to: doc.to,
-          condition: doc.condition || null,
-          mechanism: doc.mechanism || null,
-          why: doc.why ? (typeof doc.why === 'string' ? doc.why.split('\n')[0] : '') : null,
-        })
-      } catch { /* skip */ }
-    }
+  let graph
+  try {
+    graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'))
+  } catch (e) {
+    return res.status(500).json({ error: `pr-graph.json parse failed: ${e.message}` })
   }
 
-  // 过滤
-  let nodes, edges
+  const level = req.query.level || null
+  const parent = req.query.parent || null
+  const nodeId = req.query.id || null
+
+  // 提取 ID→level 映射
+  const parseLevel = (id) => {
+    const m = id.match(/-L([012])[-_]/)
+    return m ? `L${m[1]}` : 'unknown'
+  }
+
+  // 收集所有节点（排除 schema）
+  const allEntries = Object.entries(graph).filter(([k]) => k !== 'schema')
+
+  // 单节点查询
+  if (nodeId) {
+    const node = graph[nodeId]
+    if (!node) return res.status(404).json({ error: `Node ${nodeId} not found` })
+    return res.json({ id: nodeId, level: parseLevel(nodeId), ...node })
+  }
+
+  // 展开 relations 为 edges 数组
+  const flattenEdges = (entries) => {
+    const edges = []
+    for (const [id, node] of entries) {
+      if (!node?.relations) continue
+      for (const [relType, targets] of Object.entries(node.relations)) {
+        for (const target of targets) {
+          edges.push({ from: id, type: relType, to: target })
+        }
+      }
+    }
+    return edges
+  }
 
   if (!level) {
     // 全量
-    nodes = allNodes
-    edges = allEdges
-  } else if (level === 'L2') {
-    // 只返回 L2 节点 + R-L2
-    nodes = allNodes.filter(n => n.level === 'L2')
-    edges = allEdges.filter(e => e.level === 'L2')
-  } else if (parent) {
-    // 返回 parent 的直接子节点 + 该层级的 R
-    const parentNode = allNodes.find(n => n.id === parent)
-    const childIds = new Set(parentNode?.children || [])
-    nodes = allNodes.filter(n => childIds.has(n.id))
-    // 也返回 parent 本身（前端需要显示上下文）
-    if (parentNode) nodes.unshift(parentNode)
-    // R：涉及这些节点的该层级关系
-    const nodeIds = new Set(nodes.map(n => n.id))
-    edges = allEdges.filter(e => e.level === level && (nodeIds.has(e.from) || nodeIds.has(e.to)))
-  } else {
-    // level 指定但无 parent：返回该层级全部
-    nodes = allNodes.filter(n => n.level === level)
-    edges = allEdges.filter(e => e.level === level)
+    const nodes = allEntries.map(([id, node]) => ({ id, level: parseLevel(id), ...node }))
+    return res.json({ nodes, edges: flattenEdges(allEntries), generated: new Date().toISOString() })
   }
 
-  res.json({ nodes, edges, level: level || 'all', parent, generated: new Date().toISOString() })
+  if (level && !parent) {
+    // 指定层级全部
+    const filtered = allEntries.filter(([id]) => parseLevel(id) === level)
+    const nodes = filtered.map(([id, node]) => ({ id, level, ...node }))
+    return res.json({ nodes, edges: flattenEdges(filtered), level, generated: new Date().toISOString() })
+  }
+
+  if (parent) {
+    // 指定父节点的子节点
+    const parentNode = graph[parent]
+    if (!parentNode) return res.status(404).json({ error: `Parent ${parent} not found` })
+    const childIds = parentNode.children || []
+    const result = [[parent, parentNode]]  // 包含父节点本身
+    for (const cid of childIds) {
+      if (graph[cid]) result.push([cid, graph[cid]])
+    }
+    const nodes = result.map(([id, node]) => ({ id, level: parseLevel(id), ...node }))
+    const nodeIdSet = new Set(result.map(([id]) => id))
+    // edges：只返回这些节点之间的关系
+    const edges = flattenEdges(result).filter(e => nodeIdSet.has(e.from) || nodeIdSet.has(e.to))
+    return res.json({ nodes, edges, level, parent, generated: new Date().toISOString() })
+  }
 })
 
 module.exports = router
