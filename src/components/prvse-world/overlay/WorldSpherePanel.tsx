@@ -698,7 +698,7 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
           </div>
         </div>
       ) : node.id === 'dim-constitution' ? (
-        <div className="overflow-y-auto shrink-0" style={{ maxHeight: '52%' }}>
+        <div className="overflow-y-auto flex-1 min-h-0">
           <CompilerPanel sphereColor={node.color} />
         </div>
       ) : (
