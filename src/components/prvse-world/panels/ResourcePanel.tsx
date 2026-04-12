@@ -392,16 +392,112 @@ interface ResourcePanelProps {
   sphereColor?: string
 }
 
-export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanelProps) {
-  const registry = useMemo(() => createDefaultRegistry(), [])
-  const allResources = useMemo(() => registry.list(), [registry])
+/** Transform /api/resources/status + /api/resources/graph into Resource[] */
+function apiToResources(
+  status: { health: number; system: { ram: { totalMb: number; usedMb: number; reclaimableMb: number }; swap: { totalMb: number; usedMb: number }; pressure: { memory: number; swap: number; cpu: number } }; tiers: Record<string, { alive: boolean; model: string; queue?: { running: number; waiting: number; maxConcurrency: number }; today?: { calls: number; inputTokens: number; outputTokens: number; avgLatencyMs: number; errors: number } | null }>; sessions: { current: number; max: number; canCreate: boolean }; orphans: number },
+  graph: { nodes: { id: string; level: string; type: string; description: string; file?: string; children: string[] }[]; edges: { id: string; type: string; from: string; to: string }[] },
+): Resource[] {
+  const resources: Resource[] = []
+  const fmt = (mb: number) => mb >= 1024 ? `${(mb/1024).toFixed(1)} GB` : `${mb} MB`
 
-  const byLevel = useMemo(() => {
-    const l0 = registry.listByLevel('L0')
-    const l1 = registry.listByLevel('L1')
-    const l2 = registry.listByLevel('L2')
-    return { L0: l0, L1: l1, L2: l2 } as const
-  }, [registry])
+  // System resources (L0 compute)
+  resources.push({
+    id: 'sys-ram', name: `RAM ${fmt(status.system.ram.totalMb)}`, type: 'compute', tier: 'T0', level: 'L0',
+    status: status.system.pressure.memory > 90 ? 'busy' : 'available',
+    capabilities: [`已用 ${fmt(status.system.ram.usedMb)}`, `可回收 ${fmt(status.system.ram.reclaimableMb)}`, `压力 ${status.system.pressure.memory}%`],
+    constraints: [], children: [], physicalMapping: 'Apple M1 物理内存',
+  })
+  resources.push({
+    id: 'sys-swap', name: `Swap ${fmt(status.system.swap.totalMb)}`, type: 'compute', tier: 'T0', level: 'L0',
+    status: status.system.pressure.swap > 75 ? 'busy' : 'available',
+    capabilities: [`已用 ${fmt(status.system.swap.usedMb)}`, `压力 ${status.system.pressure.swap}%`],
+    constraints: [], children: [], physicalMapping: 'SSD 虚拟内存',
+  })
+  resources.push({
+    id: 'sys-cpu', name: `CPU 压力 ${status.system.pressure.cpu}%`, type: 'compute', tier: 'T0', level: 'L0',
+    status: status.system.pressure.cpu > 85 ? 'busy' : 'available',
+    capabilities: [`负载 ${status.system.pressure.cpu}%`],
+    constraints: [], children: [], physicalMapping: 'Apple M1 8 cores',
+  })
+
+  // AI Tier resources (L1 ai)
+  for (const [tier, info] of Object.entries(status.tiers)) {
+    const today = info.today
+    const caps = [`模型: ${info.model}`]
+    if (info.queue) caps.push(`队列: ${info.queue.running}运行 / ${info.queue.waiting}等待 / 上限${info.queue.maxConcurrency}`)
+    if (today) {
+      caps.push(`今日: ${today.calls}次调用`)
+      caps.push(`延迟: ${today.avgLatencyMs > 1000 ? (today.avgLatencyMs/1000).toFixed(1) + 's' : today.avgLatencyMs + 'ms'}`)
+      const totalTokens = today.inputTokens + today.outputTokens
+      caps.push(`token: ${totalTokens > 1000 ? (totalTokens/1000).toFixed(1) + 'K' : totalTokens}`)
+      if (today.errors > 0) caps.push(`错误: ${today.errors}`)
+    }
+    resources.push({
+      id: `ai-${tier}`, name: `${tier} ${info.model}`, type: 'ai',
+      tier: tier as Resource['tier'], level: 'L1',
+      status: info.alive ? 'available' : 'offline',
+      capabilities: caps, constraints: [], children: [],
+      physicalMapping: tier === 'T0' ? 'mlx_lm.server localhost:8100' : tier === 'T1' ? 'api.minimaxi.com' : 'Claude CLI (Max)',
+    })
+  }
+
+  // Sessions (L1 compute)
+  resources.push({
+    id: 'sessions', name: `CLI Sessions ${status.sessions.current}/${status.sessions.max}`, type: 'compute', tier: 'T2', level: 'L1',
+    status: status.sessions.canCreate ? 'available' : 'busy',
+    capabilities: [`当前 ${status.sessions.current}`, `上限 ${status.sessions.max}`, status.sessions.canCreate ? '可创建' : '已满'],
+    constraints: status.orphans > 0 ? [`${status.orphans} 孤儿进程`] : [],
+    children: [], physicalMapping: 'tmux sessions (free-code)',
+  })
+
+  // PR Graph nodes as L2 resources
+  for (const node of graph.nodes.filter(n => n.level === 'L2')) {
+    resources.push({
+      id: node.id, name: node.id.replace('P-L2_', ''), type: 'network', tier: 'T3', level: 'L2',
+      status: 'available',
+      capabilities: [node.description],
+      constraints: [], children: node.children,
+      physicalMapping: 'chronicle YAML',
+    })
+  }
+
+  return resources
+}
+
+export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanelProps) {
+  const [allResources, setAllResources] = useState<readonly Resource[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const [status, graph] = await Promise.all([
+          authFetch<Parameters<typeof apiToResources>[0]>('/resources/status'),
+          authFetch<Parameters<typeof apiToResources>[1]>('/resources/graph?level=L2'),
+        ])
+        if (!cancelled) {
+          setAllResources(apiToResources(status, graph))
+        }
+      } catch (err) {
+        console.error('[ResourcePanel] fetch failed:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    const timer = setInterval(load, 30000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [])
+
+  const registry = useMemo(() => createRegistry(allResources as Resource[]), [allResources])
+
+  const byLevel = useMemo(() => ({
+    L0: registry.listByLevel('L0'),
+    L1: registry.listByLevel('L1'),
+    L2: registry.listByLevel('L2'),
+  } as const), [registry])
 
   return (
     <div className="flex flex-col h-full">
@@ -410,12 +506,13 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
         className="flex items-center gap-2 px-3.5 py-2.5 shrink-0"
         style={{ borderBottom: `1px solid ${sphereColor}15` }}
       >
-        <Layers size={12} style={{ color: sphereColor }} />
-        <span className="text-[11px] font-mono font-semibold" style={{ color: `${sphereColor}cc` }}>
+        <Layers size={13} style={{ color: sphereColor }} />
+        <span className="text-[13px] font-mono font-semibold" style={{ color: `${sphereColor}cc` }}>
           资源总览
         </span>
-        <span className="text-[9px] font-mono text-white/20 ml-auto">
-          {allResources.length} 项
+        {loading && <RefreshCw size={10} className="animate-spin text-white/20" />}
+        <span className="text-[10px] font-mono text-white/25 ml-auto">
+          {allResources.length} 项 · 实时
         </span>
       </div>
 
@@ -427,7 +524,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
               key={level}
               level={level}
               resources={byLevel[level]}
-              allResources={allResources}
+              allResources={allResources as Resource[]}
               defaultExpanded={i === 0}
             />
           )
