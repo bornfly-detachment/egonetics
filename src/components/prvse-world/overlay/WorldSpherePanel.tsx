@@ -562,6 +562,7 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
   // Tab state — only used for dim-resources sphere
   type ResourceTab = 'overview' | 'tiers'
   const [resourceTab, setResourceTab] = useState<ResourceTab>('overview')
+  const [chatExpanded, setChatExpanded] = useState(false)
 
   const spectrum = ROOT_SPECTRUM[node.id]
   // Parse base color for gradient rgba values
