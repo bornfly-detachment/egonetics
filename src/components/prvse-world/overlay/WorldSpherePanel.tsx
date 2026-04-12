@@ -702,7 +702,7 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
           <CompilerPanel sphereColor={node.color} />
         </div>
       ) : (
-        <div className="overflow-y-auto px-3 py-3 shrink-0" style={{ maxHeight: '52%' }}>
+        <div className="overflow-y-auto px-3 py-3 flex-1 min-h-0">
           {layerGroups.map((group, i) => (
             <LayerGroupSection
               key={group.layer}
