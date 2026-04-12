@@ -713,23 +713,30 @@ export default function WorldSpherePanel({ node, onClose, mode, onModeChange }: 
         </div>
       )}
 
-      {/* Gradient divider */}
-      <div
-        className="mx-4 shrink-0"
-        style={{
-          height: '1px',
-          background: `linear-gradient(90deg, transparent, ${node.color}25, transparent)`,
-        }}
-      />
-
-      {/* AI Chat — fills remaining space */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <AIChat
-          sphereId={node.id}
-          sphereColor={node.color}
-          systemPrompt={systemPrompt}
-          componentId={componentId}
-        />
+      {/* AI Chat — collapsed by default, expand on click */}
+      <div className="shrink-0">
+        {chatExpanded ? (
+          <>
+            <div
+              className="mx-4 shrink-0 cursor-pointer"
+              onClick={() => setChatExpanded(false)}
+              style={{ height: '1px', background: `linear-gradient(90deg, transparent, ${node.color}25, transparent)` }}
+            />
+            <div className="flex flex-col overflow-hidden" style={{ height: '40vh' }}>
+              <AIChat sphereId={node.id} sphereColor={node.color} systemPrompt={systemPrompt} componentId={componentId} />
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={() => setChatExpanded(true)}
+            className="flex items-center gap-2 w-full px-4 py-2 text-[11px] font-mono transition-colors hover:bg-white/[0.03]"
+            style={{ color: `${node.color}60`, borderTop: `1px solid ${node.color}15` }}
+          >
+            <Bot size={11} />
+            <span>AI 对话</span>
+            <span className="text-white/15 ml-auto text-[9px]">点击展开</span>
+          </button>
+        )}
       </div>
     </div>
   )
