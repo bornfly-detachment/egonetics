@@ -13,7 +13,7 @@
  * No fixed layout — one recursive renderer eats all depths.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -24,6 +24,7 @@ import {
   Globe,
   User,
   Layers,
+  RefreshCw,
 } from 'lucide-react'
 import type {
   Resource,
@@ -31,7 +32,8 @@ import type {
   ResourceType,
   ResourceStatus,
 } from '@/kernel/resource-registry'
-import { createDefaultRegistry } from '@/kernel/resource-registry'
+import { createRegistry } from '@/kernel/resource-registry'
+import { authFetch } from '@/lib/http'
 
 // ── Constants ─────────────────────────────────────────────────────
 
