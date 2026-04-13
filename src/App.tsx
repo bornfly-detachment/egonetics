@@ -217,6 +217,9 @@ const RouteSync: React.FC = () => {
       case 'resources':
         targetPath = '/resources'
         break
+      case 'excalidraw':
+        targetPath = '/excalidraw'
+        break
       default:
         targetPath = '/memory'
     }
