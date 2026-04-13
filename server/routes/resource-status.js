@@ -182,9 +182,16 @@ router.get('/resources/runtime/status', (_req, res) => {
   })
 })
 
-// GET /api/resources/runtime/snapshot — 仅感知快照（服务 alive/dead）
+// GET /api/resources/runtime/snapshot — 感知快照（30s 缓存，避免频繁 lsof）
+let _snapshotCache = null
+let _snapshotCacheAt = 0
 router.get('/resources/runtime/snapshot', (_req, res) => {
-  res.json(runtime.perceiver.sense())
+  const now = Date.now()
+  if (!_snapshotCache || now - _snapshotCacheAt > 30000) {
+    _snapshotCache = runtime.perceiver.sense()
+    _snapshotCacheAt = now
+  }
+  res.json(_snapshotCache)
 })
 
 // ── Job CRUD ────────────────────────────────────────────────────
