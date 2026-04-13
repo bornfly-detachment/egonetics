@@ -402,6 +402,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
                 </div>
               ))}
             </div>
+            )}
 
             {/* Jobs */}
             {jobs.length > 0 && (
