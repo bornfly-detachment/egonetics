@@ -187,20 +187,21 @@ function isPortListening(port) {
   }
 }
 
-// ── Port services ────────────────────────────────────────────────
+// ── Port services (动态，从 pr-graph.json 读取) ─────────────────
 
-const KNOWN_PORTS = [
-  { port: 3000, name: 'Egonetics 前端 (Vite)' },
-  { port: 3002, name: 'Egonetics 后端 (Express)' },
-  { port: 8100, name: 'T0 Qwen3.5-0.8B (mlx_lm)' },
-  { port: 9001, name: 'Penpot (docker)' },
-  { port: 3100, name: 'Excalidraw dev' },
-]
-
+/**
+ * 端口检测委托给 runtime/perceiver.js（从 pr-graph.json 动态读取）。
+ * platform.js 保留 isPortListening 作为底层工具函数。
+ * 不再硬编码 KNOWN_PORTS。
+ */
 function detectPorts() {
-  return KNOWN_PORTS.map(({ port, name }) => ({
-    port, name, alive: isPortListening(port),
-  }))
+  try {
+    const perceiver = require('../runtime/perceiver')
+    return perceiver.detectPorts()
+  } catch {
+    // perceiver 未就绪时返回空（启动阶段）
+    return []
+  }
 }
 
 // ── tmux sessions ────────────────────────────────────────────────
