@@ -6,8 +6,19 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronDown, ChevronRight, Layers, RefreshCw } from 'lucide-react'
+import { ChevronDown, ChevronRight, Layers, RefreshCw, Circle, Server, Terminal, Container } from 'lucide-react'
 import { authFetch } from '@/lib/http'
+
+interface PortInfo { port: number; name: string; alive: boolean }
+interface TmuxSession { name: string; user: string; socket: string }
+interface DockerContainer { name: string; status: string; ports: string }
+interface RuntimeStatus {
+  ports: PortInfo[]
+  tmux: TmuxSession[]
+  docker: DockerContainer[]
+  health: number
+  system: { pressure: { memory: number; swap: number; cpu: number } }
+}
 
 // ── Types ────────────────────────────────────────────────────────
 
