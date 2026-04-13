@@ -343,15 +343,9 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
           )}
         </button>
 
-        {/* ── PRVS Runtime (from perceiver) ───────────────────── */}
-        {snapshot && (
+        {/* ── PRVS Runtime 内容（展开后显示） ──────────────── */}
+        {runtimeExpanded && (
           <>
-            <div className="mt-4 mb-2 flex items-center gap-2 px-1">
-              <div className="h-px flex-1" style={{ background: `${sphereColor}15` }} />
-              <span className="text-[10px] font-mono text-white/25">PRVS Runtime</span>
-              <div className="h-px flex-1" style={{ background: `${sphereColor}15` }} />
-            </div>
-
             {/* Gate control */}
             <div className="mb-2 px-1">
               <div className="flex items-center gap-1.5 mb-1.5">
