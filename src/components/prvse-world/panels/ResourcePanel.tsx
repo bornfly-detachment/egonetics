@@ -198,13 +198,19 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
   const [jobs, setJobs] = useState<RuntimeJob[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 加载 PRVSE Graph（结构）
+  const [graphExpanded, setGraphExpanded] = useState(false)
+  const [runtimeExpanded, setRuntimeExpanded] = useState(false)
+  const graphLoadedRef = useRef(false)
+  const runtimeLoadedRef = useRef(false)
+  const runtimeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // PRVSE Graph — 按需加载（展开时才请求）
   useEffect(() => {
-    let cancelled = false
-    async function loadGraph() {
-      try {
-        const graphData = await authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2')
-        if (cancelled) return
+    if (!graphExpanded || graphLoadedRef.current) return
+    graphLoadedRef.current = true
+    setLoading(true)
+    authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2')
+      .then(graphData => {
         const nm = new Map<string, GraphNode>()
         const em = new Map<string, GraphEdge[]>()
         for (const n of graphData.nodes) nm.set(n.id, n)
@@ -215,41 +221,42 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
         setNodeMap(nm)
         setEdgeMap(em)
         setRootIds(graphData.nodes.map(n => n.id))
-      } catch (err) {
-        console.error('[ResourcePanel] graph load failed:', err)
-      }
-      setLoading(false)
-    }
-    loadGraph()
-    const timer = setInterval(loadGraph, 60000)
-    return () => { cancelled = true; clearInterval(timer) }
-  }, [])
+      })
+      .catch(err => console.error('[ResourcePanel] graph load failed:', err))
+      .finally(() => setLoading(false))
+  }, [graphExpanded])
 
-  // 加载 PRVS Runtime（独立，轻量）
+  // PRVS Runtime — 按需加载（展开时才请求 + 30s 轮询）
   useEffect(() => {
-    let cancelled = false
+    if (!runtimeExpanded) {
+      if (runtimeTimerRef.current) { clearInterval(runtimeTimerRef.current); runtimeTimerRef.current = null }
+      return
+    }
+
     async function loadRuntime() {
       try {
-        const [statusData, snapshotData] = await Promise.all([
-          authFetch<{ gate: GateStatus; jobs: RuntimeJob[] }>('/resources/runtime/status'),
-          authFetch<RuntimeSnapshot>('/resources/runtime/snapshot'),
-        ])
-        if (cancelled) return
+        const statusData = await authFetch<{ gate: GateStatus; jobs: RuntimeJob[] }>('/resources/runtime/status')
         setGate(statusData.gate)
         setJobs(statusData.jobs)
+      } catch (err) {
+        console.error('[ResourcePanel] runtime status failed:', err)
+      }
+      try {
+        const snapshotData = await authFetch<RuntimeSnapshot>('/resources/runtime/snapshot')
         setSnapshot(snapshotData)
       } catch (err) {
-        console.error('[ResourcePanel] runtime load failed:', err)
+        console.error('[ResourcePanel] snapshot failed:', err)
       }
       try {
         const res = await authFetch<RuntimeStatus>('/resources/status')
-        if (!cancelled) setRuntime(res)
+        setRuntime(res)
       } catch { /* optional */ }
     }
+
     loadRuntime()
-    const timer = setInterval(loadRuntime, 30000)
-    return () => { cancelled = true; clearInterval(timer) }
-  }, [])
+    runtimeTimerRef.current = setInterval(loadRuntime, 30000)
+    return () => { if (runtimeTimerRef.current) clearInterval(runtimeTimerRef.current) }
+  }, [runtimeExpanded])
 
   // 懒加载子节点
   const loadChildren = useCallback(async (parentId: string) => {
