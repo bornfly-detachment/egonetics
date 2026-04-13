@@ -194,7 +194,7 @@ const KNOWN_PORTS = [
   { port: 3002, name: 'Egonetics 后端 (Express)' },
   { port: 8100, name: 'T0 Qwen3.5-0.8B (mlx_lm)' },
   { port: 9001, name: 'Penpot (docker)' },
-  { port: 3001, name: 'Excalidraw dev' },
+  { port: 3100, name: 'Excalidraw dev' },
 ]
 
 function detectPorts() {
