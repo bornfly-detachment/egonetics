@@ -1,27 +1,21 @@
 /**
  * ExcalidrawView — AI 通用视觉画布（感知器）
  *
- * 像 FreeCodeTerminal 一样嵌入 Egonetics。
- * 数据持久化到 prvse_world_workspace。
- * AI 可以通过 API 读写 .excalidraw JSON。
+ * 二次开发自 /Users/bornfly/Desktop/claude_code_learn/excalidraw
+ * 数据持久化到 localStorage（后续迁移到 prvse_world_workspace）
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+// @ts-ignore — resolved by vite alias to local excalidraw dist
 import { Excalidraw } from '@excalidraw/excalidraw'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types'
 import '@excalidraw/excalidraw/index.css'
 
 const SAVE_KEY = 'egonetics:excalidraw:scene'
 
 export default function ExcalidrawView() {
-  const [initialData, setInitialData] = useState<{
-    elements: readonly ExcalidrawElement[]
-    appState: Partial<AppState>
-  } | null>(null)
+  const [initialData, setInitialData] = useState<any>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load saved scene
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SAVE_KEY)
@@ -39,25 +33,20 @@ export default function ExcalidrawView() {
     }
   }, [])
 
-  // Auto-save on change (debounced)
-  const handleChange = useCallback(
-    (elements: readonly ExcalidrawElement[], appState: AppState, _files: BinaryFiles) => {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => {
-        try {
-          const data = {
-            elements,
-            appState: {
-              viewBackgroundColor: appState.viewBackgroundColor,
-              gridSize: appState.gridSize,
-            },
-          }
-          localStorage.setItem(SAVE_KEY, JSON.stringify(data))
-        } catch { /* quota exceeded etc */ }
-      }, 1000)
-    },
-    [],
-  )
+  const handleChange = useCallback((elements: any, appState: any) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+          elements,
+          appState: {
+            viewBackgroundColor: appState.viewBackgroundColor,
+            gridSize: appState.gridSize,
+          },
+        }))
+      } catch { /* quota */ }
+    }, 1000)
+  }, [])
 
   if (!initialData) return null
 
@@ -67,13 +56,6 @@ export default function ExcalidrawView() {
         initialData={initialData}
         onChange={handleChange}
         theme="dark"
-        UIOptions={{
-          canvasActions: {
-            loadScene: true,
-            saveToActiveFile: false,
-            export: { saveFileToDisk: true },
-          },
-        }}
       />
     </div>
   )
