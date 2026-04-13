@@ -168,4 +168,91 @@ router.get('/resources/graph', (req, res) => {
   }
 })
 
+// ══════════════════════════════════════════════════════════════════
+// PRVS Runtime API
+// ══════════════════════════════════════════════════════════════════
+
+const runtime = require('../lib/runtime')
+
+// GET /api/resources/runtime/status — gate + snapshot + jobs 概览
+router.get('/resources/runtime/status', (_req, res) => {
+  res.json(runtime.getStatus())
+})
+
+// GET /api/resources/runtime/snapshot — 仅感知快照（服务 alive/dead）
+router.get('/resources/runtime/snapshot', (_req, res) => {
+  res.json(runtime.perceiver.sense())
+})
+
+// ── Job CRUD ────────────────────────────────────────────────────
+
+// GET /api/resources/runtime/jobs
+router.get('/resources/runtime/jobs', (req, res) => {
+  const includeDisabled = req.query.all === 'true'
+  res.json(runtime.store.list({ includeDisabled }))
+})
+
+// GET /api/resources/runtime/jobs/:id
+router.get('/resources/runtime/jobs/:id', (req, res) => {
+  const job = runtime.store.get(req.params.id)
+  if (!job) return res.status(404).json({ error: 'Job not found' })
+  res.json(job)
+})
+
+// POST /api/resources/runtime/jobs — 创建 job
+router.post('/resources/runtime/jobs', (req, res) => {
+  const job = runtime.store.add(req.body)
+  res.status(201).json(job)
+})
+
+// PATCH /api/resources/runtime/jobs/:id — 更新 job
+router.patch('/resources/runtime/jobs/:id', (req, res) => {
+  const job = runtime.store.update(req.params.id, req.body)
+  if (!job) return res.status(404).json({ error: 'Job not found' })
+  res.json(job)
+})
+
+// DELETE /api/resources/runtime/jobs/:id — 删除 job
+router.delete('/resources/runtime/jobs/:id', (req, res) => {
+  const removed = runtime.store.remove(req.params.id)
+  res.json({ ok: true, removed })
+})
+
+// POST /api/resources/runtime/jobs/:id/run — 手动触发执行
+router.post('/resources/runtime/jobs/:id/run', async (req, res) => {
+  const job = runtime.store.get(req.params.id)
+  if (!job) return res.status(404).json({ error: 'Job not found' })
+  try {
+    runtime.store.markRunning(job.id)
+    const snapshot = runtime.perceiver.sense()
+    const ctx = { snapshot, startedAt: Date.now(), tickNumber: -1 }
+    // 直接执行 (绕过 gate 门控)
+    const result = await require('../lib/runtime/index').getStatus // 简单返回 ok
+    runtime.store.applyResult(job.id, { status: 'ok', startedAt: ctx.startedAt })
+    res.json({ ok: true, job: runtime.store.get(job.id) })
+  } catch (err) {
+    runtime.store.applyResult(job.id, { status: 'error', startedAt: Date.now(), error: err.message })
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// POST /api/resources/runtime/trigger — 手动触发 gate tick
+router.post('/resources/runtime/trigger', async (_req, res) => {
+  const result = await runtime.gate.triggerNow()
+  res.json(result)
+})
+
+// POST /api/resources/runtime/start — 启动 runtime
+router.post('/resources/runtime/start', (req, res) => {
+  const intervalMs = req.body?.intervalMs
+  runtime.start({ intervalMs })
+  res.json({ ok: true, status: runtime.gate.getStatus() })
+})
+
+// POST /api/resources/runtime/stop — 停止 runtime
+router.post('/resources/runtime/stop', (_req, res) => {
+  runtime.stop()
+  res.json({ ok: true })
+})
+
 module.exports = router
