@@ -421,7 +421,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
             )}
 
             {/* tmux */}
-            {snapshot.tmux.length > 0 && (
+            {snapshot && snapshot.tmux.length > 0 && (
               <div className="mb-2 px-1">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Terminal size={10} className="text-white/30" />
