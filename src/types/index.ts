@@ -72,6 +72,7 @@ export interface UIState {
     | 'prv-demo'
     | 'font-compare'
     | 'resources'
+    | 'excalidraw'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'
