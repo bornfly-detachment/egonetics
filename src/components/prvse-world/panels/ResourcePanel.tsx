@@ -198,15 +198,12 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
   const [jobs, setJobs] = useState<RuntimeJob[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 加载 PR Graph + PRVS Runtime
+  // 加载 PRVSE Graph（结构）
   useEffect(() => {
     let cancelled = false
-    async function load() {
+    async function loadGraph() {
       try {
-        const [graphData, statusData] = await Promise.all([
-          authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2'),
-          authFetch<RuntimeStatus>('/resources/status'),
-        ])
+        const graphData = await authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2')
         if (cancelled) return
         const nm = new Map<string, GraphNode>()
         const em = new Map<string, GraphEdge[]>()
@@ -218,24 +215,39 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
         setNodeMap(nm)
         setEdgeMap(em)
         setRootIds(graphData.nodes.map(n => n.id))
-        setRuntime(statusData)
       } catch (err) {
-        console.error('[ResourcePanel] graph/status load failed:', err)
-      }
-      // PRVS Runtime 独立加载，不影响 PR Graph
-      try {
-        const runtimeData = await authFetch<{ gate: GateStatus; jobs: RuntimeJob[]; snapshot: RuntimeSnapshot }>('/resources/runtime/status')
-        if (cancelled) return
-        setSnapshot(runtimeData.snapshot)
-        setGate(runtimeData.gate)
-        setJobs(runtimeData.jobs)
-      } catch (err) {
-        console.error('[ResourcePanel] runtime load failed:', err)
+        console.error('[ResourcePanel] graph load failed:', err)
       }
       setLoading(false)
     }
-    load()
-    const timer = setInterval(load, 30000)
+    loadGraph()
+    const timer = setInterval(loadGraph, 60000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [])
+
+  // 加载 PRVS Runtime（独立，轻量）
+  useEffect(() => {
+    let cancelled = false
+    async function loadRuntime() {
+      try {
+        const [statusData, snapshotData] = await Promise.all([
+          authFetch<{ gate: GateStatus; jobs: RuntimeJob[] }>('/resources/runtime/status'),
+          authFetch<RuntimeSnapshot>('/resources/runtime/snapshot'),
+        ])
+        if (cancelled) return
+        setGate(statusData.gate)
+        setJobs(statusData.jobs)
+        setSnapshot(snapshotData)
+      } catch (err) {
+        console.error('[ResourcePanel] runtime load failed:', err)
+      }
+      try {
+        const res = await authFetch<RuntimeStatus>('/resources/status')
+        if (!cancelled) setRuntime(res)
+      } catch { /* optional */ }
+    }
+    loadRuntime()
+    const timer = setInterval(loadRuntime, 30000)
     return () => { cancelled = true; clearInterval(timer) }
   }, [])
 
