@@ -203,10 +203,9 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
     let cancelled = false
     async function load() {
       try {
-        const [graphData, statusData, runtimeData] = await Promise.all([
+        const [graphData, statusData] = await Promise.all([
           authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2'),
           authFetch<RuntimeStatus>('/resources/status'),
-          authFetch<{ gate: GateStatus; jobs: RuntimeJob[]; snapshot: RuntimeSnapshot }>('/resources/runtime/status'),
         ])
         if (cancelled) return
         const nm = new Map<string, GraphNode>()
@@ -220,11 +219,18 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
         setEdgeMap(em)
         setRootIds(graphData.nodes.map(n => n.id))
         setRuntime(statusData)
+      } catch (err) {
+        console.error('[ResourcePanel] graph/status load failed:', err)
+      }
+      // PRVS Runtime 独立加载，不影响 PR Graph
+      try {
+        const runtimeData = await authFetch<{ gate: GateStatus; jobs: RuntimeJob[]; snapshot: RuntimeSnapshot }>('/resources/runtime/status')
+        if (cancelled) return
         setSnapshot(runtimeData.snapshot)
         setGate(runtimeData.gate)
         setJobs(runtimeData.jobs)
       } catch (err) {
-        console.error('[ResourcePanel] load failed:', err)
+        console.error('[ResourcePanel] runtime load failed:', err)
       }
       setLoading(false)
     }
