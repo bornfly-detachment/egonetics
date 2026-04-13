@@ -294,17 +294,26 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
       <div className="flex items-center gap-2 px-3.5 py-2.5 shrink-0" style={{ borderBottom: `1px solid ${sphereColor}15` }}>
         <Layers size={13} style={{ color: sphereColor }} />
         <span className="text-[13px] font-mono font-semibold" style={{ color: `${sphereColor}cc` }}>
-          PRVSE Graph
-        </span>
-        {loading && <RefreshCw size={10} className="animate-spin text-white/20" />}
-        <span className="text-[10px] font-mono text-white/20 ml-auto">
-          {nodeMap.size} nodes
+          Resource
         </span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
-        {/* PRVSE Graph */}
-        {rootIds.map(id => (
+        {/* ── PRVSE Graph 折叠区 ──────────────────────── */}
+        <button
+          onClick={() => setGraphExpanded(v => !v)}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg mb-1 transition-all hover:brightness-110"
+          style={{ background: `${sphereColor}08`, border: `1px solid ${sphereColor}15` }}
+        >
+          {graphExpanded
+            ? <ChevronDown size={11} style={{ color: sphereColor }} />
+            : <ChevronRight size={11} style={{ color: sphereColor }} />}
+          <Layers size={10} style={{ color: sphereColor }} />
+          <span className="text-[11px] font-mono text-white/60">PRVSE Graph</span>
+          {loading && graphExpanded && <RefreshCw size={9} className="animate-spin text-white/20 ml-auto" />}
+          {!graphExpanded && nodeMap.size > 0 && <span className="text-[9px] font-mono text-white/20 ml-auto">{nodeMap.size} nodes</span>}
+        </button>
+        {graphExpanded && rootIds.map(id => (
           <PRNode
             key={id}
             nodeId={id}
@@ -315,6 +324,24 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
             sphereColor={sphereColor}
           />
         ))}
+
+        {/* ── PRVS Runtime 折叠区 ─────────────────────── */}
+        <button
+          onClick={() => setRuntimeExpanded(v => !v)}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg mb-1 mt-1 transition-all hover:brightness-110"
+          style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)' }}
+        >
+          {runtimeExpanded
+            ? <ChevronDown size={11} className="text-green-400/70" />
+            : <ChevronRight size={11} className="text-green-400/70" />}
+          <Server size={10} className="text-green-400/70" />
+          <span className="text-[11px] font-mono text-white/60">Runtime</span>
+          {snapshot && !runtimeExpanded && (
+            <span className="text-[9px] font-mono text-white/20 ml-auto">
+              {snapshot.summary.alive}/{snapshot.summary.total} alive
+            </span>
+          )}
+        </button>
 
         {/* ── PRVS Runtime (from perceiver) ───────────────────── */}
         {snapshot && (
