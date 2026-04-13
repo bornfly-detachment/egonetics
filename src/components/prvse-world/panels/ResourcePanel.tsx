@@ -193,16 +193,20 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
   const [edgeMap, setEdgeMap] = useState<Map<string, GraphEdge[]>>(new Map())
   const [rootIds, setRootIds] = useState<string[]>([])
   const [runtime, setRuntime] = useState<RuntimeStatus | null>(null)
+  const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null)
+  const [gate, setGate] = useState<GateStatus | null>(null)
+  const [jobs, setJobs] = useState<RuntimeJob[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 加载 PR Graph + 运行时状态
+  // 加载 PR Graph + PRVS Runtime
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [graphData, statusData] = await Promise.all([
+        const [graphData, statusData, runtimeData] = await Promise.all([
           authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2'),
           authFetch<RuntimeStatus>('/resources/status'),
+          authFetch<{ gate: GateStatus; jobs: RuntimeJob[]; snapshot: RuntimeSnapshot }>('/resources/runtime/status'),
         ])
         if (cancelled) return
         const nm = new Map<string, GraphNode>()
@@ -216,6 +220,9 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
         setEdgeMap(em)
         setRootIds(graphData.nodes.map(n => n.id))
         setRuntime(statusData)
+        setSnapshot(runtimeData.snapshot)
+        setGate(runtimeData.gate)
+        setJobs(runtimeData.jobs)
       } catch (err) {
         console.error('[ResourcePanel] load failed:', err)
       }
