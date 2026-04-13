@@ -254,6 +254,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
+        {/* PR Graph */}
         {rootIds.map(id => (
           <PRNode
             key={id}
@@ -265,6 +266,72 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
             sphereColor={sphereColor}
           />
         ))}
+
+        {/* Runtime Status */}
+        {runtime && (
+          <>
+            <div className="mt-4 mb-2 flex items-center gap-2 px-1">
+              <div className="h-px flex-1" style={{ background: `${sphereColor}15` }} />
+              <span className="text-[10px] font-mono text-white/25">Runtime</span>
+              <div className="h-px flex-1" style={{ background: `${sphereColor}15` }} />
+            </div>
+
+            {/* Ports */}
+            <div className="mb-2 px-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Server size={10} className="text-white/30" />
+                <span className="text-[11px] font-mono text-white/50">服务端口</span>
+              </div>
+              {runtime.ports.map(p => (
+                <div key={p.port} className="flex items-center gap-2 px-2 py-1 text-[11px] font-mono">
+                  <Circle size={6} fill={p.alive ? '#22c55e' : '#ef4444'} stroke="none" />
+                  <span className="text-white/60 w-10">:{p.port}</span>
+                  <span className="text-white/40 flex-1">{p.name}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* tmux */}
+            <div className="mb-2 px-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Terminal size={10} className="text-white/30" />
+                <span className="text-[11px] font-mono text-white/50">tmux sessions ({runtime.tmux.length})</span>
+              </div>
+              {runtime.tmux.map(s => (
+                <div key={s.name + s.user} className="flex items-center gap-2 px-2 py-1 text-[10px] font-mono">
+                  <Circle size={5} fill="#22c55e" stroke="none" />
+                  <span className="text-white/50 flex-1 truncate">{s.name}</span>
+                  <span className="text-white/25">{s.user}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Docker */}
+            {runtime.docker.length > 0 && (
+              <div className="mb-2 px-1">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Container size={10} className="text-white/30" />
+                  <span className="text-[11px] font-mono text-white/50">docker ({runtime.docker.length})</span>
+                </div>
+                {runtime.docker.map(c => (
+                  <div key={c.name} className="flex items-center gap-2 px-2 py-1 text-[10px] font-mono">
+                    <Circle size={5} fill={c.status.startsWith('Up') ? '#22c55e' : '#ef4444'} stroke="none" />
+                    <span className="text-white/50 flex-1 truncate">{c.name.replace('images-penpot-', 'penpot/')}</span>
+                    <span className="text-white/25">{c.status.split('(')[0].trim()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* System pressure */}
+            <div className="px-1 mt-2 flex gap-3 text-[9px] font-mono text-white/25">
+              <span>MEM {runtime.system.pressure.memory}%</span>
+              <span>SWAP {runtime.system.pressure.swap}%</span>
+              <span>CPU {runtime.system.pressure.cpu}%</span>
+              <span>Health {runtime.health}%</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
