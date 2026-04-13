@@ -174,9 +174,12 @@ router.get('/resources/graph', (req, res) => {
 
 const runtime = require('../lib/runtime')
 
-// GET /api/resources/runtime/status — gate + snapshot + jobs 概览
+// GET /api/resources/runtime/status — gate + jobs（轻量，不调 sense）
 router.get('/resources/runtime/status', (_req, res) => {
-  res.json(runtime.getStatus())
+  res.json({
+    gate: runtime.gate.getStatus(),
+    jobs: runtime.store.list({ includeDisabled: true }),
+  })
 })
 
 // GET /api/resources/runtime/snapshot — 仅感知快照（服务 alive/dead）
