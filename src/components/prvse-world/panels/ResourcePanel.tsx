@@ -5,7 +5,7 @@
  * 交互: 点击节点原地展开子节点，不换页
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronDown, ChevronRight, Layers, RefreshCw, Circle, Server, Terminal, Container } from 'lucide-react'
 import { authFetch } from '@/lib/http'
 
