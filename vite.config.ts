@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@prvse': path.resolve(__dirname, '../prvse_world_workspace/src'),
+      '@excalidraw/excalidraw': path.resolve(__dirname, '../excalidraw/packages/excalidraw/dist/dev'),
     },
   },
   server: {
