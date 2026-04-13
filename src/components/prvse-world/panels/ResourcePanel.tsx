@@ -20,6 +20,23 @@ interface RuntimeStatus {
   system: { pressure: { memory: number; swap: number; cpu: number } }
 }
 
+// ── PRVS Runtime types ──────────────────────────────────────────
+
+interface ServiceState { p: string; type: string; alive: boolean; at: string; port?: number; container?: string }
+interface RuntimeSnapshot {
+  at: string
+  services: ServiceState[]
+  tmux: TmuxSession[]
+  docker: DockerContainer[]
+  summary: { total: number; alive: number; dead: number }
+}
+interface GateStatus { enabled: boolean; running: boolean; intervalMs: number; lastRunAt: string | null; stats: { ticks: number; skipped: number; errors: number } }
+interface RuntimeJob {
+  id: string; name: string; enabled: boolean
+  schedule: { kind: string; everyMs?: number; expr?: string }
+  state: { nextRunAtMs: number | null; lastStatus: string | null; consecutiveErrors: number; lastDurationMs: number | null }
+}
+
 // ── Types ────────────────────────────────────────────────────────
 
 interface GraphNode {
