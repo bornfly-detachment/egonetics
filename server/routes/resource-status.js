@@ -49,6 +49,11 @@ router.get('/resources/status', (_req, res) => {
     },
 
     orphans: limits.categories?.orphans?.length || 0,
+
+    ports: platform.detectPorts(),
+    tmux: platform.detectTmuxSessions(),
+    docker: platform.detectDocker(),
+
     timestamp: aiStatus.timestamp,
   })
 })
