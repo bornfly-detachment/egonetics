@@ -17,7 +17,7 @@ const express = require('express')
 const router = express.Router()
 const ai = require('../lib/ai-service')
 const harness = require('../lib/harness-manager')
-const { allocator } = require('../lib/resource-manager')
+const { allocator, platform } = require('../lib/resource-manager')
 
 // Ensure allocator is running
 ai.start()
