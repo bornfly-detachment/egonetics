@@ -291,53 +291,114 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
           />
         ))}
 
-        {/* Runtime Status */}
-        {runtime && (
+        {/* ── PRVS Runtime (from perceiver) ───────────────────── */}
+        {snapshot && (
           <>
             <div className="mt-4 mb-2 flex items-center gap-2 px-1">
               <div className="h-px flex-1" style={{ background: `${sphereColor}15` }} />
-              <span className="text-[10px] font-mono text-white/25">Runtime</span>
+              <span className="text-[10px] font-mono text-white/25">PRVS Runtime</span>
               <div className="h-px flex-1" style={{ background: `${sphereColor}15` }} />
             </div>
 
-            {/* Ports */}
+            {/* Gate control */}
+            <div className="mb-2 px-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Circle size={6} fill={gate?.enabled ? '#22c55e' : '#6b7280'} stroke="none" />
+                <span className="text-[11px] font-mono text-white/50">
+                  Gate {gate?.enabled ? 'ON' : 'OFF'}
+                </span>
+                <button
+                  onClick={async () => {
+                    await authFetch(gate?.enabled ? '/resources/runtime/stop' : '/resources/runtime/start', { method: 'POST', body: JSON.stringify({ intervalMs: 600000 }), headers: { 'Content-Type': 'application/json' } })
+                    const r = await authFetch<{ gate: GateStatus }>('/resources/runtime/status')
+                    setGate(r.gate)
+                  }}
+                  className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border transition-colors"
+                  style={{ color: sphereColor, borderColor: `${sphereColor}30`, background: `${sphereColor}08` }}
+                >
+                  {gate?.enabled ? 'Stop' : 'Start'}
+                </button>
+                <button
+                  onClick={async () => {
+                    await authFetch('/resources/runtime/trigger', { method: 'POST' })
+                    const r = await authFetch<{ gate: GateStatus; jobs: RuntimeJob[]; snapshot: RuntimeSnapshot }>('/resources/runtime/status')
+                    setGate(r.gate); setJobs(r.jobs); setSnapshot(r.snapshot)
+                  }}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded border transition-colors"
+                  style={{ color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.08)' }}
+                >
+                  Tick
+                </button>
+              </div>
+              {gate && (
+                <div className="flex gap-3 px-2 text-[9px] font-mono text-white/25">
+                  <span>ticks: {gate.stats.ticks}</span>
+                  <span>interval: {Math.round(gate.intervalMs / 1000)}s</span>
+                  {gate.lastRunAt && <span>last: {new Date(gate.lastRunAt).toLocaleTimeString()}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Services (from pr-graph.json via perceiver) */}
             <div className="mb-2 px-1">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Server size={10} className="text-white/30" />
-                <span className="text-[11px] font-mono text-white/50">服务端口</span>
+                <span className="text-[11px] font-mono text-white/50">
+                  P nodes ({snapshot.summary.alive}/{snapshot.summary.total} alive)
+                </span>
               </div>
-              {runtime.ports.map(p => (
-                <div key={p.port} className="flex items-center gap-2 px-2 py-1 text-[11px] font-mono">
-                  <Circle size={6} fill={p.alive ? '#22c55e' : '#ef4444'} stroke="none" />
-                  <span className="text-white/60 w-10">:{p.port}</span>
-                  <span className="text-white/40 flex-1">{p.name}</span>
+              {snapshot.services.map(s => (
+                <div key={s.p} className="flex items-center gap-2 px-2 py-1 text-[11px] font-mono">
+                  <Circle size={6} fill={s.alive ? '#22c55e' : '#ef4444'} stroke="none" />
+                  <span className="text-white/60 w-10">{s.port ? `:${s.port}` : s.container || s.type}</span>
+                  <span className="text-white/40 flex-1 truncate">{s.p.replace(/^P-L\d(-[A-Z]+)?_/, '')}</span>
                 </div>
               ))}
             </div>
+
+            {/* Jobs */}
+            {jobs.length > 0 && (
+              <div className="mb-2 px-1">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <RefreshCw size={10} className="text-white/30" />
+                  <span className="text-[11px] font-mono text-white/50">Jobs ({jobs.length})</span>
+                </div>
+                {jobs.map(j => (
+                  <div key={j.id} className="flex items-center gap-2 px-2 py-1 text-[10px] font-mono">
+                    <Circle size={5} fill={j.state.lastStatus === 'ok' ? '#22c55e' : j.state.lastStatus === 'error' ? '#ef4444' : '#6b7280'} stroke="none" />
+                    <span className="text-white/50 flex-1 truncate">{j.name}</span>
+                    <span className="text-white/20">{j.schedule.kind === 'every' ? `${Math.round((j.schedule.everyMs || 0) / 60000)}m` : j.schedule.expr || j.schedule.kind}</span>
+                    {j.state.consecutiveErrors > 0 && <span className="text-red-400/60">x{j.state.consecutiveErrors}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* tmux */}
-            <div className="mb-2 px-1">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Terminal size={10} className="text-white/30" />
-                <span className="text-[11px] font-mono text-white/50">tmux sessions ({runtime.tmux.length})</span>
-              </div>
-              {runtime.tmux.map(s => (
-                <div key={s.name + s.user} className="flex items-center gap-2 px-2 py-1 text-[10px] font-mono">
-                  <Circle size={5} fill="#22c55e" stroke="none" />
-                  <span className="text-white/50 flex-1 truncate">{s.name}</span>
-                  <span className="text-white/25">{s.user}</span>
+            {snapshot.tmux.length > 0 && (
+              <div className="mb-2 px-1">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Terminal size={10} className="text-white/30" />
+                  <span className="text-[11px] font-mono text-white/50">tmux ({snapshot.tmux.length})</span>
                 </div>
-              ))}
-            </div>
+                {snapshot.tmux.map(s => (
+                  <div key={s.name + s.user} className="flex items-center gap-2 px-2 py-1 text-[10px] font-mono">
+                    <Circle size={5} fill="#22c55e" stroke="none" />
+                    <span className="text-white/50 flex-1 truncate">{s.name}</span>
+                    <span className="text-white/25">{s.user}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Docker */}
-            {runtime.docker.length > 0 && (
+            {snapshot.docker.length > 0 && (
               <div className="mb-2 px-1">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Container size={10} className="text-white/30" />
-                  <span className="text-[11px] font-mono text-white/50">docker ({runtime.docker.length})</span>
+                  <span className="text-[11px] font-mono text-white/50">docker ({snapshot.docker.length})</span>
                 </div>
-                {runtime.docker.map(c => (
+                {snapshot.docker.map(c => (
                   <div key={c.name} className="flex items-center gap-2 px-2 py-1 text-[10px] font-mono">
                     <Circle size={5} fill={c.status.startsWith('Up') ? '#22c55e' : '#ef4444'} stroke="none" />
                     <span className="text-white/50 flex-1 truncate">{c.name.replace('images-penpot-', 'penpot/')}</span>
@@ -347,13 +408,15 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
               </div>
             )}
 
-            {/* System pressure */}
-            <div className="px-1 mt-2 flex gap-3 text-[9px] font-mono text-white/25">
-              <span>MEM {runtime.system.pressure.memory}%</span>
-              <span>SWAP {runtime.system.pressure.swap}%</span>
-              <span>CPU {runtime.system.pressure.cpu}%</span>
-              <span>Health {runtime.health}%</span>
-            </div>
+            {/* System pressure (from original runtime) */}
+            {runtime && (
+              <div className="px-1 mt-2 flex gap-3 text-[9px] font-mono text-white/25">
+                <span>MEM {runtime.system.pressure.memory}%</span>
+                <span>SWAP {runtime.system.pressure.swap}%</span>
+                <span>CPU {runtime.system.pressure.cpu}%</span>
+                <span>Health {runtime.health}%</span>
+              </div>
+            )}
           </>
         )}
       </div>
