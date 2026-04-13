@@ -187,6 +187,59 @@ function isPortListening(port) {
   }
 }
 
+// ── Port services ────────────────────────────────────────────────
+
+const KNOWN_PORTS = [
+  { port: 3000, name: 'Egonetics 前端 (Vite)' },
+  { port: 3002, name: 'Egonetics 后端 (Express)' },
+  { port: 8100, name: 'T0 Qwen3.5-0.8B (mlx_lm)' },
+  { port: 9001, name: 'Penpot (docker)' },
+  { port: 5173, name: 'Excalidraw dev' },
+]
+
+function detectPorts() {
+  return KNOWN_PORTS.map(({ port, name }) => ({
+    port, name, alive: isPortListening(port),
+  }))
+}
+
+// ── tmux sessions ────────────────────────────────────────────────
+
+function detectTmuxSessions() {
+  const sessions = []
+  // bornfly's sessions
+  try {
+    const out = execSync('tmux list-sessions -F "#{session_name}" 2>/dev/null', { encoding: 'utf8', timeout: 2000 })
+    for (const name of out.trim().split('\n').filter(Boolean)) {
+      sessions.push({ name, user: 'bornfly', socket: 'default' })
+    }
+  } catch { /* no tmux */ }
+  // free-code isolated sessions
+  for (const user of ['egonetics-l0', 'egonetics-l1']) {
+    try {
+      const out = execSync(`sudo -n -H -u ${user} /opt/homebrew/bin/tmux -L egonetics-freecode list-sessions -F "#{session_name}" 2>/dev/null`, { encoding: 'utf8', timeout: 2000 })
+      for (const name of out.trim().split('\n').filter(Boolean)) {
+        sessions.push({ name, user, socket: 'egonetics-freecode' })
+      }
+    } catch { /* no sessions or no sudo */ }
+  }
+  return sessions
+}
+
+// ── Docker containers ────────────────────────────────────────────
+
+function detectDocker() {
+  try {
+    const out = execSync('docker ps --format "{{.Names}}\\t{{.Status}}\\t{{.Ports}}" 2>/dev/null', { encoding: 'utf8', timeout: 3000 })
+    return out.trim().split('\n').filter(Boolean).map(line => {
+      const [name, status, ports] = line.split('\t')
+      return { name, status, ports: ports || '' }
+    })
+  } catch {
+    return []
+  }
+}
+
 // ── Unified detect ───────────────────────────────────────────────
 
 /**
@@ -203,6 +256,9 @@ function detect() {
     swap: detectSwap(),
     cpu: detectCpu(),
     processes: detectProcesses(),
+    ports: detectPorts(),
+    tmux: detectTmuxSessions(),
+    docker: detectDocker(),
   }
 }
 
@@ -212,6 +268,9 @@ module.exports = {
   detectSwap,
   detectCpu,
   detectProcesses,
+  detectPorts,
+  detectTmuxSessions,
+  detectDocker,
   isPortListening,
   PLATFORM,
 }
