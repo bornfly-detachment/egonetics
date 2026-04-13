@@ -175,28 +175,38 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
   const [nodeMap, setNodeMap] = useState<Map<string, GraphNode>>(new Map())
   const [edgeMap, setEdgeMap] = useState<Map<string, GraphEdge[]>>(new Map())
   const [rootIds, setRootIds] = useState<string[]>([])
+  const [runtime, setRuntime] = useState<RuntimeStatus | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // 加载初始 L2
+  // 加载 PR Graph + 运行时状态
   useEffect(() => {
     let cancelled = false
-    authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2')
-      .then(data => {
+    async function load() {
+      try {
+        const [graphData, statusData] = await Promise.all([
+          authFetch<{ nodes: GraphNode[]; edges: GraphEdge[] }>('/resources/graph?level=L2'),
+          authFetch<RuntimeStatus>('/resources/status'),
+        ])
         if (cancelled) return
         const nm = new Map<string, GraphNode>()
         const em = new Map<string, GraphEdge[]>()
-        for (const n of data.nodes) nm.set(n.id, n)
-        for (const e of data.edges) {
+        for (const n of graphData.nodes) nm.set(n.id, n)
+        for (const e of graphData.edges) {
           if (!em.has(e.from)) em.set(e.from, [])
           em.get(e.from)!.push(e)
         }
         setNodeMap(nm)
         setEdgeMap(em)
-        setRootIds(data.nodes.map(n => n.id))
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-    return () => { cancelled = true }
+        setRootIds(graphData.nodes.map(n => n.id))
+        setRuntime(statusData)
+      } catch (err) {
+        console.error('[ResourcePanel] load failed:', err)
+      }
+      setLoading(false)
+    }
+    load()
+    const timer = setInterval(load, 30000)
+    return () => { cancelled = true; clearInterval(timer) }
   }, [])
 
   // 懒加载子节点
