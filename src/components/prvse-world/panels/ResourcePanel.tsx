@@ -1,5 +1,5 @@
 /**
- * ResourcePanel — PR Graph 树形展开视图
+ * ResourcePanel — PRVSE Graph 树形展开视图
  *
  * 数据源: /api/resources/graph → pr-graph.json
  * 交互: 点击节点原地展开子节点，不换页
@@ -287,7 +287,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
       <div className="flex items-center gap-2 px-3.5 py-2.5 shrink-0" style={{ borderBottom: `1px solid ${sphereColor}15` }}>
         <Layers size={13} style={{ color: sphereColor }} />
         <span className="text-[13px] font-mono font-semibold" style={{ color: `${sphereColor}cc` }}>
-          PR Graph
+          PRVSE Graph
         </span>
         {loading && <RefreshCw size={10} className="animate-spin text-white/20" />}
         <span className="text-[10px] font-mono text-white/20 ml-auto">
@@ -296,7 +296,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
-        {/* PR Graph */}
+        {/* PRVSE Graph */}
         {rootIds.map(id => (
           <PRNode
             key={id}
