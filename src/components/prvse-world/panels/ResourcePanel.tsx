@@ -386,6 +386,7 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
             </div>
 
             {/* Services (from pr-graph.json via perceiver) */}
+            {snapshot && (
             <div className="mb-2 px-1">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Server size={10} className="text-white/30" />
