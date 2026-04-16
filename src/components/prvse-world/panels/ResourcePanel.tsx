@@ -201,7 +201,6 @@ export default function ResourcePanel({ sphereColor = '#7dd3fc' }: ResourcePanel
   const [graphExpanded, setGraphExpanded] = useState(false)
   const [runtimeExpanded, setRuntimeExpanded] = useState(false)
   const graphLoadedRef = useRef(false)
-  const runtimeLoadedRef = useRef(false)
   const runtimeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // PRVSE Graph — 按需加载（展开时才请求）
