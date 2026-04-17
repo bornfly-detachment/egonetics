@@ -289,8 +289,9 @@ function buildSessionName(tier, cwd) {
  * @param {string} opts.binary           - absolute path to harness binary
  * @returns {{ command, args, effectiveUser, isolated, env, tier, sessionName }}
  */
+// Claude-added (2026-04-18): per-tier binary resolution — tier.binary takes priority over opts.binary
 function buildTmuxSpawn(opts) {
-  const { tierId, tmuxSocket, tmuxConfig, binary } = opts
+  const { tierId, tmuxSocket, tmuxConfig } = opts
   let { cwd } = opts
 
   // Resolve tier (throws if unknown or disabled)
