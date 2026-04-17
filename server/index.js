@@ -204,6 +204,10 @@ Promise.all([kernelRuntime.init(), mq.init(kernelRuntime)]).then(async () => {
   controllerLib.registerContracts(kernelRuntime);
   controllerLib.start(kernelRuntime);
 
+  // 启动 PRVSE Runtime (L0 gate + L1 job executor)
+  const prvseRuntime = require('./lib/runtime')
+  prvseRuntime.start({ intervalMs: 10 * 60_000 })  // 10min tick
+
   // 启动心跳（24/7 自触发）
   heartbeat.start();
 
