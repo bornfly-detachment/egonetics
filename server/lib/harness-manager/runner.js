@@ -334,8 +334,10 @@ function buildTmuxSpawn(opts) {
     repairStaleServer(spawnUser, tmuxSocket)
   }
 
+  // Resolve binary: tier.binary takes priority over opts.binary (caller fallback)
+  const resolvedBinary = tier.binary || opts.binary
   const startupFlags = Array.isArray(tier.startup_flags) ? tier.startup_flags.join(' ') : ''
-  const binaryCmd = startupFlags ? `${binary} ${startupFlags}` : binary
+  const binaryCmd = startupFlags ? `${resolvedBinary} ${startupFlags}` : resolvedBinary
 
   const tmuxArgs = [
     '-L', tmuxSocket,
