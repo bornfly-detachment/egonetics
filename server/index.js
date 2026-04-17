@@ -67,6 +67,7 @@ const t0InferenceRouter  = require('./routes/t0-inference')
 const anthropicCompatRouter = require('./routes/anthropic-compat')
 const freeCodeRouter        = require('./routes/free-code')
 const signalsRouter      = require('./routes/signals');
+const runtimeRouter      = require('./routes/runtime');
 const compilerModule     = require('./routes/compiler');
 
 const app = express();
