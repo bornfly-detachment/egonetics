@@ -71,5 +71,50 @@
       "startup_flags": ["--dangerously-skip-permissions"],
       "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行"
     }
+  },
+
+    "T3": {
+      "_added_by": "Claude-added (2026-04-18): Codex CLI xterm tier",
+      "id": "T3",
+      "label": "Codex CLI",
+      "description": "OpenAI Codex CLI，走 OpenAI 订阅 OAuth，host 身份运行",
+      "color": "green",
+      "enabled": true,
+      "binary": "/Users/bornfly/.npm-global/bin/codex",
+      "spawn_user": null,
+      "default_cwd": "/Users/Shared/prvse_world_workspace/L2",
+      "scope": {
+        "readable": ["*"],
+        "writable": ["*"],
+        "description": "T3 以 host 身份运行，OAuth 凭证存储在用户目录"
+      },
+      "env": {},
+      "session_prefix": "freecode-t3",
+      "model_hint": "codex",
+      "startup_flags": [],
+      "isolation_note": "T3 必须以 host 身份运行，OAuth 存储在 ~/.codex/"
+    },
+
+    "T4": {
+      "_added_by": "Claude-added (2026-04-18): Gemini CLI xterm tier",
+      "id": "T4",
+      "label": "Gemini CLI",
+      "description": "Google Gemini CLI，走 Google OAuth 订阅，host 身份运行",
+      "color": "blue",
+      "enabled": true,
+      "binary": "/Users/bornfly/.npm-global/bin/gemini",
+      "spawn_user": null,
+      "default_cwd": "/Users/Shared/prvse_world_workspace/L2",
+      "scope": {
+        "readable": ["*"],
+        "writable": ["*"],
+        "description": "T4 以 host 身份运行，OAuth 凭证存储在用户目录"
+      },
+      "env": {},
+      "session_prefix": "freecode-t4",
+      "model_hint": "gemini-2.5-pro",
+      "startup_flags": ["--approval-mode", "yolo"],
+      "isolation_note": "T4 必须以 host 身份运行，OAuth 存储在 ~/.gemini/"
+    }
   }
 }
