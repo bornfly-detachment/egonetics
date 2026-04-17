@@ -185,6 +185,7 @@ app.use('/api', t2ConfigRouter);
 app.use('/api', t0InferenceRouter);
 app.use('/api/signals', signalsRouter.init(signalsDb));
 app.use('/api', compilerModule.init());
+app.use('/api', runtimeRouter);
 
 const httpServer = http.createServer(app);
 proposalsModule.attachWebSocket(httpServer, pagesDb);
