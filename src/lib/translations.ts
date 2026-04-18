@@ -56,6 +56,7 @@ export interface Translation {
     lab: string
     mq: string
     resourcesClaude: string
+    resourcesGemini: string
     recycle: string
     collapse: string
     logout: string
