@@ -165,21 +165,24 @@ function attach(httpServer) {
     let batchBuf = ''
     let batchTimer = null
 
-    const spawnPty = (cols, rows, cwdCandidate, tierIdRaw) => {
+    // Claude-added (2026-04-18): accept provider alongside tier — e.g. 'claude', 'codex', 'gemini'
+    const spawnPty = (cols, rows, cwdCandidate, tierIdRaw, providerRaw) => {
       if (ptyProcess) return
 
       // Only pre-validate if client actually sent a cwd. Otherwise pass undefined
-      // to harness-runner so it can apply the tier's default_cwd.
+      // to harness-runner so it can apply the provider's module_root or tier's default_cwd.
       const cwd = cwdCandidate ? (validateCwd(cwdCandidate) || undefined) : undefined
 
       // Tier selection: default 'T2' when client doesn't specify
       const tiersCfg = harnessRunner.loadTiers()
       const tierId = tierIdRaw || tiersCfg.default_tier || 'T2'
+      const provider = providerRaw || tiersCfg.default_provider || undefined
 
-      // harness-runner generates tier-qualified session name + env + spawn plan
+      // harness-runner generates tier+provider-qualified session name + env + spawn plan
       try {
         const spawnPlan = harnessRunner.buildTmuxSpawn({
           tierId,
+          provider,
           tmuxSocket: TMUX_SOCKET,
           tmuxConfig: TMUX_CONFIG,
           cwd,
