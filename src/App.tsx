@@ -33,7 +33,7 @@ import MQView from './components/MQView'
 import FreeCodeTerminal from './components/FreeCodeTerminal'
 import PRVDemo from './components/prvse/PRVDemo'
 import FontCompare from './components/prvse/FontCompare'
-import ResourceStatusView from './components/ResourceStatusView'
+import ResourcesConsolePage from './components/resources/ResourcesConsolePage'
 import ExcalidrawView from './components/ExcalidrawView'
 import { TokenProvider } from './design/TokenProvider'
 import LoginPage from './components/LoginPage'
@@ -301,7 +301,7 @@ const AppContent: React.FC = () => {
               <Route path="/free-code" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><FreeCodeTerminal /></div>} />
               <Route path="/prv-demo" element={<PRVDemo />} />
               <Route path="/font-compare" element={<FontCompare />} />
-              <Route path="/resources" element={<ResourceStatusView />} />
+              <Route path="/resources" element={<ResourcesConsolePage />} />
               <Route path="/excalidraw" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><ExcalidrawView /></div>} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>

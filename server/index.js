@@ -160,6 +160,7 @@ app.use('/api/free-code', freeCodeRouter);
 app.use('/api/llm', llmRouter);
 app.use('/api/ai', aiWorldRouter);
 app.use('/api', resourceStatusRouter);
+app.use('/api', screenshotRouter);
 app.use('/api', ontologyRouter.init());
 app.use('/api', prvsRouter.init());
 app.use('/api', tagsRouter.init());

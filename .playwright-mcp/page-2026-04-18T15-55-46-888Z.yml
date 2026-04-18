@@ -1,0 +1,160 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img "Bornfly"
+        - generic [ref=e7]:
+          - generic [ref=e8]: Egonetics
+          - button "EN" [ref=e9] [cursor=pointer]
+      - navigation [ref=e10]:
+        - button "主页" [ref=e11] [cursor=pointer]:
+          - img [ref=e12]
+          - generic [ref=e15]: 主页
+        - button "记忆" [ref=e16] [cursor=pointer]:
+          - img [ref=e17]
+          - generic [ref=e19]: 记忆
+        - button "生变论" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+          - generic [ref=e24]: 生变论
+        - button "生变录" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+          - generic [ref=e30]: 生变录
+        - button "任务" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e35]: 任务
+        - button "博客" [ref=e36] [cursor=pointer]:
+          - img [ref=e37]
+          - generic [ref=e40]: 博客
+        - button "标签语义树" [ref=e41] [cursor=pointer]:
+          - img [ref=e42]
+          - generic [ref=e44]: 标签语义树
+        - button "人机协议" [ref=e45] [cursor=pointer]:
+          - img [ref=e46]
+          - generic [ref=e49]: 人机协议
+        - button "协议构建器" [ref=e50] [cursor=pointer]:
+          - img [ref=e51]
+          - generic [ref=e55]: 协议构建器
+        - button "PRVSE World" [ref=e56] [cursor=pointer]:
+          - img [ref=e57]
+          - generic [ref=e60]: PRVSE World
+        - button "Free Code" [ref=e61] [cursor=pointer]:
+          - img [ref=e62]
+          - generic [ref=e64]: Free Code
+        - button "测试环境" [ref=e65] [cursor=pointer]:
+          - img [ref=e66]
+          - generic [ref=e68]: 测试环境
+        - button "消息队列" [ref=e69] [cursor=pointer]:
+          - img [ref=e70]
+          - generic [ref=e74]: 消息队列
+        - button "回收站" [ref=e75] [cursor=pointer]:
+          - img [ref=e76]
+          - generic [ref=e79]: 回收站
+      - generic [ref=e80]:
+        - button "bornfly admin" [ref=e81] [cursor=pointer]:
+          - img [ref=e82]
+          - generic [ref=e85]:
+            - generic [ref=e86]: bornfly
+            - generic [ref=e87]: admin
+        - button "收起" [ref=e88] [cursor=pointer]:
+          - img [ref=e89]
+          - generic [ref=e91]: 收起
+    - main [ref=e92]:
+      - generic [ref=e94]:
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]: Resources / Usage
+            - heading "Subscription usage limits" [level=1] [ref=e98]
+            - paragraph [ref=e99]: 按 Claude_usage 的节奏重做：整页只围绕三大厂商的订阅剩余电量展示。现在没有 provider 级 reset / quota / session 数据的地方，统一显示为未暴露，而不是继续做假的资源面板。
+          - generic [ref=e100]:
+            - button "刷新" [ref=e101] [cursor=pointer]
+            - generic [ref=e102]: 自动刷新 20s
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - generic [ref=e106]:
+                - heading "Claude Code" [level=2] [ref=e107]
+                - paragraph [ref=e108]: 当前后端未暴露 provider 级 usage / reset 数据
+              - generic [ref=e109]: Pro
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - generic [ref=e113]: Current session
+                  - generic [ref=e114]: 当前 session 级 usage 还没有 provider 数据源
+                - generic [ref=e117]: 未暴露
+              - generic [ref=e119]:
+                - generic [ref=e120]:
+                  - generic [ref=e121]: Subscription window
+                  - generic [ref=e122]: reset 时间 / 剩余额度目前没有 provider 级 API 或 CLI probe 接口
+                - generic [ref=e125]: 未暴露
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - generic [ref=e128]: Daily requests
+                  - generic [ref=e129]: 当前只有 tier 级统计，没有按厂商拆分的 usage
+                - generic [ref=e132]: 未暴露
+            - generic [ref=e134]: "Last updated: 未提供"
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - heading "Codex CLI" [level=2] [ref=e138]
+                - paragraph [ref=e139]: 当前后端未暴露 provider 级 usage / reset 数据
+              - generic [ref=e140]: Member
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]: Current session
+                  - generic [ref=e145]: 当前 session 级 usage 还没有 provider 数据源
+                - generic [ref=e148]: 未暴露
+              - generic [ref=e150]:
+                - generic [ref=e151]:
+                  - generic [ref=e152]: Subscription window
+                  - generic [ref=e153]: reset 时间 / 剩余额度目前没有 provider 级 API 或 CLI probe 接口
+                - generic [ref=e156]: 未暴露
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - generic [ref=e159]: Daily requests
+                  - generic [ref=e160]: 当前只有 tier 级统计，没有按厂商拆分的 usage
+                - generic [ref=e163]: 未暴露
+            - generic [ref=e165]: "Last updated: 未提供"
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - generic [ref=e168]:
+                - heading "Gemini CLI" [level=2] [ref=e169]
+                - paragraph [ref=e170]: 当前后端未暴露 provider 级 usage / reset 数据
+              - generic [ref=e171]: Advanced
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - generic [ref=e174]:
+                  - generic [ref=e175]: Current session
+                  - generic [ref=e176]: 当前 session 级 usage 还没有 provider 数据源
+                - generic [ref=e179]: 未暴露
+              - generic [ref=e181]:
+                - generic [ref=e182]:
+                  - generic [ref=e183]: Subscription window
+                  - generic [ref=e184]: reset 时间 / 剩余额度目前没有 provider 级 API 或 CLI probe 接口
+                - generic [ref=e187]: 未暴露
+              - generic [ref=e188]:
+                - generic [ref=e189]:
+                  - generic [ref=e190]: Daily requests
+                  - generic [ref=e191]: 当前只有 tier 级统计，没有按厂商拆分的 usage
+                - generic [ref=e194]: 未暴露
+            - generic [ref=e196]: "Last updated: 未提供"
+        - generic [ref=e197]:
+          - generic [ref=e198]: Reality check
+          - generic [ref=e199]:
+            - generic [ref=e200]: —
+            - generic [ref=e201]: —
+            - generic [ref=e202]: —
+            - generic [ref=e203]: runtime gate off
+            - generic [ref=e204]: stable
+          - generic [ref=e205]:
+            - generic [ref=e206]: 未完成：provider 级 auth probe、attempt/pitfall runtime、subscription reset 时间、各厂商独立 usage 百分比。
+            - generic [ref=e207]: 命名约束：未加载
+            - generic [ref=e208]: "Last runtime tick: 未提供 · Snapshot: 未提供 · loading…"
+  - button "AI 对话助手" [ref=e209] [cursor=pointer]:
+    - img [ref=e210]
+  - generic [ref=e213]:
+    - generic [ref=e214]:
+      - generic [ref=e217]: "生命主体性: 活跃"
+      - generic [ref=e218]: "|"
+      - generic [ref=e219]: Egonetics v0.1 · Bornfly Theory
+    - generic [ref=e220]: 2026年4月18日星期六 23:55
