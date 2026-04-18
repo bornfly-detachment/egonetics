@@ -282,25 +282,40 @@ function buildSessionName(tier, cwd) {
  *
  * @param {Object} opts
  * @param {string} opts.tierId          - Tier id ('T0' | 'T1' | 'T2')
+ * @param {string} [opts.provider]      - Provider id within tier (e.g. 'claude', 'codex', 'gemini').
+ *                                        Only meaningful for tiers that have a `providers` map (T2).
+ *                                        Defaults to the config's default_provider or first key.
  * @param {'L0'|'L1'|'L2'} opts.level   - Security level for the spawned process
  * @param {string} opts.tmuxSocket       - tmux -L socket name
  * @param {string} opts.tmuxConfig       - tmux -f config file path
- * @param {string} opts.cwd              - working directory
- * @param {string} opts.binary           - absolute path to harness binary
- * @returns {{ command, args, effectiveUser, isolated, env, tier, sessionName }}
+ * @param {string} opts.cwd              - working directory (overrides provider module_root)
+ * @param {string} opts.binary           - absolute path to harness binary (lowest-priority fallback)
+ * @returns {{ command, args, effectiveUser, isolated, env, tier, provider, sessionName }}
  */
-// Claude-added (2026-04-18): per-tier binary resolution — tier.binary takes priority over opts.binary
+// Claude-added (2026-04-18): provider-aware binary/cwd resolution — T2.providers[provider] takes priority
 function buildTmuxSpawn(opts) {
   const { tierId, tmuxSocket, tmuxConfig } = opts
   let { cwd } = opts
 
   // Resolve tier (throws if unknown or disabled)
   const tier = resolveTier(tierId)
+  const cfg = loadTiers()
 
-  // If caller didn't provide cwd, use the tier's default_cwd.
-  // This ensures each tier starts in a directory its spawn_user can actually write to.
+  // Resolve provider config (only tiers that declare a `providers` map use this).
+  // Priority: opts.provider → cfg.default_provider → first key in tier.providers
+  let providerCfg = null
+  let resolvedProviderId = null
+  if (tier.providers && typeof tier.providers === 'object') {
+    const defaultProvider = opts.provider || cfg.default_provider || Object.keys(tier.providers)[0]
+    if (defaultProvider && tier.providers[defaultProvider]) {
+      resolvedProviderId = defaultProvider
+      providerCfg = tier.providers[defaultProvider]
+    }
+  }
+
+  // cwd priority: explicit opts.cwd → provider module_root → tier default_cwd → $HOME
   if (!cwd || !cwd.trim()) {
-    cwd = tier.default_cwd || os.homedir()
+    cwd = (providerCfg && providerCfg.module_root) || tier.default_cwd || os.homedir()
   }
 
   // Per-tier spawn_user decides isolation:
