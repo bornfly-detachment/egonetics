@@ -70,6 +70,7 @@ const freeCodeRouter        = require('./routes/free-code')
 const signalsRouter      = require('./routes/signals');
 const runtimeRouter      = require('./routes/runtime');
 const compilerModule     = require('./routes/compiler');
+const usageRouter        = require('./routes/usage');
 
 const app = express();
 const PORT = 3002;
