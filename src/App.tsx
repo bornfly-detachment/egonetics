@@ -116,6 +116,8 @@ const RouteSync: React.FC = () => {
       view = 'font-compare'
     } else if (path === '/resources') {
       view = 'resources'
+    } else if (path === '/resources_claude') {
+      view = 'resources-claude'
     } else if (path === '/excalidraw') {
       view = 'excalidraw'
     } else {
