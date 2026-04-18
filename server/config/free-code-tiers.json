@@ -92,8 +92,9 @@
           "label": "Gemini CLI",
           "model_hint": "gemini-2.5-pro",
           "startup_flags": ["--approval-mode", "yolo"],
-          "module_root": "/Users/bornfly/Desktop/claude_code_learn/egonetics/src",
-          "session_suffix": "gemini"
+          "module_root": "/Users/Shared/prvse_world_workspace/gemini",
+          "session_suffix": "gemini",
+          "_note": "Value 独立 — Gemini owns its own workspace, no overlap with claude (egonetics/) or codex (prvse_world_workspace/)"
         }
       }
     }
