@@ -371,6 +371,10 @@ function buildTmuxSpawn(opts) {
 
   const status = detectIsolation()
 
+  const providerMeta = resolvedProviderId
+    ? { id: resolvedProviderId, label: providerCfg.label || resolvedProviderId }
+    : null
+
   if (!willIsolate) {
     return {
       command: 'tmux',
@@ -380,6 +384,7 @@ function buildTmuxSpawn(opts) {
       fallbackReason: wantsIsolation ? isolationStatus.reason : 'tier runs as host',
       env: envVars,
       tier: { id: tier.id, label: tier.label },
+      provider: providerMeta,
       sessionName,
     }
   }
@@ -398,6 +403,7 @@ function buildTmuxSpawn(opts) {
     isolated: true,
     env: envVars,
     tier: { id: tier.id, label: tier.label },
+    provider: providerMeta,
     sessionName,
   }
 }
