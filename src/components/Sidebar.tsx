@@ -47,6 +47,7 @@ const Sidebar: React.FC = () => {
     { id: 'lab',              label: s.lab,           icon: FlaskConical, color: 'text-violet-400',  path: '/lab'              },
     { id: 'mq',               label: s.mq,            icon: Waves,        color: 'text-cyan-400',    path: '/mq'               },
     { id: 'resources-claude', label: s.resourcesClaude, icon: BarChart2,  color: 'text-orange-400',  path: '/resources_claude' },
+    { id: 'resources-gemini', label: s.resourcesGemini, icon: BarChart2,  color: 'text-purple-400',  path: '/resources_gemini' },
     { id: 'recycle',          label: s.recycle,       icon: Trash2,       color: 'text-white/20',    path: '/recycle'          },
   ]
 
