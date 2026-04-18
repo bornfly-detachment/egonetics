@@ -220,6 +220,9 @@ const RouteSync: React.FC = () => {
       case 'resources':
         targetPath = '/resources'
         break
+      case 'resources-claude':
+        targetPath = '/resources_claude'
+        break
       case 'excalidraw':
         targetPath = '/excalidraw'
         break
