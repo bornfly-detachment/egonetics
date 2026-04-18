@@ -122,6 +122,8 @@ const RouteSync: React.FC = () => {
       view = 'resources-codex'
     } else if (path === '/resources_claude') {
       view = 'resources-claude'
+    } else if (path === '/resources_gemini') {
+      view = 'resources-gemini'
     } else if (path === '/excalidraw') {
       view = 'excalidraw'
     } else {
