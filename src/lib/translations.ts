@@ -664,7 +664,7 @@ const en: Translation = {
     home: 'Home', memory: 'Memory', theory: 'Bornfly Theory', chronicle: 'Chronicle',
     tasks: 'Tasks', blog: 'Blog', egonetics: 'Egonetics', tagTree: 'Tag Tree',
     protocol: 'HM Protocol', protoBuilder: 'Proto Builder', prvseWorld: 'PRVSE World', freeCode: 'Free Code',
-    lab: 'Lab', mq: 'MQ Stream', recycle: 'Archive', collapse: 'Collapse', logout: 'Logout',
+    lab: 'Lab', mq: 'MQ Stream', resourcesClaude: 'AI Usage', recycle: 'Archive', collapse: 'Collapse', logout: 'Logout',
   },
 
   home: {
