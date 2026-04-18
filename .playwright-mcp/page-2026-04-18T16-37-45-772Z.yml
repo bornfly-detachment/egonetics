@@ -1,0 +1,200 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img "Bornfly" [ref=e7]
+        - generic [ref=e8]:
+          - generic [ref=e9]: Egonetics
+          - button "EN" [ref=e10] [cursor=pointer]
+      - navigation [ref=e11]:
+        - button "主页" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e16]: 主页
+        - button "记忆" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]: 记忆
+        - button "生变论" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+          - generic [ref=e25]: 生变论
+        - button "生变录" [ref=e26] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e31]: 生变录
+        - button "任务" [ref=e32] [cursor=pointer]:
+          - img [ref=e33]
+          - generic [ref=e36]: 任务
+        - button "博客" [ref=e37] [cursor=pointer]:
+          - img [ref=e38]
+          - generic [ref=e41]: 博客
+        - button "标签语义树" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+          - generic [ref=e45]: 标签语义树
+        - button "人机协议" [ref=e46] [cursor=pointer]:
+          - img [ref=e47]
+          - generic [ref=e50]: 人机协议
+        - button "协议构建器" [ref=e51] [cursor=pointer]:
+          - img [ref=e52]
+          - generic [ref=e56]: 协议构建器
+        - button "PRVSE World" [ref=e57] [cursor=pointer]:
+          - img [ref=e58]
+          - generic [ref=e61]: PRVSE World
+        - button "Free Code" [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+          - generic [ref=e65]: Free Code
+        - button "测试环境" [ref=e66] [cursor=pointer]:
+          - img [ref=e67]
+          - generic [ref=e69]: 测试环境
+        - button "消息队列" [ref=e70] [cursor=pointer]:
+          - img [ref=e71]
+          - generic [ref=e75]: 消息队列
+        - button "回收站" [ref=e76] [cursor=pointer]:
+          - img [ref=e77]
+          - generic [ref=e80]: 回收站
+      - generic [ref=e81]:
+        - button "bornfly admin" [ref=e82] [cursor=pointer]:
+          - img [ref=e83]
+          - generic [ref=e86]:
+            - generic [ref=e87]: bornfly
+            - generic [ref=e88]: admin
+        - button "收起" [ref=e89] [cursor=pointer]:
+          - img [ref=e90]
+          - generic [ref=e92]: 收起
+    - main [ref=e93]:
+      - generic [ref=e94]:
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - img [ref=e99]
+            - generic [ref=e100]:
+              - heading "Plan usage limits" [level=1] [ref=e101]
+              - paragraph [ref=e102]: Live probe dashboard
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - img [ref=e105]
+              - text: Live
+            - button "Add probe" [ref=e109] [cursor=pointer]:
+              - img [ref=e110]
+              - text: Add probe
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - generic [ref=e114]:
+                - generic [ref=e115]:
+                  - generic [ref=e116]:
+                    - img [ref=e118]
+                    - generic [ref=e119]:
+                      - generic [ref=e120]:
+                        - generic [ref=e121]: Claude Code
+                        - generic [ref=e122]: Max
+                      - generic [ref=e123]: polls every 60s
+                  - generic [ref=e124]:
+                    - button "Force refresh" [ref=e125] [cursor=pointer]:
+                      - img [ref=e126]
+                    - button [ref=e131] [cursor=pointer]:
+                      - img [ref=e132]
+                - generic [ref=e134]:
+                  - generic [ref=e135]:
+                    - generic [ref=e136]:
+                      - generic [ref=e137]: Current session
+                      - generic [ref=e139]: 0%
+                    - generic [ref=e141]:
+                      - generic [ref=e142]: 559.5K tokens
+                      - generic [ref=e143]: "in: 2.8K out: 556.8K cache_hit: 89.3M"
+                  - generic [ref=e144]:
+                    - generic [ref=e145]:
+                      - generic [ref=e146]: All models (7 days)
+                      - generic [ref=e148]: 0%
+                    - generic [ref=e150]:
+                      - generic [ref=e151]: 4.0M tokens
+                      - generic [ref=e152]: 2175 turns across 20 sessions
+                - generic [ref=e153]:
+                  - generic [ref=e154]: "Last updated: 14s ago"
+                  - generic [ref=e155]: claude_cli_session
+              - button "Remove probe" [ref=e156] [cursor=pointer]:
+                - img [ref=e157]
+            - generic [ref=e160]:
+              - generic [ref=e161]:
+                - generic [ref=e162]:
+                  - generic [ref=e163]:
+                    - img [ref=e165]
+                    - generic [ref=e166]:
+                      - generic [ref=e168]: EGonetics T2 calls
+                      - generic [ref=e169]: polls every 30s
+                  - generic [ref=e170]:
+                    - button "Force refresh" [ref=e171] [cursor=pointer]:
+                      - img [ref=e172]
+                    - button [ref=e177] [cursor=pointer]:
+                      - img [ref=e178]
+                - generic [ref=e181]:
+                  - generic [ref=e182]:
+                    - generic [ref=e183]: API calls (last 100 runs)
+                    - generic [ref=e185]: 13%
+                  - generic [ref=e188]:
+                    - generic [ref=e189]: 125 / 1000
+                    - generic [ref=e190]: 9 runs sampled
+                - generic [ref=e191]:
+                  - generic [ref=e192]: "Last updated: 14s ago"
+                  - generic [ref=e193]: db_execution_runs
+              - button "Remove probe" [ref=e194] [cursor=pointer]:
+                - img [ref=e195]
+            - generic [ref=e198]:
+              - generic [ref=e199]:
+                - generic [ref=e200]:
+                  - generic [ref=e201]:
+                    - img [ref=e203]
+                    - generic [ref=e204]:
+                      - generic [ref=e205]:
+                        - generic [ref=e206]: Codex CLI
+                        - generic [ref=e207]: Pro
+                      - generic [ref=e208]: polls every 120s
+                  - generic [ref=e209]:
+                    - button "Force refresh" [ref=e210] [cursor=pointer]:
+                      - img [ref=e211]
+                    - button [ref=e216] [cursor=pointer]:
+                      - img [ref=e217]
+                - generic [ref=e220]:
+                  - generic [ref=e221]:
+                    - generic [ref=e222]: Current session
+                    - generic [ref=e224]: Login required
+                  - generic [ref=e227]:
+                    - generic [ref=e228]: undefined / undefined
+                    - generic [ref=e229]: CLI harness not yet authenticated
+                - generic [ref=e230]:
+                  - generic [ref=e231]: "Last updated: 14s ago"
+                  - generic [ref=e232]: unknown
+              - button "Remove probe" [ref=e233] [cursor=pointer]:
+                - img [ref=e234]
+            - generic [ref=e237]:
+              - generic [ref=e238]:
+                - generic [ref=e239]:
+                  - generic [ref=e240]:
+                    - img [ref=e242]
+                    - generic [ref=e243]:
+                      - generic [ref=e244]:
+                        - generic [ref=e245]: Gemini CLI
+                        - generic [ref=e246]: Free
+                      - generic [ref=e247]: polls every 120s
+                  - generic [ref=e248]:
+                    - button "Force refresh" [ref=e249] [cursor=pointer]:
+                      - img [ref=e250]
+                    - button [ref=e255] [cursor=pointer]:
+                      - img [ref=e256]
+                - generic [ref=e259]:
+                  - generic [ref=e260]:
+                    - generic [ref=e261]: Current session
+                    - generic [ref=e263]: Login required
+                  - generic [ref=e266]:
+                    - generic [ref=e267]: undefined / undefined
+                    - generic [ref=e268]: CLI harness not yet authenticated
+                - generic [ref=e269]:
+                  - generic [ref=e270]: "Last updated: 14s ago"
+                  - generic [ref=e271]: unknown
+              - button "Remove probe" [ref=e272] [cursor=pointer]:
+                - img [ref=e273]
+          - paragraph [ref=e276]: "Server time: 00:37:45"
+  - button "AI 对话助手" [ref=e277] [cursor=pointer]:
+    - img [ref=e278]
+  - generic [ref=e281]:
+    - generic [ref=e282]:
+      - generic [ref=e285]: "生命主体性: 活跃"
+      - generic [ref=e286]: "|"
+      - generic [ref=e287]: Egonetics v0.1 · Bornfly Theory
+    - generic [ref=e288]: 2026年4月19日星期日 00:37

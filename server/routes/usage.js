@@ -74,55 +74,102 @@ const _sseClients = new Set()
 // ── Collectors ────────────────────────────────────────────────────────────────
 
 function collectClaudeCliSession() {
-  // Try to read Claude Code's local usage state from ~/.claude/
-  // Fallback: auth_required if no data accessible
+  // Parse real token usage from ~/.claude/projects/**/*.jsonl
+  // Each JSONL line may have message.usage with input_tokens, output_tokens, etc.
   try {
-    const statsPath = `${os.homedir()}/.claude/statsig/`
-    const sessionDir = `${os.homedir()}/.claude/projects/`
+    const projectsDir = `${os.homedir()}/.claude/projects/`
+    if (!fs.existsSync(projectsDir)) {
+      return _claudeNoData('projects dir not found')
+    }
 
-    // Estimate from local project conversation files
-    let sessionFiles = 0
-    let totalSize = 0
-    if (fs.existsSync(sessionDir)) {
-      const dirs = fs.readdirSync(sessionDir).slice(0, 20)
-      for (const d of dirs) {
-        const full = `${sessionDir}/${d}`
+    const nowMs = Date.now()
+    const weekMs = 7 * 24 * 3600 * 1000
+
+    // Collect all .jsonl files recursively (depth ≤ 3) modified within 7 days
+    const jsonlFiles = []
+    function scanDir(dir, depth) {
+      if (depth > 3) return
+      let entries
+      try { entries = fs.readdirSync(dir) } catch { return }
+      for (const e of entries) {
+        const full = `${dir}/${e}`
         try {
           const stat = fs.statSync(full)
           if (stat.isDirectory()) {
-            sessionFiles++
-            const files = fs.readdirSync(full)
-            for (const f of files) {
-              try { totalSize += fs.statSync(`${full}/${f}`).size } catch {}
-            }
+            scanDir(full, depth + 1)
+          } else if (e.endsWith('.jsonl') && (nowMs - stat.mtimeMs) < weekMs) {
+            jsonlFiles.push({ path: full, mtimeMs: stat.mtimeMs })
           }
         } catch {}
       }
     }
+    scanDir(projectsDir, 0)
 
-    // Rough estimate: session usage ~proportional to conversation size
-    // We can't get exact quota without scraping claude.ai — mark as auth_required
+    if (jsonlFiles.length === 0) return _claudeNoData('no recent sessions')
+
+    // Sort by mtime descending — first entry = most recent session
+    jsonlFiles.sort((a, b) => b.mtimeMs - a.mtimeMs)
+    const latestSessionPath = jsonlFiles[0].path
+
+    // Aggregate tokens: current session (latest file) and weekly (all files)
+    function aggregateTokens(filePaths, cutoffMs) {
+      let inputTokens = 0, outputTokens = 0, cacheCreate = 0, cacheRead = 0, turns = 0
+      for (const p of filePaths) {
+        let lines
+        try { lines = fs.readFileSync(p, 'utf8').split('\n') } catch { continue }
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const entry = JSON.parse(line)
+            const ts = entry.timestamp ? new Date(entry.timestamp).getTime() : 0
+            if (cutoffMs && ts < cutoffMs) continue
+            const usage = entry.message?.usage || entry.usage
+            if (!usage) continue
+            if (usage.input_tokens) inputTokens += usage.input_tokens
+            if (usage.output_tokens) outputTokens += usage.output_tokens
+            if (usage.cache_creation_input_tokens) cacheCreate += usage.cache_creation_input_tokens
+            if (usage.cache_read_input_tokens) cacheRead += usage.cache_read_input_tokens
+            turns++
+          } catch {}
+        }
+      }
+      return { inputTokens, outputTokens, cacheCreate, cacheRead, turns }
+    }
+
+    const sessionStats = aggregateTokens([latestSessionPath], 0)
+    const weekStats    = aggregateTokens(jsonlFiles.map(f => f.path), nowMs - weekMs)
+
+    function fmt(n) {
+      if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+      if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`
+      return String(n)
+    }
+
+    const sessionTotal = sessionStats.inputTokens + sessionStats.outputTokens
+    const weekTotal    = weekStats.inputTokens + weekStats.outputTokens
+
+    // Claude Max quota is not exposed via API; show real counts with no fake %
     return {
       rows: [
         {
-          id:      'session',
-          label:   'Current session',
-          status:  'auth_required',
+          id:       'session',
+          label:    'Current session',
+          status:   'ready',
           used_pct: null,
-          used:    null,
-          total:   null,
+          used:     `${fmt(sessionTotal)} tokens`,
+          total:    null,
           reset_in: null,
-          note:    'Login to claude.ai to see exact quota',
+          note:     `in: ${fmt(sessionStats.inputTokens)}  out: ${fmt(sessionStats.outputTokens)}  cache_hit: ${fmt(sessionStats.cacheRead)}`,
         },
         {
           id:       'weekly',
-          label:    'All models',
-          status:   'estimated',
-          used_pct: Math.min(100, Math.round((totalSize / (50 * 1024 * 1024)) * 100)),
-          used:     `${Math.round(totalSize / 1024)}KB local state`,
+          label:    'All models (7 days)',
+          status:   'ready',
+          used_pct: null,
+          used:     `${fmt(weekTotal)} tokens`,
           total:    null,
           reset_in: null,
-          note:     'Estimated from local session data',
+          note:     `${weekStats.turns} turns across ${jsonlFiles.length} sessions`,
         },
       ],
       collected_at: new Date().toISOString(),
@@ -135,6 +182,16 @@ function collectClaudeCliSession() {
       ],
       collected_at: new Date().toISOString(),
     }
+  }
+}
+
+function _claudeNoData(reason) {
+  return {
+    rows: [
+      { id: 'session', label: 'Current session', status: 'unknown', used_pct: null, used: null, total: null, reset_in: null, note: reason },
+      { id: 'weekly',  label: 'All models (7 days)', status: 'unknown', used_pct: null, used: null, total: null, reset_in: null, note: reason },
+    ],
+    collected_at: new Date().toISOString(),
   }
 }
 
