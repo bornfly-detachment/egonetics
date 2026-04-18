@@ -70,8 +70,7 @@
       "model_hint": "claude-sonnet-4-5",
       "startup_flags": ["--dangerously-skip-permissions"],
       "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行"
-    }
-  },
+    },
 
     "T3": {
       "_added_by": "Claude-added (2026-04-18): Codex CLI xterm tier",
