@@ -46,6 +46,7 @@ import SlashCommandMenu from './components/SlashCommandMenu'
 import SpherePalette from './components/SpherePalette'
 import BottomNav from './components/layout/BottomNav'
 import { useViewport } from './hooks/useViewport'
+import UsageLimitsView from './components/UsageLimitsView'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
