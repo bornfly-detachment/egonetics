@@ -1,7 +1,8 @@
 {
-  "_doc": "Free-Code Tier Registry. Each tier defines the model backend, env injection, and session/config isolation strategy for the same free-code binary.",
+  "_doc": "Free-Code Tier Registry. Tier = authority/isolation level. Provider = which CLI binary within a tier. T3/T4 do not exist — Codex and Gemini run at T2 authority, listed under T2.providers.",
 
   "default_tier": "T2",
+  "default_provider": "claude",
 
   "tiers": {
     "T0": {
@@ -52,8 +53,8 @@
 
     "T2": {
       "id": "T2",
-      "label": "Claude Sonnet 4.6",
-      "description": "Claude Max 订阅（默认），走 macOS Keychain OAuth — 必须以 host 身份跑",
+      "label": "Host CLI Agent",
+      "description": "host 身份运行，走 macOS Keychain OAuth — 所有需要订阅的 CLI 都在此层",
       "color": "violet",
       "enabled": true,
       "spawn_user": null,
@@ -67,53 +68,34 @@
         "FREE_CODE_CONFIG_DIR": "/Users/Shared/prvse_world_workspace/L2/free-code-config"
       },
       "session_prefix": "freecode-t2",
-      "model_hint": "claude-sonnet-4-5",
-      "startup_flags": ["--dangerously-skip-permissions"],
-      "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行"
-    },
+      "isolation_note": "T2 必须访问 bornfly 的 macOS Keychain 做 OAuth，无法在 isolated user 下运行",
 
-    "T3": {
-      "_added_by": "Claude-added (2026-04-18): Codex CLI xterm tier",
-      "id": "T3",
-      "label": "Codex CLI",
-      "description": "OpenAI Codex CLI，走 OpenAI 订阅 OAuth，host 身份运行",
-      "color": "green",
-      "enabled": true,
-      "binary": "/Users/bornfly/.npm-global/bin/codex",
-      "spawn_user": null,
-      "default_cwd": "/Users/Shared/prvse_world_workspace/L2",
-      "scope": {
-        "readable": ["*"],
-        "writable": ["*"],
-        "description": "T3 以 host 身份运行，OAuth 凭证存储在用户目录"
-      },
-      "env": {},
-      "session_prefix": "freecode-t3",
-      "model_hint": "codex",
-      "startup_flags": [],
-      "isolation_note": "T3 必须以 host 身份运行，OAuth 存储在 ~/.codex/"
-    },
-
-    "T4": {
-      "_added_by": "Claude-added (2026-04-18): Gemini CLI xterm tier",
-      "id": "T4",
-      "label": "Gemini CLI",
-      "description": "Google Gemini CLI，走 Google OAuth 订阅，host 身份运行",
-      "color": "blue",
-      "enabled": true,
-      "binary": "/Users/bornfly/.npm-global/bin/gemini",
-      "spawn_user": null,
-      "default_cwd": "/Users/Shared/prvse_world_workspace/L2",
-      "scope": {
-        "readable": ["*"],
-        "writable": ["*"],
-        "description": "T4 以 host 身份运行，OAuth 凭证存储在用户目录"
-      },
-      "env": {},
-      "session_prefix": "freecode-t4",
-      "model_hint": "gemini-2.5-pro",
-      "startup_flags": ["--approval-mode", "yolo"],
-      "isolation_note": "T4 必须以 host 身份运行，OAuth 存储在 ~/.gemini/"
+      "providers": {
+        "claude": {
+          "binary": "/Users/bornfly/.npm-global/bin/claude",
+          "label": "Claude Code",
+          "model_hint": "claude-sonnet-4-6",
+          "startup_flags": ["--dangerously-skip-permissions"],
+          "module_root": "/Users/bornfly/Desktop/claude_code_learn/egonetics",
+          "session_suffix": "claude"
+        },
+        "codex": {
+          "binary": "/Users/bornfly/.npm-global/bin/codex",
+          "label": "Codex CLI",
+          "model_hint": "codex",
+          "startup_flags": [],
+          "module_root": "/Users/Shared/prvse_world_workspace",
+          "session_suffix": "codex"
+        },
+        "gemini": {
+          "binary": "/Users/bornfly/.npm-global/bin/gemini",
+          "label": "Gemini CLI",
+          "model_hint": "gemini-2.5-pro",
+          "startup_flags": ["--approval-mode", "yolo"],
+          "module_root": "/Users/bornfly/Desktop/claude_code_learn/egonetics/src",
+          "session_suffix": "gemini"
+        }
+      }
     }
   }
 }
