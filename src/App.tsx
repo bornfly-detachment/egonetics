@@ -34,6 +34,7 @@ import FreeCodeTerminal from './components/FreeCodeTerminal'
 import PRVDemo from './components/prvse/PRVDemo'
 import FontCompare from './components/prvse/FontCompare'
 import ResourcesConsolePage from './components/resources/ResourcesConsolePage'
+import CodexUsagePage from './components/resources/CodexUsagePage'
 import ExcalidrawView from './components/ExcalidrawView'
 import { TokenProvider } from './design/TokenProvider'
 import LoginPage from './components/LoginPage'
@@ -116,6 +117,8 @@ const RouteSync: React.FC = () => {
       view = 'font-compare'
     } else if (path === '/resources') {
       view = 'resources'
+    } else if (path === '/resources_codex') {
+      view = 'resources-codex'
     } else if (path === '/resources_claude') {
       view = 'resources-claude'
     } else if (path === '/excalidraw') {
@@ -220,6 +223,9 @@ const RouteSync: React.FC = () => {
       case 'resources':
         targetPath = '/resources'
         break
+      case 'resources-codex':
+        targetPath = '/resources_codex'
+        break
       case 'resources-claude':
         targetPath = '/resources_claude'
         break
@@ -308,6 +314,7 @@ const AppContent: React.FC = () => {
               <Route path="/prv-demo" element={<PRVDemo />} />
               <Route path="/font-compare" element={<FontCompare />} />
               <Route path="/resources" element={<ResourcesConsolePage />} />
+              <Route path="/resources_codex" element={<CodexUsagePage />} />
               <Route path="/resources_claude" element={<UsageLimitsView />} />
               <Route path="/excalidraw" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><ExcalidrawView /></div>} />
               <Route path="*" element={<Navigate to="/home" replace />} />

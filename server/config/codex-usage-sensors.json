@@ -1,0 +1,15 @@
+{
+  "pollMs": 20000,
+  "limits": {
+    "currentSessionTokens": null,
+    "dailyTokens": null,
+    "subscriptionTokens": null,
+    "weeklyTokens": null
+  },
+  "sensorOrder": [
+    "current-session",
+    "daily-usage",
+    "subscription-window",
+    "weekly-usage"
+  ]
+}

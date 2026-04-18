@@ -72,6 +72,8 @@ export interface UIState {
     | 'prv-demo'
     | 'font-compare'
     | 'resources'
+    | 'resources-codex'
+    | 'resources-claude'
     | 'excalidraw'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
