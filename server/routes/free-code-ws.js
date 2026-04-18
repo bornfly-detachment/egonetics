@@ -268,7 +268,8 @@ function attach(httpServer) {
         const tag = spawnPlan.isolated
           ? `as ${spawnPlan.effectiveUser}`
           : `direct (${spawnPlan.fallbackReason})`
-        console.log(`[free-code-ws] spawned id=${clientId} pid=${ptyProcess.pid} tier=${currentTier.id} session=${sessionName} cwd=${cwd} ${tag}`)
+        const providerTag = spawnPlan.provider ? ` provider=${spawnPlan.provider.id}` : ''
+        console.log(`[free-code-ws] spawned id=${clientId} pid=${ptyProcess.pid} tier=${currentTier.id}${providerTag} session=${sessionName} cwd=${cwd} ${tag}`)
       } catch (err) {
         send({ type: 'error', error: `spawn failed: ${err.message}` })
       }
