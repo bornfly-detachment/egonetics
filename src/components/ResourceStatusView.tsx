@@ -31,6 +31,15 @@ interface ResourceStatus {
   timestamp: number
 }
 
+interface CanonicalProjection {
+  namingContract?: { aiLevels?: string[]; note?: string }
+  statusVocabulary?: string[]
+  modelResources?: unknown[]
+  harnessResources?: unknown[]
+  resourceBindings?: unknown[]
+  runtimeTiers?: Array<{ id: string; providers?: string[]; hostConfigPresent?: boolean; legacyFreeCodeTierKey?: string | null }>
+}
+
 const TIER_COLORS: Record<string, string> = {
   T0: '#22c55e',
   T1: '#60a5fa',
@@ -114,6 +123,7 @@ function TierCard({ tier, status }: { tier: string; status: TierStatus }) {
 
 export default function ResourceStatusView() {
   const [status, setStatus] = useState<ResourceStatus | null>(null)
+  const [canonical, setCanonical] = useState<CanonicalProjection | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -121,8 +131,13 @@ export default function ResourceStatusView() {
     setLoading(true)
     setError(null)
     try {
-      const data = await authFetch<ResourceStatus>('/resources/status')
-      setStatus(data)
+      const [data, canonicalData] = await Promise.allSettled([
+        authFetch<ResourceStatus>('/resources/status'),
+        authFetch<CanonicalProjection>('/resources/status/canonical'),
+      ])
+
+      if (data.status === 'fulfilled') setStatus(data.value)
+      if (canonicalData.status === 'fulfilled') setCanonical(canonicalData.value)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -155,6 +170,43 @@ export default function ResourceStatusView() {
 
       {error && (
         <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">{error}</div>
+      )}
+
+      {canonical && (
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-cyan-200">Canonical Projection</span>
+            <span className="text-xs text-cyan-300/70">
+              {canonical.statusVocabulary?.length || 0} statuses · {canonical.modelResources?.length || 0} models · {canonical.harnessResources?.length || 0} harnesses
+            </span>
+          </div>
+          <div className="text-xs text-cyan-100/70">
+            {canonical.namingContract?.note || 'canonical projection loaded'}
+          </div>
+          {canonical.runtimeTiers?.[0] && (
+            <div className="text-xs text-cyan-100/70">
+              runtime tier {canonical.runtimeTiers[0].id} → providers: {(canonical.runtimeTiers[0].providers || []).join(', ')}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="rounded-lg border border-cyan-500/10 bg-black/10 p-3 space-y-1">
+              <div className="font-semibold text-cyan-100">Models</div>
+              {(canonical.modelResources || []).slice(0, 4).map((item: any) => (
+                <div key={item.id} className="text-cyan-100/80">
+                  {item.id} · {item.aiLevel} · {item.status}
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-cyan-500/10 bg-black/10 p-3 space-y-1">
+              <div className="font-semibold text-cyan-100">Harnesses</div>
+              {(canonical.harnessResources || []).slice(0, 4).map((item: any) => (
+                <div key={item.id} className="text-cyan-100/80">
+                  {item.id} · {item.binary || item.modelHint || 'unknown'} · {item.status}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {status && (

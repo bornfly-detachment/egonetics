@@ -186,7 +186,7 @@ Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident c
   - **`anchor_tag_id` on protocol entries**: each entry anchors to a tag tree node; deleting a tag that is referenced by protocol entries is blocked with a 409 error listing the referencing rules
   - **Seed scripts**: `seed-ui-components.js`, `seed-resource-tier.js`, `seed-permission-layers.js`, `seed-communication-protocol.js`
   - **Visuals**: `ResourceTierVisual`, `CommunicationVisual`, `UIComponentVisual` — new visual renderer routes in `ProtocolVisual`
-  - **三层 LLM 客户端** (`server/lib/llm.js`): T0 `seaiClient` (localhost:8000) / T1 `minimaxClient` (MiniMax-M2.7) / T2 `claudeClient` (claude-sonnet-4-6); `getClientForTier()` with T2→T1 graceful downgrade when `ANTHROPIC_API_KEY` absent
+  - **兼容层 LLM 客户端** (`server/lib/llm.js`): T0 `seaiClient` (localhost:8000) / T1 `minimaxClient` (MiniMax-M2.7) / T2 `claudeClient` (claude-sonnet-4-6); `getClientForTier()` no longer silently downgrades T2 — missing Anthropic auth now surfaces `AUTH_REQUIRED`
 
 - **Cybernetics Hub v2 — SEAI Live Integration** *(2026-04-02)*
   - **CyberneticsSystemView** redesigned: left-side persistent tree navigation (PRVSE 5-layer × 3-question tag tree) + right-side content panel
@@ -649,7 +649,7 @@ Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系
   - **通信机制 L0/L1/L2**：L0 描述型 / L1 请求型 / L2 控制型 — 类型化边，映射至 PRVSE 图中的 R 层
   - **标签锚定保护**：删除被协议规则引用的标签节点时，返回 409 错误并列出所有引用规则，防止悬空引用
   - **种子脚本**：`seed-ui-components.js`、`seed-resource-tier.js`、`seed-permission-layers.js`、`seed-communication-protocol.js`
-  - **三层 LLM 客户端** (`server/lib/llm.js`)：T0 `seaiClient`（localhost:8000）/ T1 `minimaxClient`（MiniMax-M2.7）/ T2 `claudeClient`（claude-sonnet-4-6）；`getClientForTier()` 支持 T2→T1 优雅降级（`ANTHROPIC_API_KEY` 未配置时自动回退）
+  - **兼容层 LLM 客户端** (`server/lib/llm.js`)：T0 `seaiClient`（localhost:8000）/ T1 `minimaxClient`（MiniMax-M2.7）/ T2 `claudeClient`（claude-sonnet-4-6）；`getClientForTier()` 不再对 T2 做静默降级，缺少 Anthropic 认证时会显式返回 `AUTH_REQUIRED`
 
 - **控制论 Hub v2 — SEAI 实时集成** *(2026-04-02)*
   - **CyberneticsSystemView 重设计**：左侧常驻树形导航（PRVSE 5层×3问标签树）+ 右侧内容区

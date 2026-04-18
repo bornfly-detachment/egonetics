@@ -1,10 +1,10 @@
 /**
  * server/lib/llm.js
- * 三层 LLM 客户端：T0 SEAI 本地 / T1 MiniMax 云端 / T2 Claude 专家
+ * 兼容层 LLM 客户端：T0 SEAI 本地 / T1 MiniMax 云端 / T2 Claude（需显式认证）
  *
  * T0: localhost:8000 — SEAI 本地模型，零延迟，离线可用
  * T1: minimaxi.com   — MiniMax-M2.7，高并发，兼容 Anthropic 协议
- * T2: api.anthropic.com — claude-sonnet-4-6，顶级专家模型
+ * T2: Claude 访问需要 Anthropic API key 或 CLI harness login；无静默降级
  *
  * 注意：T0/T1/T2 执行逻辑已迁移到各自独立文件：
  *   t0-engine.js — T0 直接调用 localhost:8001/generate
@@ -48,8 +48,11 @@ function getClientForTier(tier) {
   if (tier === 'T0') return { client: seaiClient, model: MODELS.T0 }
   if (tier === 'T2') {
     if (!process.env.ANTHROPIC_API_KEY) {
-      // Claude API key 未配置，降级到 MiniMax
-      return { client: minimaxClient, model: MODELS.T1, downgraded: true }
+      const err = new Error('T2 requires Anthropic API key or CLI harness login; silent fallback is disabled')
+      err.code = 'AUTH_REQUIRED'
+      err.status = 401
+      err.retryable = false
+      throw err
     }
     return { client: claudeClient, model: MODELS.T2 }
   }

@@ -23,8 +23,10 @@
 'use strict'
 
 const path = require('path')
+const fs = require('fs')
 
 const SERVER_ROOT = path.resolve(__dirname, '../..')
+const FREE_CODE_TIERS_PATH = path.join(SERVER_ROOT, 'config/free-code-tiers.json')
 
 // ── 服务提供方 ───────────────────────────────────────────────────
 
@@ -155,6 +157,113 @@ const LOG_PATHS = {
   },
 }
 
+const STATUS_VOCABULARY = ['ready', 'auth_required', 'unknown', 'unavailable', 'degraded']
+
+const NAMING_CONTRACT = {
+  aiLevels: ['T0', 'T1', 'T2'],
+  note: 'PRVSE constitutional AI levels never exceed T2. free-code tier keys such as T3/T4 remain legacy host config keys.',
+}
+
+const OWNERSHIP_SPLIT = {
+  prvse: ['resource_identity', 'harness_model_separation', 'bindings', 'policy', 'canonical_status_vocabulary'],
+  egonetics: ['runtime_observation', 'terminal_transport', 'auth_detection', 'live_usage_projection', 'ui_projection'],
+}
+
+function readFreeCodeTiers() {
+  try {
+    return JSON.parse(fs.readFileSync(FREE_CODE_TIERS_PATH, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function buildCanonicalProjection() {
+  const freeCodeTiers = readFreeCodeTiers()
+  const tierMap = freeCodeTiers?.tiers || {}
+  const hostT2 = tierMap.T2 || null
+
+  return {
+    namingContract: NAMING_CONTRACT,
+    ownershipSplit: OWNERSHIP_SPLIT,
+    statusVocabulary: STATUS_VOCABULARY,
+    modelResources: [
+      {
+        id: 'model:local-deterministic',
+        aiLevel: 'T0',
+        providerTier: 'T0',
+        runtime: 'local',
+        protocol: PROVIDERS.T0.protocol,
+        model: PROVIDERS.T0.model,
+        status: 'ready',
+      },
+      {
+        id: 'model:minimax',
+        aiLevel: 'T1',
+        providerTier: 'T1',
+        runtime: 'api',
+        protocol: PROVIDERS.T1.protocol,
+        model: PROVIDERS.T1.model,
+        status: 'unknown',
+      },
+    ],
+    harnessResources: [
+      {
+        id: 'harness:claude-cli',
+        aiLevel: 'T2',
+        providerTier: 'T2',
+        legacyFreeCodeTierKey: hostT2 ? 'T2' : null,
+        runtime: 'cli',
+        binary: 'claude',
+        modelHint: hostT2?.model_hint || 'unknown',
+        status: hostT2 ? 'unknown' : 'unavailable',
+        hostConfigPresent: Boolean(hostT2),
+      },
+      {
+        id: 'harness:codex-cli',
+        aiLevel: 'T2',
+        providerTier: 'T2',
+        legacyFreeCodeTierKey: hostT2 ? 'T2' : null,
+        runtime: 'cli',
+        binary: 'codex',
+        modelHint: 'codex',
+        status: hostT2 ? 'unknown' : 'unavailable',
+        hostConfigPresent: Boolean(hostT2),
+      },
+      {
+        id: 'harness:gemini-cli',
+        aiLevel: 'T2',
+        providerTier: 'T2',
+        legacyFreeCodeTierKey: hostT2 ? 'T2' : null,
+        runtime: 'cli',
+        binary: 'gemini',
+        modelHint: 'gemini',
+        status: hostT2 ? 'unknown' : 'unavailable',
+        hostConfigPresent: Boolean(hostT2),
+      },
+    ],
+    runtimeTiers: [
+      {
+        id: 'T2',
+        aiLevel: 'T2',
+        legacyFreeCodeTierKey: hostT2 ? 'T2' : null,
+        hostConfigPresent: Boolean(hostT2),
+        providers: ['harness:claude-cli', 'harness:codex-cli', 'harness:gemini-cli'],
+      },
+    ],
+    resourceBindings: [
+      { id: 'binding:slot:T0', aiLevel: 'T0', modelResourceId: 'model:local-deterministic' },
+      { id: 'binding:slot:T1', aiLevel: 'T1', modelResourceId: 'model:minimax' },
+      {
+        id: 'binding:slot:T2',
+        aiLevel: 'T2',
+        harnessResourceIds: ['harness:claude-cli', 'harness:codex-cli', 'harness:gemini-cli'],
+        legacyFreeCodeTierKey: hostT2 ? 'T2' : null,
+        hostConfigPresent: Boolean(hostT2),
+      },
+    ],
+  }
+}
+
 // ── 公共接口 ─────────────────────────────────────────────────────
 
 function getProvider(tier) {
@@ -182,6 +291,7 @@ function manifest() {
     providers: PROVIDERS,
     consumers: CONSUMERS,
     logs: LOG_PATHS,
+    canonicalProjection: buildCanonicalProjection(),
     migrationProgress: {
       migrated: CONSUMERS.filter(c => c.status === 'migrated').length,
       pending: CONSUMERS.filter(c => c.status.startsWith('pending')).length,
@@ -190,4 +300,13 @@ function manifest() {
   }
 }
 
-module.exports = { getProvider, getConsumers, getLogPaths, manifest, PROVIDERS, CONSUMERS, LOG_PATHS }
+module.exports = {
+  getProvider,
+  getConsumers,
+  getLogPaths,
+  manifest,
+  canonicalProjection: buildCanonicalProjection,
+  PROVIDERS,
+  CONSUMERS,
+  LOG_PATHS,
+}

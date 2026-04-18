@@ -58,9 +58,30 @@ router.get('/resources/status', (_req, res) => {
   })
 })
 
+// GET /api/resources/status/canonical
+// New read-only surface: runtime observation + canonical projection side by side.
+router.get('/resources/status/canonical', (_req, res) => {
+  const aiStatus = ai.status()
+  const harnessStatus = harness.status()
+
+  res.json({
+    observedAt: aiStatus.timestamp,
+    canonical: ai.registry.canonicalProjection(),
+    runtime: {
+      aiStatus,
+      harnessStatus,
+    },
+  })
+})
+
 // GET /api/resources/registry
 router.get('/resources/registry', (_req, res) => {
   res.json(ai.registry.manifest())
+})
+
+// GET /api/resources/registry/canonical
+router.get('/resources/registry/canonical', (_req, res) => {
+  res.json(ai.registry.canonicalProjection())
 })
 
 // GET /api/resources/logs?date=YYYY-MM-DD&n=50

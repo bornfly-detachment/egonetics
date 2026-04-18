@@ -193,7 +193,18 @@ router.post('/chat', async (req, res) => {
     return res.status(503).json({ error: `AI 队列拒绝请求: ${err.message}` })
   }
 
-  const { client, model: tierModel } = getClientForTier(tier)
+  let client
+  let tierModel
+  try {
+    ({ client, model: tierModel } = getClientForTier(tier))
+  } catch (e) {
+    sem.release()
+    if (e?.code === 'AUTH_REQUIRED' || e?.status === 401) {
+      return res.status(401).json({ error: e.message, code: 'AUTH_REQUIRED' })
+    }
+    return res.status(500).json({ error: e.message })
+  }
+
   const finalModel     = model || tierModel
   const finalMaxTokens = max_tokens || DEFAULT_MAX_TOKENS
   const finalMessages  = buildMessages(messages, system)
@@ -226,6 +237,9 @@ router.post('/chat', async (req, res) => {
       })
     } catch (e) {
       sem.release()
+      if (e?.code === 'AUTH_REQUIRED' || e?.status === 401) {
+        return res.status(401).json({ error: e.message, code: 'AUTH_REQUIRED' })
+      }
       return res.status(500).json({ error: e.message })
     }
   }
@@ -283,7 +297,11 @@ router.post('/chat', async (req, res) => {
     })
   } catch (e) {
     console.error('[ai/chat] stream error:', e.message)
+    if (e?.code === 'AUTH_REQUIRED' || e?.status === 401) {
+      send({ error: e.message, code: 'AUTH_REQUIRED' })
+    } else {
     send({ error: e.message })
+    }
   } finally {
     sem.release()
     res.end()
