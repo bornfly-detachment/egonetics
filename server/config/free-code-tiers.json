@@ -77,6 +77,7 @@
           "model_hint": "claude-sonnet-4-6",
           "startup_flags": ["--dangerously-skip-permissions"],
           "module_root": "/Users/bornfly/Desktop/claude_code_learn/egonetics",
+          "scope": { "writable": ["/Users/bornfly/Desktop/claude_code_learn/egonetics"] },
           "session_suffix": "claude"
         },
         "codex": {
@@ -85,6 +86,7 @@
           "model_hint": "codex",
           "startup_flags": [],
           "module_root": "/Users/Shared/prvse_world_workspace",
+          "scope": { "writable": ["/Users/Shared/prvse_world_workspace"] },
           "session_suffix": "codex"
         },
         "gemini": {
