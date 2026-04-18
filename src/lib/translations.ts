@@ -391,7 +391,7 @@ const zh: Translation = {
     home: '主页', memory: '记忆', theory: '生变论', chronicle: '生变录',
     tasks: '任务', blog: '博客', egonetics: '自我控制论', tagTree: '标签语义树',
     protocol: '人机协议', protoBuilder: '协议构建器', prvseWorld: 'PRVSE World', freeCode: 'Free Code',
-    lab: '测试环境', mq: '消息队列', resourcesClaude: 'AI 用量', recycle: '回收站', collapse: '收起', logout: '退出',
+    lab: '测试环境', mq: '消息队列', resourcesClaude: 'AI 用量', resourcesGemini: 'Gemini 感知', recycle: '回收站', collapse: '收起', logout: '退出',
   },
 
   home: {
