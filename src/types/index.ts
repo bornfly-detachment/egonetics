@@ -74,6 +74,7 @@ export interface UIState {
     | 'resources'
     | 'resources-codex'
     | 'resources-claude'
+    | 'resources-gemini'
     | 'excalidraw'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
