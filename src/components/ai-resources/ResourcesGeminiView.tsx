@@ -1,5 +1,5 @@
 // Gemini-added (2026-04-18): real-time AI resource view backed by runtime projection store.
-import React, { useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react"
 import {
   getHarnessRuntimeSnapshot,
   subscribeHarnessRuntimeSnapshots,
