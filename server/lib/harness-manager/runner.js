@@ -339,8 +339,12 @@ function buildTmuxSpawn(opts) {
     envArgs.push('-e', `${k}=${v}`)
   }
 
-  // Per-tier session name: same cwd with different tier → different session
-  const sessionName = buildSessionName(tier, cwd)
+  // Session name includes provider suffix so claude/codex/gemini each get their own tmux session.
+  // buildSessionName uses tier.session_prefix; append provider's session_suffix when present.
+  const rawSessionName = buildSessionName(tier, cwd)
+  const sessionName = providerCfg && providerCfg.session_suffix
+    ? `${rawSessionName}-${providerCfg.session_suffix}`
+    : rawSessionName
 
   // Proactively repair stale tmux state before spawn. No-op if healthy.
   // This fixes the edge case where a previous free-code crash left
@@ -349,9 +353,10 @@ function buildTmuxSpawn(opts) {
     repairStaleServer(spawnUser, tmuxSocket)
   }
 
-  // Resolve binary: tier.binary takes priority over opts.binary (caller fallback)
-  const resolvedBinary = tier.binary || opts.binary
-  const startupFlags = Array.isArray(tier.startup_flags) ? tier.startup_flags.join(' ') : ''
+  // Binary resolution priority: provider config → tier-level binary → opts.binary fallback
+  const resolvedBinary = (providerCfg && providerCfg.binary) || tier.binary || opts.binary
+  const rawFlags = (providerCfg && providerCfg.startup_flags) || tier.startup_flags || []
+  const startupFlags = Array.isArray(rawFlags) ? rawFlags.join(' ') : ''
   const binaryCmd = startupFlags ? `${resolvedBinary} ${startupFlags}` : resolvedBinary
 
   const tmuxArgs = [
