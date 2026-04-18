@@ -318,6 +318,21 @@ function buildTmuxSpawn(opts) {
     cwd = (providerCfg && providerCfg.module_root) || tier.default_cwd || os.homedir()
   }
 
+  // Enforce provider scope boundary — reject cwd outside declared writable paths.
+  // This prevents claude/codex/gemini from being pointed at each other's domains.
+  // Claude-added (2026-04-18): scope.writable enforcement
+  if (providerCfg && providerCfg.scope && Array.isArray(providerCfg.scope.writable)) {
+    const allowed = providerCfg.scope.writable.some(
+      (p) => cwd === p || cwd.startsWith(p + '/')
+    )
+    if (!allowed) {
+      throw new Error(
+        `provider "${resolvedProviderId}" is not allowed to operate in cwd "${cwd}". ` +
+        `Allowed: ${providerCfg.scope.writable.join(', ')}`
+      )
+    }
+  }
+
   // Per-tier spawn_user decides isolation:
   //   - null    → run as host user (bornfly)
   //   - 'egonetics-lX' → sudo -u to that service user
