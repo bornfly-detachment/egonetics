@@ -55,6 +55,7 @@ export interface Translation {
     freeCode: string
     lab: string
     mq: string
+    resourcesClaude: string
     recycle: string
     collapse: string
     logout: string
