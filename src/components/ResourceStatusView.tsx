@@ -133,7 +133,7 @@ export default function ResourceStatusView() {
     try {
       const [data, canonicalData] = await Promise.allSettled([
         authFetch<ResourceStatus>('/resources/status'),
-        authFetch<CanonicalProjection>('/resources/status/canonical'),
+        authFetch<CanonicalProjection>('/resources/registry/canonical'),
       ])
 
       if (data.status === 'fulfilled') setStatus(data.value)
