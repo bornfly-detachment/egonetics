@@ -268,11 +268,116 @@ function collectUnknown(probe) {
   })
 }
 
+function collectGeminiDailyRequests(probe) {
+  try {
+    const tmpDir = `${os.homedir()}/.gemini/tmp`
+    if (!fs.existsSync(tmpDir)) {
+      return Promise.resolve({
+        rows: [{ id: 'daily', label: 'Requests today', status: 'unknown', used_pct: null, used: 0, total: probe.quota_rpd, note: 'gemini tmp dir not found' }],
+        collected_at: new Date().toISOString(),
+      })
+    }
+
+    const quota   = probe.quota_rpd || 1500
+    const nowMs   = Date.now()
+    const todayMs = new Date().setHours(0, 0, 0, 0)   // midnight local
+
+    let requestsToday = 0
+    let requestsTotal = 0
+
+    // Scan ~/.gemini/tmp/{project}/logs.json — each "user" entry = 1 request
+    let projects
+    try { projects = fs.readdirSync(tmpDir) } catch { projects = [] }
+    for (const proj of projects) {
+      const logPath = `${tmpDir}/${proj}/logs.json`
+      if (!fs.existsSync(logPath)) continue
+      try {
+        const entries = JSON.parse(fs.readFileSync(logPath, 'utf8'))
+        if (!Array.isArray(entries)) continue
+        for (const e of entries) {
+          if (e.type !== 'user') continue
+          requestsTotal++
+          const ts = e.timestamp ? new Date(e.timestamp).getTime() : 0
+          if (ts >= todayMs) requestsToday++
+        }
+      } catch {}
+    }
+
+    const resetMsLeft = new Date().setHours(24, 0, 0, 0) - nowMs
+    const h = Math.floor(resetMsLeft / 3_600_000)
+    const m = Math.floor((resetMsLeft % 3_600_000) / 60_000)
+    const resetIn = `resets in ${h}h ${m}m`
+
+    return Promise.resolve({
+      rows: [{
+        id:       'daily',
+        label:    'Requests today',
+        status:   'ready',
+        used_pct: Math.min(100, Math.round((requestsToday / quota) * 100)),
+        used:     requestsToday,
+        total:    quota,
+        reset_in: resetIn,
+        note:     `${requestsTotal} total turns across all sessions`,
+      }],
+      collected_at: new Date().toISOString(),
+    })
+  } catch (err) {
+    return Promise.resolve({
+      rows: [{ id: 'daily', label: 'Requests today', status: 'error', note: err.message }],
+      collected_at: new Date().toISOString(),
+    })
+  }
+}
+
+function collectMinimaxDailyCalls() {
+  try {
+    const { pagesDb } = require('../db')
+    return new Promise((resolve) => {
+      // Count T1-tier steps in execution_runs created today (local midnight)
+      const todayIso = new Date().toISOString().slice(0, 10)   // "YYYY-MM-DD"
+      pagesDb.all(
+        `SELECT steps FROM execution_runs WHERE date(created_at) = ? ORDER BY created_at DESC`,
+        [todayIso],
+        (err, rows) => {
+          if (err || !rows) {
+            return resolve({ rows: [{ id: 'daily', label: 'T1 calls today', status: 'error', note: err?.message }], collected_at: new Date().toISOString() })
+          }
+          let t1Today = 0
+          for (const row of rows) {
+            try {
+              const steps = JSON.parse(row.steps || '[]')
+              t1Today += steps.filter(s => s.tier === 'T1').length
+            } catch {}
+          }
+          const quota = 500   // soft daily budget — adjust as needed
+          resolve({
+            rows: [{
+              id:       'daily',
+              label:    'T1 calls today',
+              status:   'ready',
+              used_pct: Math.min(100, Math.round((t1Today / quota) * 100)),
+              used:     t1Today,
+              total:    quota,
+              reset_in: null,
+              note:     `${rows.length} runs sampled today`,
+            }],
+            collected_at: new Date().toISOString(),
+          })
+        }
+      )
+    })
+  } catch {
+    return Promise.resolve({ rows: [{ id: 'daily', label: 'T1 calls today', status: 'unknown', note: 'DB unavailable' }], collected_at: new Date().toISOString() })
+  }
+}
+
 async function collectProbe(probe) {
   switch (probe.kind) {
-    case 'claude_cli_session':  return collectClaudeCliSession()
-    case 'db_execution_runs':   return collectDbExecutionRuns()
-    default:                    return collectUnknown(probe)
+    case 'claude_cli_session':     return collectClaudeCliSession()
+    case 'db_execution_runs':      return collectDbExecutionRuns()
+    case 'gemini_daily_requests':  return collectGeminiDailyRequests(probe)
+    case 'minimax_daily_calls':    return collectMinimaxDailyCalls()
+    default:                       return collectUnknown(probe)
   }
 }
 
