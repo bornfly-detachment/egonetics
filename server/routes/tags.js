@@ -248,7 +248,7 @@ router.get('/tag-trees/flat', (_req, res) => {
   try {
     const tree = readTree()
     const flat = []
-    for (const key of ['P', 'R', 'V', 'S', 'E']) {
+    for (const key of ['P', 'R', 'V', 'S', 'E', 'cybernetic_feedback_loop']) {
       if (tree[key]) flattenTree(tree[key], 0, flat)
     }
     res.json(flat)
