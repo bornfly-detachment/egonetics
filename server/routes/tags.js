@@ -205,7 +205,7 @@ router.get('/tag-trees', (req, res) => {
   try {
     const tree = readTree()
     const roots = []
-    for (const key of ['P', 'R', 'V', 'S', 'E']) {
+    for (const key of ['P', 'R', 'V', 'S', 'E', 'cybernetic_feedback_loop']) {
       if (tree[key]) {
         const node = toTagNode(tree[key])
         if (node) roots.push(node)
