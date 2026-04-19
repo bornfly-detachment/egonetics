@@ -78,6 +78,28 @@
         "name": "L1 分子模块（溯源责任链）",
         "children": [
           {
+            "id": "tag-p-l1-content",
+            "name": "内容语义类型",
+            "children": [
+              {
+                "id": "tag-p-l1-c-constitution",
+                "name": "宪法体系"
+              },
+              {
+                "id": "tag-p-l1-c-goal",
+                "name": "目标管理"
+              },
+              {
+                "id": "tag-p-l1-c-resource",
+                "name": "资源/权限/通信管理"
+              },
+              {
+                "id": "tag-p-l1-c-egonetics",
+                "name": "PRVSE 组成 Egonetics"
+              }
+            ]
+          },
+          {
             "id": "tag-p-origin",
             "name": "溯源来源",
             "children": [
