@@ -82,8 +82,9 @@ function collectClaudeCliSession() {
       return _claudeNoData('projects dir not found')
     }
 
-    const nowMs = Date.now()
-    const weekMs = 7 * 24 * 3600 * 1000
+    const nowMs  = Date.now()
+    const fiveHMs = 5 * 3600 * 1000
+    const weekMs  = 7 * 24 * 3600 * 1000
 
     // Collect all .jsonl files recursively (depth ≤ 3) modified within 7 days
     const jsonlFiles = []
@@ -107,13 +108,11 @@ function collectClaudeCliSession() {
 
     if (jsonlFiles.length === 0) return _claudeNoData('no recent sessions')
 
-    // Sort by mtime descending — first entry = most recent session
-    jsonlFiles.sort((a, b) => b.mtimeMs - a.mtimeMs)
-    const latestSessionPath = jsonlFiles[0].path
-
-    // Aggregate tokens: current session (latest file) and weekly (all files)
+    // Aggregate tokens across files with a cutoffMs lower bound.
+    // Returns aggregated counters + earliest timestamp seen (for reset calculation).
     function aggregateTokens(filePaths, cutoffMs) {
-      let inputTokens = 0, outputTokens = 0, cacheCreate = 0, cacheRead = 0, turns = 0
+      let inputTokens = 0, outputTokens = 0, cacheRead = 0, turns = 0
+      let earliestTs = Infinity
       for (const p of filePaths) {
         let lines
         try { lines = fs.readFileSync(p, 'utf8').split('\n') } catch { continue }
@@ -125,19 +124,19 @@ function collectClaudeCliSession() {
             if (cutoffMs && ts < cutoffMs) continue
             const usage = entry.message?.usage || entry.usage
             if (!usage) continue
-            if (usage.input_tokens) inputTokens += usage.input_tokens
-            if (usage.output_tokens) outputTokens += usage.output_tokens
-            if (usage.cache_creation_input_tokens) cacheCreate += usage.cache_creation_input_tokens
-            if (usage.cache_read_input_tokens) cacheRead += usage.cache_read_input_tokens
+            const inp = usage.input_tokens || 0
+            const out = usage.output_tokens || 0
+            if (inp === 0 && out === 0) continue   // skip zero-value entries
+            inputTokens += inp
+            outputTokens += out
+            cacheRead   += usage.cache_read_input_tokens || 0
             turns++
+            if (ts && ts < earliestTs) earliestTs = ts
           } catch {}
         }
       }
-      return { inputTokens, outputTokens, cacheCreate, cacheRead, turns }
+      return { inputTokens, outputTokens, cacheRead, turns, earliestTs }
     }
-
-    const sessionStats = aggregateTokens([latestSessionPath], 0)
-    const weekStats    = aggregateTokens(jsonlFiles.map(f => f.path), nowMs - weekMs)
 
     function fmt(n) {
       if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -145,10 +144,26 @@ function collectClaudeCliSession() {
       return String(n)
     }
 
+    function fmtDuration(ms) {
+      if (ms <= 0) return 'soon'
+      const h = Math.floor(ms / 3600_000)
+      const m = Math.floor((ms % 3600_000) / 60_000)
+      if (h > 0) return `${h}h ${m}m`
+      return `${m}m`
+    }
+
+    const allPaths     = jsonlFiles.map(f => f.path)
+    const sessionStats = aggregateTokens(allPaths, nowMs - fiveHMs)
+    const weekStats    = aggregateTokens(allPaths, nowMs - weekMs)
+
+    // Reset countdown: 5h window expires at (earliest turn in window + 5h)
+    const sessionResetMs = sessionStats.earliestTs !== Infinity
+      ? (sessionStats.earliestTs + fiveHMs) - nowMs
+      : null
+
     const sessionTotal = sessionStats.inputTokens + sessionStats.outputTokens
     const weekTotal    = weekStats.inputTokens + weekStats.outputTokens
 
-    // Claude Max quota is not exposed via API; show real counts with no fake %
     return {
       rows: [
         {
@@ -158,18 +173,18 @@ function collectClaudeCliSession() {
           used_pct: null,
           used:     `${fmt(sessionTotal)} tokens`,
           total:    null,
-          reset_in: null,
-          note:     `in: ${fmt(sessionStats.inputTokens)}  out: ${fmt(sessionStats.outputTokens)}  cache_hit: ${fmt(sessionStats.cacheRead)}`,
+          reset_in: sessionResetMs !== null ? `resets in ${fmtDuration(sessionResetMs)}` : null,
+          note:     `in: ${fmt(sessionStats.inputTokens)}  out: ${fmt(sessionStats.outputTokens)}  cache: ${fmt(sessionStats.cacheRead)}`,
         },
         {
           id:       'weekly',
-          label:    'All models (7 days)',
+          label:    'All models (weekly)',
           status:   'ready',
           used_pct: null,
           used:     `${fmt(weekTotal)} tokens`,
           total:    null,
-          reset_in: null,
-          note:     `${weekStats.turns} turns across ${jsonlFiles.length} sessions`,
+          reset_in: 'resets weekly',
+          note:     `${weekStats.turns} turns  ${jsonlFiles.length} sessions`,
         },
       ],
       collected_at: new Date().toISOString(),
