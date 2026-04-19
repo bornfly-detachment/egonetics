@@ -6,137 +6,148 @@
     "name": "P — Pattern",
     "children": [
       {
-        "id": "tag-p-state",
-        "name": "Pattern 状态",
-        "select_mode": "single",
+        "id": "tag-p-l0",
+        "name": "L0 原子模式（感知器输入）",
         "children": [
           {
-            "id": "tag-p-st-external",
-            "name": "外部态"
-          },
-          {
-            "id": "tag-p-st-candidate",
-            "name": "候选态"
-          },
-          {
-            "id": "tag-p-st-internal",
-            "name": "内部态"
-          }
-        ]
-      },
-      {
-        "id": "tag-p-origin",
-        "name": "来源溯源",
-        "children": [
-          {
-            "id": "tag-p-ori-internal",
-            "name": "内部来源",
+            "id": "tag-p-state",
+            "name": "接入状态",
+            "select_mode": "single",
             "children": [
               {
-                "id": "tag-p-ori-user",
-                "name": "用户输入"
+                "id": "tag-p-st-external",
+                "name": "外部态"
               },
               {
-                "id": "tag-p-ori-model",
-                "name": "模型调用"
+                "id": "tag-p-st-candidate",
+                "name": "候选态"
               },
               {
-                "id": "tag-p-ori-module",
-                "name": "模块产出"
-              },
-              {
-                "id": "tag-p-ori-event",
-                "name": "系统事件"
-              },
-              {
-                "id": "tag-p-ori-memory",
-                "name": "过程记忆"
+                "id": "tag-p-st-internal",
+                "name": "内部态"
               }
             ]
           },
           {
-            "id": "tag-p-ori-external",
-            "name": "外部来源",
+            "id": "tag-p-physical",
+            "name": "物理载体",
+            "select_mode": "single",
             "children": [
               {
-                "id": "tag-p-ori-computable",
-                "name": "可计算溯源"
+                "id": "tag-p-phy-text",
+                "name": "文本"
               },
               {
-                "id": "tag-p-ori-verifiable",
-                "name": "可验证溯源"
+                "id": "tag-p-phy-number",
+                "name": "数值"
               },
               {
-                "id": "tag-p-ori-narrative",
-                "name": "叙事溯源"
+                "id": "tag-p-phy-code",
+                "name": "代码"
               },
               {
-                "id": "tag-p-ori-sensor",
-                "name": "环境感知"
+                "id": "tag-p-phy-structured",
+                "name": "结构化数据"
+              },
+              {
+                "id": "tag-p-phy-image",
+                "name": "图像"
+              },
+              {
+                "id": "tag-p-phy-audio",
+                "name": "音频"
+              },
+              {
+                "id": "tag-p-phy-video",
+                "name": "视频"
+              },
+              {
+                "id": "tag-p-phy-stream",
+                "name": "流式数据"
+              },
+              {
+                "id": "tag-p-phy-mixed",
+                "name": "混合体"
               }
             ]
           }
         ]
       },
       {
-        "id": "tag-p-physical",
-        "name": "物理载体",
-        "select_mode": "single",
+        "id": "tag-p-l1",
+        "name": "L1 分子模块（溯源责任链）",
         "children": [
           {
-            "id": "tag-p-phy-text",
-            "name": "文本"
-          },
-          {
-            "id": "tag-p-phy-number",
-            "name": "数值"
-          },
-          {
-            "id": "tag-p-phy-code",
-            "name": "代码"
-          },
-          {
-            "id": "tag-p-phy-structured",
-            "name": "结构化数据"
-          },
-          {
-            "id": "tag-p-phy-image",
-            "name": "图像"
-          },
-          {
-            "id": "tag-p-phy-audio",
-            "name": "音频"
-          },
-          {
-            "id": "tag-p-phy-video",
-            "name": "视频"
-          },
-          {
-            "id": "tag-p-phy-stream",
-            "name": "流式数据"
-          },
-          {
-            "id": "tag-p-phy-mixed",
-            "name": "混合体"
+            "id": "tag-p-origin",
+            "name": "溯源来源",
+            "children": [
+              {
+                "id": "tag-p-ori-internal",
+                "name": "内部来源",
+                "children": [
+                  {
+                    "id": "tag-p-ori-user",
+                    "name": "用户输入"
+                  },
+                  {
+                    "id": "tag-p-ori-model",
+                    "name": "模型调用"
+                  },
+                  {
+                    "id": "tag-p-ori-module",
+                    "name": "模块产出"
+                  },
+                  {
+                    "id": "tag-p-ori-event",
+                    "name": "系统事件"
+                  },
+                  {
+                    "id": "tag-p-ori-memory",
+                    "name": "过程记忆"
+                  }
+                ]
+              },
+              {
+                "id": "tag-p-ori-external",
+                "name": "外部来源",
+                "children": [
+                  {
+                    "id": "tag-p-ori-computable",
+                    "name": "可计算溯源"
+                  },
+                  {
+                    "id": "tag-p-ori-verifiable",
+                    "name": "可验证溯源"
+                  },
+                  {
+                    "id": "tag-p-ori-narrative",
+                    "name": "叙事溯源"
+                  },
+                  {
+                    "id": "tag-p-ori-sensor",
+                    "name": "环境感知"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
       {
-        "id": "tag-p-level",
-        "name": "级别",
-        "select_mode": "single",
+        "id": "tag-p-l2",
+        "name": "L2 基因抽象（高概率触发进化）",
         "children": [
           {
-            "id": "tag-p-lv-l0",
-            "name": "L0 原子"
+            "id": "tag-p-l2-statistical",
+            "name": "统计价值"
           },
           {
-            "id": "tag-p-lv-l1",
-            "name": "L1 分子"
+            "id": "tag-p-l2-trigger-e",
+            "name": "触发系统进化"
           },
           {
-            "id": "tag-p-lv-l2",
-            "name": "L2 基因"
+            "id": "tag-p-l2-coverage",
+            "name": "最小内容最大覆盖"
           }
         ]
       }
@@ -1096,82 +1107,6 @@
                 "name": "实践反馈"
               }
             ]
-          }
-        ]
-      }
-    ]
-  },
-  "cybernetic_feedback_loop": {
-    "id": "tag-cyber",
-    "name": "控制论反馈回路",
-    "children": [
-      {
-        "id": "tag-cyber-l0",
-        "name": "L0 确定性控制",
-        "children": [
-          {
-            "id": "tag-cyber-l0-perceive",
-            "name": "感知(P采集)"
-          },
-          {
-            "id": "tag-cyber-l0-validate",
-            "name": "校验(V判定)"
-          },
-          {
-            "id": "tag-cyber-l0-transition",
-            "name": "状态转移(S)"
-          },
-          {
-            "id": "tag-cyber-l0-feedback",
-            "name": "反馈回P"
-          }
-        ]
-      },
-      {
-        "id": "tag-cyber-l1",
-        "name": "L1 层级控制",
-        "children": [
-          {
-            "id": "tag-cyber-l1-hierarchy",
-            "name": "层级控制"
-          },
-          {
-            "id": "tag-cyber-l1-optimality",
-            "name": "局部vs全局"
-          },
-          {
-            "id": "tag-cyber-l1-lifecycle",
-            "name": "生命周期"
-          },
-          {
-            "id": "tag-cyber-l1-memory",
-            "name": "过程记忆"
-          }
-        ]
-      },
-      {
-        "id": "tag-cyber-l2",
-        "name": "L2 Egonetics",
-        "children": [
-          {
-            "id": "tag-cyber-l2-narrative",
-            "name": "内外叙事张力"
-          },
-          {
-            "id": "tag-cyber-l2-dialectic",
-            "name": "可控-失控辩证"
-          },
-          {
-            "id": "tag-cyber-l2-egonetics",
-            "name": "实验研发"
-          },
-          {
-            "id": "tag-cyber-l2-shengbianlun",
-            "name": "生变论"
-          },
-          {
-            "id": "tag-cyber-l2-emergence",
-            "name": "涌现唯物"
           }
         ]
       }
