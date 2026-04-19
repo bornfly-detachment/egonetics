@@ -56,13 +56,24 @@ const DEFAULT_PROBES = [
     ],
   },
   {
-    id:          'gemini-session',
+    id:          'gemini-daily',
     label:       'Gemini CLI',
-    plan:        'Free',
-    kind:        'unknown',
-    interval_ms: 120_000,
+    plan:        'Pro',
+    kind:        'gemini_daily_requests',
+    interval_ms: 60_000,
+    quota_rpd:   1500,
     rows: [
-      { id: 'session', label: 'Current session', reset_hint: null },
+      { id: 'daily', label: 'Requests today', reset_hint: 'daily (midnight)' },
+    ],
+  },
+  {
+    id:          'minimax-daily',
+    label:       'MiniMax T1',
+    plan:        null,
+    kind:        'minimax_daily_calls',
+    interval_ms: 30_000,
+    rows: [
+      { id: 'daily', label: 'T1 calls today', reset_hint: 'daily (midnight)' },
     ],
   },
 ]
