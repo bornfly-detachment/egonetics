@@ -199,6 +199,24 @@
                 "name": "发展"
               }
             ]
+          },
+          {
+            "id": "tag-r-l1-temporal-forms",
+            "name": "时间关系的物化形式",
+            "children": [
+              {
+                "id": "tag-r-l1-chronicle",
+                "name": "编年记录（时序哈希链）"
+              },
+              {
+                "id": "tag-r-l1-lifecycle",
+                "name": "生命周期（资源约束下的时序）"
+              },
+              {
+                "id": "tag-r-l1-memory",
+                "name": "过程记忆（可复盘的时序上下文）"
+              }
+            ]
           }
         ]
       },
