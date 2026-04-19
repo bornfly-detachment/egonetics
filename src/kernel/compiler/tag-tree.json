@@ -1,13 +1,13 @@
 {
-  "$schema": "PRVSE Tag Tree v3.0",
-  "$version": "3.0.0",
+  "$schema": "PRVSE Tag Tree v3.1",
+  "$version": "3.1.0",
   "P": {
     "id": "tag-p",
     "name": "P — Pattern",
     "children": [
       {
         "id": "tag-p-l0",
-        "name": "L0 原子模式（感知器输入）",
+        "name": "L0 原子物理信号",
         "children": [
           {
             "id": "tag-p-state",
@@ -16,15 +16,15 @@
             "children": [
               {
                 "id": "tag-p-st-external",
-                "name": "外部态"
+                "name": "外部态（未经L0校验）"
               },
               {
                 "id": "tag-p-st-candidate",
-                "name": "候选态"
+                "name": "候选态（通过L0校验，待实践验证）"
               },
               {
                 "id": "tag-p-st-internal",
-                "name": "内部态"
+                "name": "内部态（实践验证，具备确定性）"
               }
             ]
           },
@@ -68,34 +68,6 @@
               {
                 "id": "tag-p-phy-mixed",
                 "name": "混合体"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tag-p-l1",
-        "name": "L1 分子模块（溯源责任链）",
-        "children": [
-          {
-            "id": "tag-p-l1-content",
-            "name": "内容语义类型",
-            "children": [
-              {
-                "id": "tag-p-l1-c-constitution",
-                "name": "宪法体系"
-              },
-              {
-                "id": "tag-p-l1-c-goal",
-                "name": "目标管理"
-              },
-              {
-                "id": "tag-p-l1-c-resource",
-                "name": "资源/权限/通信管理"
-              },
-              {
-                "id": "tag-p-l1-c-egonetics",
-                "name": "PRVSE 组成 Egonetics"
               }
             ]
           },
@@ -156,20 +128,96 @@
         ]
       },
       {
-        "id": "tag-p-l2",
-        "name": "L2 基因抽象（高概率触发进化）",
+        "id": "tag-p-l1",
+        "name": "L1 条件模块（宪法/目标/资源实践层）",
         "children": [
           {
-            "id": "tag-p-l2-statistical",
-            "name": "统计价值"
+            "id": "tag-p-l1-constitution",
+            "name": "宪法体系"
           },
           {
-            "id": "tag-p-l2-trigger-e",
-            "name": "触发系统进化"
+            "id": "tag-p-l1-goal",
+            "name": "目标管理"
           },
           {
-            "id": "tag-p-l2-coverage",
-            "name": "最小内容最大覆盖"
+            "id": "tag-p-l1-resource",
+            "name": "资源/权限/通信管理"
+          },
+          {
+            "id": "tag-p-l1-egonetics",
+            "name": "PRVSE 组成 Egonetics"
+          }
+        ]
+      },
+      {
+        "id": "tag-p-l2",
+        "name": "L2 主观Egonetic基因（高概率触发进化）",
+        "children": [
+          {
+            "id": "tag-p-l2-determinism",
+            "name": "确定性提升",
+            "children": [
+              {
+                "id": "tag-p-l2-det-compiler",
+                "name": "自然语言→机器语言编译器"
+              },
+              {
+                "id": "tag-p-l2-det-physics",
+                "name": "物理引擎"
+              },
+              {
+                "id": "tag-p-l2-det-strategy",
+                "name": "分级策略"
+              },
+              {
+                "id": "tag-p-l2-det-graph",
+                "name": "PRVSE 图结构信息编码"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-l2-feedback",
+            "name": "正反馈迭代",
+            "children": [
+              {
+                "id": "tag-p-l2-fb-coevo",
+                "name": "人机协同进化系统 OS"
+              },
+              {
+                "id": "tag-p-l2-fb-ai",
+                "name": "下一代AI研发（标注训练闭环）"
+              },
+              {
+                "id": "tag-p-l2-fb-ab",
+                "name": "AB测试"
+              },
+              {
+                "id": "tag-p-l2-fb-evolve",
+                "name": "系统自身进化（V和E的完善）"
+              }
+            ]
+          },
+          {
+            "id": "tag-p-l2-external",
+            "name": "外部信息转化",
+            "children": [
+              {
+                "id": "tag-p-l2-ext-flow",
+                "name": "外部Pattern→内部Pattern控制论流程"
+              },
+              {
+                "id": "tag-p-l2-ext-source",
+                "name": "外部优质信息源扩展"
+              },
+              {
+                "id": "tag-p-l2-ext-density",
+                "name": "提升信息量和信息转化率"
+              },
+              {
+                "id": "tag-p-l2-ext-practice",
+                "name": "扩展对外实践渠道和经验"
+              }
+            ]
           }
         ]
       }
@@ -181,25 +229,157 @@
     "children": [
       {
         "id": "tag-r-l0",
-        "name": "L0 逻辑关系",
+        "name": "L0 确定性/可计算关系（不需AI判断的客观关系）",
         "children": [
           {
-            "id": "tag-r-l0-deductive",
-            "name": "演绎"
+            "id": "tag-r-l0-logic",
+            "name": "逻辑推理",
+            "children": [
+              {
+                "id": "tag-r-l0-deductive",
+                "name": "演绎"
+              },
+              {
+                "id": "tag-r-l0-inductive",
+                "name": "归纳"
+              },
+              {
+                "id": "tag-r-l0-analogical",
+                "name": "类比"
+              }
+            ]
           },
           {
-            "id": "tag-r-l0-inductive",
-            "name": "归纳"
+            "id": "tag-r-l0-struct",
+            "name": "结构依赖",
+            "children": [
+              {
+                "id": "tag-r-l0-dependency",
+                "name": "代码依赖"
+              },
+              {
+                "id": "tag-r-l0-containment",
+                "name": "包含"
+              },
+              {
+                "id": "tag-r-l0-reference",
+                "name": "引用"
+              },
+              {
+                "id": "tag-r-l0-composition",
+                "name": "组合"
+              },
+              {
+                "id": "tag-r-l0-inheritance",
+                "name": "继承"
+              }
+            ]
           },
           {
-            "id": "tag-r-l0-analogical",
-            "name": "类比"
+            "id": "tag-r-l0-aggregate",
+            "name": "聚合操作",
+            "children": [
+              {
+                "id": "tag-r-l0-consume",
+                "name": "消耗"
+              },
+              {
+                "id": "tag-r-l0-absorb",
+                "name": "吸收"
+              },
+              {
+                "id": "tag-r-l0-merge",
+                "name": "合并"
+              },
+              {
+                "id": "tag-r-l0-split",
+                "name": "分解"
+              },
+              {
+                "id": "tag-r-l0-map",
+                "name": "映射"
+              }
+            ]
+          },
+          {
+            "id": "tag-r-l0-version",
+            "name": "版本/变更",
+            "children": [
+              {
+                "id": "tag-r-l0-commit",
+                "name": "commit"
+              },
+              {
+                "id": "tag-r-l0-merge-vcs",
+                "name": "merge"
+              },
+              {
+                "id": "tag-r-l0-branch",
+                "name": "branch"
+              },
+              {
+                "id": "tag-r-l0-revert",
+                "name": "revert"
+              },
+              {
+                "id": "tag-r-l0-version-iter",
+                "name": "版本迭代"
+              }
+            ]
+          },
+          {
+            "id": "tag-r-l0-exec",
+            "name": "执行/自动化",
+            "children": [
+              {
+                "id": "tag-r-l0-call",
+                "name": "调用"
+              },
+              {
+                "id": "tag-r-l0-trigger",
+                "name": "触发"
+              },
+              {
+                "id": "tag-r-l0-pipeline",
+                "name": "流水线"
+              },
+              {
+                "id": "tag-r-l0-automate",
+                "name": "自动化协作"
+              }
+            ]
+          },
+          {
+            "id": "tag-r-l0-dataflow",
+            "name": "数据流",
+            "children": [
+              {
+                "id": "tag-r-l0-input",
+                "name": "输入"
+              },
+              {
+                "id": "tag-r-l0-output",
+                "name": "输出"
+              },
+              {
+                "id": "tag-r-l0-transform",
+                "name": "转换"
+              },
+              {
+                "id": "tag-r-l0-copy",
+                "name": "复制"
+              },
+              {
+                "id": "tag-r-l0-route",
+                "name": "路由"
+              }
+            ]
           }
         ]
       },
       {
         "id": "tag-r-l1",
-        "name": "L1 条件关系",
+        "name": "L1 条件/时间关系（需AI/人脑辅助）",
         "children": [
           {
             "id": "tag-r-l1-prim",
@@ -235,19 +415,19 @@
           },
           {
             "id": "tag-r-l1-temporal-forms",
-            "name": "时间关系的物化形式",
+            "name": "时间关系物化形式",
             "children": [
               {
                 "id": "tag-r-l1-chronicle",
-                "name": "编年记录（时序哈希链）"
+                "name": "chronicle（时序哈希链）"
               },
               {
                 "id": "tag-r-l1-lifecycle",
-                "name": "生命周期（资源约束下的时序）"
+                "name": "lifecycle（资源约束下的时序）"
               },
               {
                 "id": "tag-r-l1-memory",
-                "name": "过程记忆（可复盘的时序上下文）"
+                "name": "memory（可复盘的时序上下文）"
               }
             ]
           }
@@ -255,7 +435,7 @@
       },
       {
         "id": "tag-r-l2",
-        "name": "L2 存在关系",
+        "name": "L2 存在关系（需叙事赋予价值）",
         "children": [
           {
             "id": "tag-r-l2-narrative",
@@ -296,107 +476,113 @@
         ]
       },
       {
-        "id": "tag-r-comm",
-        "name": "通信方向",
-        "select_mode": "single",
+        "id": "tag-r-cfl",
+        "name": "cfl R在回路中的路由角色",
         "children": [
           {
-            "id": "tag-r-comm-up",
-            "name": "自底向上"
-          },
-          {
-            "id": "tag-r-comm-down",
-            "name": "自顶向下"
-          },
-          {
-            "id": "tag-r-comm-lateral",
-            "name": "同层通信"
-          }
-        ]
-      },
-      {
-        "id": "tag-r-attrs",
-        "name": "通用属性",
-        "children": [
-          {
-            "id": "tag-r-dir",
-            "name": "方向性",
+            "id": "tag-r-cfl-comm",
+            "name": "通信方向",
             "select_mode": "single",
             "children": [
               {
-                "id": "tag-r-dir-none",
-                "name": "无向"
+                "id": "tag-r-cfl-comm-up",
+                "name": "自底向上"
               },
               {
-                "id": "tag-r-dir-one",
-                "name": "单向"
+                "id": "tag-r-cfl-comm-down",
+                "name": "自顶向下"
               },
               {
-                "id": "tag-r-dir-bi",
-                "name": "双向"
+                "id": "tag-r-cfl-comm-lateral",
+                "name": "同层通信"
               }
             ]
           },
           {
-            "id": "tag-r-str",
-            "name": "强度",
-            "select_mode": "single",
+            "id": "tag-r-cfl-attrs",
+            "name": "关系属性",
             "children": [
               {
-                "id": "tag-r-str-pos",
-                "name": "正向"
+                "id": "tag-r-cfl-dir",
+                "name": "方向性",
+                "select_mode": "single",
+                "children": [
+                  {
+                    "id": "tag-r-cfl-dir-none",
+                    "name": "无向"
+                  },
+                  {
+                    "id": "tag-r-cfl-dir-one",
+                    "name": "单向"
+                  },
+                  {
+                    "id": "tag-r-cfl-dir-bi",
+                    "name": "双向"
+                  }
+                ]
               },
               {
-                "id": "tag-r-str-neg",
-                "name": "负向"
+                "id": "tag-r-cfl-str",
+                "name": "强度",
+                "select_mode": "single",
+                "children": [
+                  {
+                    "id": "tag-r-cfl-str-pos",
+                    "name": "正向"
+                  },
+                  {
+                    "id": "tag-r-cfl-str-neg",
+                    "name": "负向"
+                  }
+                ]
+              },
+              {
+                "id": "tag-r-cfl-cert",
+                "name": "确定性",
+                "select_mode": "single",
+                "children": [
+                  {
+                    "id": "tag-r-cfl-cert-det",
+                    "name": "确定（L0典型）"
+                  },
+                  {
+                    "id": "tag-r-cfl-cert-prob",
+                    "name": "概率（L1典型）"
+                  },
+                  {
+                    "id": "tag-r-cfl-cert-fuzzy",
+                    "name": "模糊（L2典型）"
+                  }
+                ]
               }
             ]
           },
           {
-            "id": "tag-r-cert",
-            "name": "确定性",
+            "id": "tag-r-cfl-dest",
+            "name": "目标系统",
             "select_mode": "single",
             "children": [
               {
-                "id": "tag-r-cert-det",
-                "name": "确定"
+                "id": "tag-r-cfl-d1",
+                "name": "D1 驱动推理"
               },
               {
-                "id": "tag-r-cert-prob",
-                "name": "概率"
+                "id": "tag-r-cfl-d2",
+                "name": "D2 支撑价值计算"
               },
               {
-                "id": "tag-r-cert-fuzzy",
-                "name": "模糊"
+                "id": "tag-r-cfl-d3",
+                "name": "D3 记录演化依据"
+              },
+              {
+                "id": "tag-r-cfl-d4",
+                "name": "D4 执行约束检查"
+              },
+              {
+                "id": "tag-r-cfl-d5",
+                "name": "D5 激活关联节点"
               }
             ]
-          }
-        ]
-      },
-      {
-        "id": "tag-r-dest",
-        "name": "目的",
-        "select_mode": "single",
-        "children": [
-          {
-            "id": "tag-r-d1",
-            "name": "驱动推理"
-          },
-          {
-            "id": "tag-r-d2",
-            "name": "支撑价值计算"
-          },
-          {
-            "id": "tag-r-d3",
-            "name": "记录演化依据"
-          },
-          {
-            "id": "tag-r-d4",
-            "name": "执行约束检查"
-          },
-          {
-            "id": "tag-r-d5",
-            "name": "激活关联节点"
           }
         ]
       }
@@ -407,26 +593,8 @@
     "name": "V — Value",
     "children": [
       {
-        "id": "tag-v-core",
-        "name": "核心机制",
-        "children": [
-          {
-            "id": "tag-v-core-testset",
-            "name": "测试集"
-          },
-          {
-            "id": "tag-v-core-valset",
-            "name": "验证集"
-          },
-          {
-            "id": "tag-v-core-generator",
-            "name": "清单生成器"
-          }
-        ]
-      },
-      {
         "id": "tag-v-l0",
-        "name": "L0 确定性校验",
+        "name": "L0 确定性校验（100%可判定）",
         "children": [
           {
             "id": "tag-v-l0-metrics",
@@ -508,7 +676,7 @@
         "children": [
           {
             "id": "tag-v-l1-budget",
-            "name": "资源预算",
+            "name": "资源预分配",
             "children": [
               {
                 "id": "tag-v-l1-budget-time",
@@ -538,7 +706,7 @@
           },
           {
             "id": "tag-v-l1-state-eval",
-            "name": "状态评估",
+            "name": "状态评估器",
             "children": [
               {
                 "id": "tag-v-l1-feedback",
@@ -584,7 +752,7 @@
               },
               {
                 "id": "tag-v-l1-rw-constitution",
-                "name": "宪法校验"
+                "name": "宪法原则校验"
               },
               {
                 "id": "tag-v-l1-rw-opportunity",
@@ -596,11 +764,11 @@
       },
       {
         "id": "tag-v-l2",
-        "name": "L2 宪法级校验",
+        "name": "L2 宪法级校验+实践检验",
         "children": [
           {
             "id": "tag-v-l2-practice",
-            "name": "实践检验",
+            "name": "实践检验（最强V）",
             "children": [
               {
                 "id": "tag-v-l2-ab-test",
@@ -622,7 +790,7 @@
           },
           {
             "id": "tag-v-l2-identity",
-            "name": "身份验证"
+            "name": "身份动态验证（T3）"
           },
           {
             "id": "tag-v-l2-human-val",
@@ -631,20 +799,44 @@
         ]
       },
       {
-        "id": "tag-v-indep",
-        "name": "独立性保障",
+        "id": "tag-v-cfl",
+        "name": "cfl V作为比较器/AOP的独立性",
         "children": [
           {
-            "id": "tag-v-indep-neutral",
-            "name": "中立性"
+            "id": "tag-v-cfl-core",
+            "name": "校验核心机制",
+            "children": [
+              {
+                "id": "tag-v-cfl-testset",
+                "name": "测试集（V独立持有）"
+              },
+              {
+                "id": "tag-v-cfl-valset",
+                "name": "验证集（模块自测）"
+              },
+              {
+                "id": "tag-v-cfl-generator",
+                "name": "清单生成器（动态安全）"
+              }
+            ]
           },
           {
-            "id": "tag-v-indep-anti",
-            "name": "防渗透"
-          },
-          {
-            "id": "tag-v-indep-kernel",
-            "name": "内核直接负责"
+            "id": "tag-v-cfl-indep",
+            "name": "独立性保障",
+            "children": [
+              {
+                "id": "tag-v-cfl-neutral",
+                "name": "中立性"
+              },
+              {
+                "id": "tag-v-cfl-anti",
+                "name": "防渗透"
+              },
+              {
+                "id": "tag-v-cfl-kernel",
+                "name": "内核直接负责"
+              }
+            ]
           }
         ]
       }
@@ -655,31 +847,8 @@
     "name": "S — State",
     "children": [
       {
-        "id": "tag-s-drive",
-        "name": "战略驱动力",
-        "select_mode": "single",
-        "children": [
-          {
-            "id": "tag-s-s1",
-            "name": "任务驱动"
-          },
-          {
-            "id": "tag-s-s2",
-            "name": "生存驱动"
-          },
-          {
-            "id": "tag-s-s3",
-            "name": "进化驱动"
-          },
-          {
-            "id": "tag-s-s4",
-            "name": "探索驱动"
-          }
-        ]
-      },
-      {
         "id": "tag-s-l0",
-        "name": "L0 确定性状态",
+        "name": "L0 确定性状态机",
         "children": [
           {
             "id": "tag-s-l0-states",
@@ -714,7 +883,7 @@
           },
           {
             "id": "tag-s-l0-transitions",
-            "name": "转移规则",
+            "name": "状态转移规则",
             "children": [
               {
                 "id": "tag-s-l0-tr-guard",
@@ -722,7 +891,7 @@
               },
               {
                 "id": "tag-s-l0-tr-reversible",
-                "name": "可逆性"
+                "name": "可逆性标记"
               }
             ]
           }
@@ -777,7 +946,7 @@
           },
           {
             "id": "tag-s-l1-feedback-loop",
-            "name": "反馈机制",
+            "name": "反馈迭代机制",
             "children": [
               {
                 "id": "tag-s-l1-fb-positive",
@@ -803,7 +972,7 @@
             "children": [
               {
                 "id": "tag-s-l1-res-budget",
-                "name": "资源预算"
+                "name": "预算"
               },
               {
                 "id": "tag-s-l1-res-monitor",
@@ -850,7 +1019,7 @@
           },
           {
             "id": "tag-s-l2-learner",
-            "name": "学习器",
+            "name": "搁置学习器",
             "children": [
               {
                 "id": "tag-s-l2-learn-monitor",
@@ -880,35 +1049,64 @@
               },
               {
                 "id": "tag-s-l2-dec-task",
-                "name": "L1任务"
+                "name": "L1任务产生"
               }
             ]
           }
         ]
       },
       {
-        "id": "tag-s-effects",
-        "name": "状态转移效果",
+        "id": "tag-s-cfl",
+        "name": "cfl S作为执行器的驱动和效果",
         "children": [
           {
-            "id": "tag-s-eff-perception",
-            "name": "触发感知"
+            "id": "tag-s-cfl-drive",
+            "name": "战略驱动力",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-s-cfl-s1",
+                "name": "任务驱动"
+              },
+              {
+                "id": "tag-s-cfl-s2",
+                "name": "生存驱动"
+              },
+              {
+                "id": "tag-s-cfl-s3",
+                "name": "进化驱动"
+              },
+              {
+                "id": "tag-s-cfl-s4",
+                "name": "探索驱动"
+              }
+            ]
           },
           {
-            "id": "tag-s-eff-execution",
-            "name": "触发执行"
-          },
-          {
-            "id": "tag-s-eff-evolution",
-            "name": "触发进化"
-          },
-          {
-            "id": "tag-s-eff-communication",
-            "name": "触发通信"
-          },
-          {
-            "id": "tag-s-eff-escalate",
-            "name": "触发上报"
+            "id": "tag-s-cfl-effects",
+            "name": "状态转移效果",
+            "children": [
+              {
+                "id": "tag-s-cfl-eff-perception",
+                "name": "触发感知"
+              },
+              {
+                "id": "tag-s-cfl-eff-execution",
+                "name": "触发执行"
+              },
+              {
+                "id": "tag-s-cfl-eff-evolution",
+                "name": "触发进化记录"
+              },
+              {
+                "id": "tag-s-cfl-eff-communication",
+                "name": "触发通信"
+              },
+              {
+                "id": "tag-s-cfl-eff-escalate",
+                "name": "触发上报"
+              }
+            ]
           }
         ]
       }
@@ -920,7 +1118,7 @@
     "children": [
       {
         "id": "tag-e-l0",
-        "name": "L0 系统完备性",
+        "name": "L0 系统完备性维护",
         "children": [
           {
             "id": "tag-e-l0-triggers",
@@ -957,6 +1155,38 @@
                 "name": "修改更新"
               }
             ]
+          },
+          {
+            "id": "tag-e-l0-scope",
+            "name": "影响范围",
+            "children": [
+              {
+                "id": "tag-e-l0-scope-l0",
+                "name": "L0层更新"
+              },
+              {
+                "id": "tag-e-l0-scope-l1",
+                "name": "L1层联动"
+              }
+            ]
+          },
+          {
+            "id": "tag-e-l0-principles",
+            "name": "更新原则",
+            "children": [
+              {
+                "id": "tag-e-l0-prin-extend",
+                "name": "平行扩展优先"
+              },
+              {
+                "id": "tag-e-l0-prin-cohesion",
+                "name": "高内聚低耦合"
+              },
+              {
+                "id": "tag-e-l0-prin-three",
+                "name": "三思后行"
+              }
+            ]
           }
         ]
       },
@@ -970,7 +1200,7 @@
             "children": [
               {
                 "id": "tag-e-l1-train-local",
-                "name": "本地模型"
+                "name": "本地模型训练"
               },
               {
                 "id": "tag-e-l1-train-paradigm",
@@ -992,11 +1222,11 @@
             "children": [
               {
                 "id": "tag-e-l1-opt-replace",
-                "name": "本地替代API"
+                "name": "外部API→本地替代"
               },
               {
                 "id": "tag-e-l1-opt-usage",
-                "name": "API使用优化"
+                "name": "API优化"
               },
               {
                 "id": "tag-e-l1-opt-pipeline",
@@ -1052,7 +1282,7 @@
       },
       {
         "id": "tag-e-l2",
-        "name": "L2 Egonetics 研发",
+        "name": "L2 Egonetics研发前沿",
         "children": [
           {
             "id": "tag-e-l2-subjectivity",
@@ -1114,11 +1344,11 @@
             "children": [
               {
                 "id": "tag-e-l2-coevo-interaction",
-                "name": "交互更新"
+                "name": "交互产品更新"
               },
               {
                 "id": "tag-e-l2-coevo-data",
-                "name": "标注数据"
+                "name": "标注数据收集"
               },
               {
                 "id": "tag-e-l2-coevo-train",
@@ -1126,7 +1356,93 @@
               },
               {
                 "id": "tag-e-l2-coevo-feedback",
-                "name": "实践反馈"
+                "name": "实践反馈训练"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tag-e-cfl",
+        "name": "cfl E的跨层基础设施",
+        "children": [
+          {
+            "id": "tag-e-cfl-info",
+            "name": "信息分级",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-e-cfl-info-l0",
+                "name": "L0 信号层"
+              },
+              {
+                "id": "tag-e-cfl-info-l1",
+                "name": "L1 规律层"
+              },
+              {
+                "id": "tag-e-cfl-info-l2",
+                "name": "L2 认知层"
+              }
+            ]
+          },
+          {
+            "id": "tag-e-cfl-perm",
+            "name": "权限分级",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-e-cfl-perm-t0",
+                "name": "T0 执行"
+              },
+              {
+                "id": "tag-e-cfl-perm-t1",
+                "name": "T1 推理"
+              },
+              {
+                "id": "tag-e-cfl-perm-t2",
+                "name": "T2 进化"
+              }
+            ]
+          },
+          {
+            "id": "tag-e-cfl-comm",
+            "name": "通信机制",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-e-cfl-comm-l0",
+                "name": "L0 信号通信"
+              },
+              {
+                "id": "tag-e-cfl-comm-l1",
+                "name": "L1 请求型"
+              },
+              {
+                "id": "tag-e-cfl-comm-l2",
+                "name": "L2 控制型"
+              }
+            ]
+          },
+          {
+            "id": "tag-e-cfl-mut",
+            "name": "变更类型",
+            "select_mode": "single",
+            "children": [
+              {
+                "id": "tag-e-cfl-mut-create",
+                "name": "创建"
+              },
+              {
+                "id": "tag-e-cfl-mut-update",
+                "name": "更新"
+              },
+              {
+                "id": "tag-e-cfl-mut-delete",
+                "name": "删除"
+              },
+              {
+                "id": "tag-e-cfl-mut-transition",
+                "name": "状态迁移"
               }
             ]
           }
@@ -1134,68 +1450,69 @@
       }
     ]
   },
-  "infra": {
-    "id": "tag-infra",
-    "name": "跨层基础设施",
+  "cybernetic_feedback_loop": {
+    "id": "tag-cfl",
+    "name": "cybernetic-feedback-loop",
     "children": [
       {
-        "id": "tag-infra-info",
-        "name": "信息分级",
-        "select_mode": "single",
+        "id": "tag-cfl-l2",
+        "name": "L2 Egonetics（引入AI的控制论）",
         "children": [
           {
-            "id": "tag-infra-info-l0",
-            "name": "L0 信号层"
+            "id": "tag-cfl-l2-resource",
+            "name": "资源（Resources）"
           },
           {
-            "id": "tag-infra-info-l1",
-            "name": "L1 规律层"
+            "id": "tag-cfl-l2-goal",
+            "name": "目标（Goals）"
           },
           {
-            "id": "tag-infra-info-l2",
-            "name": "L2 认知层"
+            "id": "tag-cfl-l2-constitution",
+            "name": "宪法（Constitution）"
           }
         ]
       },
       {
-        "id": "tag-infra-perm",
-        "name": "权限分级",
-        "select_mode": "single",
+        "id": "tag-cfl-l1",
+        "name": "L1 AI OS（独立模块，组合涌现L2）",
         "children": [
           {
-            "id": "tag-infra-perm-t0",
-            "name": "T0 执行"
+            "id": "tag-cfl-l1-compiler",
+            "name": "AI编译器"
           },
           {
-            "id": "tag-infra-perm-t1",
-            "name": "T1 推理"
+            "id": "tag-cfl-l1-physics",
+            "name": "物理引擎"
           },
           {
-            "id": "tag-infra-perm-t2",
-            "name": "T2 进化"
+            "id": "tag-cfl-l1-ui",
+            "name": "AI Native UI"
           }
         ]
       },
       {
-        "id": "tag-infra-mut",
-        "name": "变更类型",
-        "select_mode": "single",
+        "id": "tag-cfl-l0",
+        "name": "L0 经典控制论（无AI，确定性）",
         "children": [
           {
-            "id": "tag-infra-mut-create",
-            "name": "创建"
+            "id": "tag-cfl-l0-sensor",
+            "name": "Sensor（感知器）"
           },
           {
-            "id": "tag-infra-mut-update",
-            "name": "更新"
+            "id": "tag-cfl-l0-comparator",
+            "name": "Comparator（比较器）"
           },
           {
-            "id": "tag-infra-mut-delete",
-            "name": "删除"
+            "id": "tag-cfl-l0-controller",
+            "name": "Controller（控制器）"
           },
           {
-            "id": "tag-infra-mut-transition",
-            "name": "状态迁移"
+            "id": "tag-cfl-l0-actuator",
+            "name": "Actuator（执行器）"
+          },
+          {
+            "id": "tag-cfl-l0-feedback",
+            "name": "Feedback（反馈回路）"
           }
         ]
       }
