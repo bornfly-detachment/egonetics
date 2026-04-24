@@ -330,6 +330,7 @@ const AppContent: React.FC = () => {
               <Route path="/resources_claude" element={<UsageLimitsView />} />
               <Route path="/resources_gemini" element={<div className="p-8 flex justify-center"><ResourcesGeminiView /></div>} />
               <Route path="/excalidraw" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] h-full"><ExcalidrawView /></div>} />
+              <Route path="/prvse-ui" element={<div className="-m-4 md:-m-6 w-[calc(100%+2rem)] md:w-[calc(100%+3rem)]"><PRVSEUIDemo /></div>} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           )}
