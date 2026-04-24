@@ -49,6 +49,7 @@ import BottomNav from './components/layout/BottomNav'
 import { useViewport } from './hooks/useViewport'
 import UsageLimitsView from './components/UsageLimitsView'
 import ResourcesGeminiView from './components/ai-resources/ResourcesGeminiView'
+import PRVSEUIDemo from './components/PRVSEUIDemo'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
