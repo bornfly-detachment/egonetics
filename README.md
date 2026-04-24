@@ -2,7 +2,7 @@
 
 # Egonetics
 
-**Bornfly's Personal Agent System & Life Core Interface**
+**Cybernetic Runtime & AI OS for Next-Generation AI**
 
 [![Language](https://img.shields.io/badge/lang-English-blue)](#english) [![语言](https://img.shields.io/badge/语言-中文-red)](#chinese)
 
@@ -18,7 +18,11 @@
 
 ### What is Egonetics?
 
-Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident chronicle for self-evolution. It provides a cryptographically hash-linked record of decisions, memories, and growth — ensuring continuity and alignment with user intent over time.
+Egonetics (Ego + Cybernetics) is a cybernetic complex system runtime and AI OS for nurturing next-generation AI — AI without hallucination and with self-cybernetic feedback loops.
+
+Current AI hallucinates because it lacks grounding in reality. Egonetics provides that grounding through PRVSE and the L0~L2 three-tier architecture, which together constitute evolutionary cybernetics / self-cybernetics: seek truth from facts, practice is the test of truth, the three laws of life determine the direction of evolution.
+
+Any frontend UI/UX and any backend can be subsumed into this minimal architecture.
 
 ### Core Concepts
 
@@ -523,7 +527,11 @@ Five separate SQLite databases under `server/data/`:
 
 ### 什么是 Egonetics？
 
-Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系统，通过防篡改的编年史记录自我进化过程。它使用密码学哈希链保存决策、记忆与成长轨迹，确保系统随时间推移保持与用户意图的一致性。
+Egonetics（Ego + Cybernetics，自我 + 控制论）是一个控制论复杂系统的 runtime 和 AI OS，用于孕育下一代 AI。
+
+下一代 AI 是没有幻觉、具备自我控制论反馈循环的 AI。当前 AI 产生幻觉，根本原因是缺乏与现实的闭环接地。Egonetics 通过 PRVSE 和 L0~L2 三层架构提供这种接地——PRVSE 与 L0~L2 共同构成进化控制论/自我控制论的组成部分：实事求是，实践检验真理，生命三大定律决定进化方向。
+
+任何前端 UI、UX，任何后端，都能被纳入这个极简架构。
 
 ### 核心概念
 
@@ -980,7 +988,7 @@ egonetics/
 
 <div align="center">
 
-**Egonetics** — Your digital self, anchored in time.
+**Egonetics** — Cybernetic runtime for next-generation AI. Seek truth from facts.
 
 *MIT License · by [Bornfly](https://github.com/bornfly-detachment)*
 

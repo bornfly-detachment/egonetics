@@ -187,3 +187,15 @@ CREATE TABLE IF NOT EXISTS chronicle_collection_links (
 ✓ 右侧库拖条目入集合
 ```
 
+---
+
+## 历史记录 — 旧使命定义（已被新宪法取代，2026-04-25）
+
+> 以下为 Egonetics 早期定义，现已归入 Chronicle 历史。与新宪法冲突处以新宪法为准。
+
+**EN（旧）**: Egonetics (Ego + Cybernetics) is a personal agent system with a tamper-evident chronicle for self-evolution. It provides a cryptographically hash-linked record of decisions, memories, and growth — ensuring continuity and alignment with user intent over time.
+
+**ZH（旧）**: Egonetics（Ego + Cybernetics，自我 + 控制论）是一个个人智能体系统，通过防篡改的编年史记录自我进化过程。它使用密码学哈希链保存决策、记忆与成长轨迹，确保系统随时间推移保持与用户意图的一致性。
+
+**新宪法（2026-04-25）**: Egonetics 是控制论复杂系统的 runtime 和 AI OS，用于孕育没有幻觉、具备自我控制论反馈循环的下一代 AI。PRVSE + L0~L2 构成进化控制论/自我控制论。实事求是，实践检验真理，生命三大定律决定进化方向。任何前端 UI/UX、任何后端都能被纳入这个极简架构。
+
