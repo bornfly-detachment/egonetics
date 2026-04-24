@@ -125,9 +125,7 @@ export function RGraph({ nodes, edges, className }: RGraphProps) {
   const nodeMap = new Map(nodes.map(n => [n.id, n]))
 
   // Simple linear + branch layout detection
-  const conditionNodes = nodes.filter(n => n.type === 'condition')
   const startNode = nodes.find(n => n.type === 'start')
-  const endNodes = nodes.filter(n => n.type === 'end')
 
   // Build adjacency
   const outEdges = new Map<string, REdge[]>()
