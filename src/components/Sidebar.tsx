@@ -73,7 +73,7 @@ const Sidebar: React.FC = () => {
       style={{ background: 'var(--bg-surface)' }}
     >
       {/* Logo */}
-      <div className={`shrink-0 flex items-center gap-3 px-4 h-14 border-b border-white/[0.06] ${!open && 'justify-center'}`}>
+      <div className={`shrink-0 flex items-center gap-3 px-4 h-14 border-b border-border ${!open && 'justify-center'}`}>
         <img
           src="/bornfly_logo.png"
           alt="Bornfly"
