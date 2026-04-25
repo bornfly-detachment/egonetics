@@ -86,6 +86,19 @@ cd server && node scripts/init-auth-db.js && cd ..
 
 ---
 
+## 开发者模式说明
+
+`frontend.env` 中的 `VITE_DEV_MODE=true` 会同时影响前端和后端两处：
+
+**前端（auth store）**：跳过 JWT 验证，直接以 admin 身份进入，无需登录页。  
+**后端（server.env 中 `DEV_MODE=true`）**：跳过 Token 校验，所有 API 请求自动注入 admin 身份。
+
+两个变量必须同时生效，否则前端能进去但 API 请求会被后端 401 拒绝。
+
+> 这两个变量已在共享 config 文件中设置，步骤 3 软链完成后自动生效，无需手动修改。
+
+---
+
 ## 踩坑记录
 
 | 症状 | 原因 | 修复 |
