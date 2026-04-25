@@ -24,6 +24,7 @@ import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { getVisibleNavItems } from '@/components/AuthGuard'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 const Sidebar: React.FC = () => {
   const { uiState } = useChronicleStore()
