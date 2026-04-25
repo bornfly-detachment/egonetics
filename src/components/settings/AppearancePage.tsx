@@ -1,7 +1,8 @@
-import { useThemeStore, type BaseMode } from '@/stores/useThemeStore'
+import { useThemeStore, type BaseMode, type FontSize, type FontStyle } from '@/stores/useThemeStore'
+import { useTranslation } from '@/lib/translations'
 import { cn } from '@/lib/utils'
 
-// ── Mini UI previews (match claude_theme.png card style) ──
+// ── Color mode previews ──
 
 function LightPreview() {
   return (
@@ -27,7 +28,7 @@ function LightPreview() {
 
 function DarkPreview() {
   return (
-    <div className="w-full h-full flex flex-col" style={{ background: '#1c1c1e' }}>
+    <div className="w-full h-full flex flex-col" style={{ background: '#1e1e1e' }}>
       <div className="flex justify-center pt-3">
         <div className="rounded-full px-2.5 py-1 flex gap-1 items-center" style={{ background: '#2c2c2e' }}>
           <div className="w-7 h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }} />
@@ -47,9 +48,49 @@ function DarkPreview() {
   )
 }
 
-const MODES: { value: BaseMode; label: string; Preview: React.FC }[] = [
+// ── Font size preview — macOS window style (font.png) ──
+
+function FontSizePreview({ size }: { size: FontSize }) {
+  const cfg = {
+    lg: { lines: 2, h: 'h-2.5',   gap: 'gap-2'   },
+    md: { lines: 3, h: 'h-[7px]', gap: 'gap-1.5' },
+    sm: { lines: 5, h: 'h-[5px]', gap: 'gap-1'   },
+  }[size]
+  const widths = ['90%', '75%', '85%', '65%', '80%']
+  return (
+    <div className="w-full h-full flex flex-col" style={{ background: '#1e1e1e' }}>
+      <div className="flex gap-1 px-2 pt-2">
+        <div className="w-2 h-2 rounded-full" style={{ background: '#FF5F57' }} />
+        <div className="w-2 h-2 rounded-full" style={{ background: '#FEBC2E' }} />
+        <div className="w-2 h-2 rounded-full" style={{ background: '#28C840' }} />
+      </div>
+      <div className={`flex-1 px-2 pt-1.5 pb-2 flex flex-col ${cfg.gap} overflow-hidden`}>
+        {[...Array(cfg.lines)].map((_, i) => (
+          <div key={i} className={`${cfg.h} rounded-sm`}
+               style={{ background: 'rgba(255,255,255,0.15)', width: widths[i] }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Constants ──
+
+const COLOR_MODES: { value: BaseMode; label: string; Preview: React.FC }[] = [
   { value: 'light', label: 'Light', Preview: LightPreview },
   { value: 'dark',  label: 'Dark',  Preview: DarkPreview  },
+]
+
+const FONT_SIZES: { value: FontSize; label: string }[] = [
+  { value: 'lg', label: '更大' },
+  { value: 'md', label: '默认' },
+  { value: 'sm', label: '紧凑' },
+]
+
+const FONT_STYLES: { value: FontStyle; label: string; family: string }[] = [
+  { value: 'default', label: 'Default', family: "'Inter', sans-serif"               },
+  { value: 'sans',    label: 'Sans',    family: 'ui-sans-serif, system-ui'          },
+  { value: 'system',  label: 'System',  family: '-apple-system, BlinkMacSystemFont' },
 ]
 
 const LAYERS = [
@@ -58,48 +99,116 @@ const LAYERS = [
   { id: 'L2', label: 'L2', desc: '裁决层', segments: ['#fdecea', '#d4614e', '#C0341D'], name: 'Red'    },
 ]
 
+// ── Generic card selector ──
+
+function SelectCard<T extends string>({
+  value, current, onClick, label, wide, children,
+}: {
+  value: T; current: T; onClick: (v: T) => void
+  label: string; wide?: boolean; children: React.ReactNode
+}) {
+  const active = value === current
+  return (
+    <button onClick={() => onClick(value)} className="flex flex-col items-center gap-2 focus:outline-none group">
+      <div className={cn(
+        'overflow-hidden border-2 transition-all duration-200',
+        wide ? 'w-36 h-28 rounded-2xl' : 'w-24 h-20 rounded-xl',
+        active
+          ? 'border-blue-500'
+          : 'border-transparent opacity-60 group-hover:opacity-90'
+      )}>
+        {children}
+      </div>
+      <span className={cn('text-xs transition-colors', active ? 'text-foreground' : 'text-muted-foreground')}>
+        {label}
+      </span>
+    </button>
+  )
+}
+
+// ── Section wrapper ──
+
+function Section({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-sm font-medium text-muted-foreground">{label}</h2>
+        {sub && <p className="text-xs text-muted-foreground/60 mt-0.5">{sub}</p>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// ── Page ──
+
 export default function AppearancePage() {
-  const { baseMode, setBaseMode } = useThemeStore()
+  const { baseMode, setBaseMode, fontSize, setFontSize, fontStyle, setFontStyle } = useThemeStore()
+  const { language, setLanguage } = useTranslation()
 
   return (
     <div className="max-w-2xl mx-auto py-10 px-8 space-y-10">
       <h1 className="text-2xl font-semibold text-foreground">Appearance</h1>
 
-      {/* Color Mode */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-medium text-muted-foreground">Color mode</h2>
+      {/* Color mode */}
+      <Section label="Color mode">
         <div className="flex gap-3">
-          {MODES.map(({ value, label, Preview }) => (
-            <button
-              key={value}
-              onClick={() => setBaseMode(value)}
-              className="flex flex-col items-center gap-2.5 focus:outline-none group"
-            >
-              <div className={cn(
-                'w-36 h-28 rounded-2xl overflow-hidden border-2 transition-all duration-200',
-                baseMode === value
-                  ? 'border-blue-500'
-                  : 'border-transparent opacity-70 group-hover:opacity-100'
-              )}>
-                <Preview />
+          {COLOR_MODES.map(({ value, label, Preview }) => (
+            <SelectCard key={value} value={value} current={baseMode} onClick={setBaseMode} label={label} wide>
+              <Preview />
+            </SelectCard>
+          ))}
+        </div>
+      </Section>
+
+      {/* Font size */}
+      <Section label="Font size">
+        <div className="flex gap-3">
+          {FONT_SIZES.map(({ value, label }) => (
+            <SelectCard key={value} value={value} current={fontSize} onClick={setFontSize} label={label}>
+              <FontSizePreview size={value} />
+            </SelectCard>
+          ))}
+        </div>
+      </Section>
+
+      {/* Font style */}
+      <Section label="Font style">
+        <div className="flex gap-3">
+          {FONT_STYLES.map(({ value, label, family }) => (
+            <SelectCard key={value} value={value} current={fontStyle} onClick={setFontStyle} label={label}>
+              <div className="w-full h-full flex items-center justify-center" style={{ background: '#1e1e1e' }}>
+                <span className="text-2xl font-semibold" style={{ fontFamily: family, color: 'rgba(255,255,255,0.85)' }}>
+                  Aa
+                </span>
               </div>
-              <span className={cn(
-                'text-sm transition-colors',
-                baseMode === value ? 'text-foreground' : 'text-muted-foreground'
-              )}>
-                {label}
-              </span>
+            </SelectCard>
+          ))}
+        </div>
+      </Section>
+
+      {/* Language */}
+      <Section label="Language">
+        <div className="flex gap-2">
+          {(['en', 'zh'] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLanguage(lang)}
+              className={cn(
+                'px-5 py-2 rounded-xl text-sm font-medium border-2 transition-all duration-200',
+                language === lang
+                  ? 'border-blue-500 text-foreground bg-foreground/5'
+                  : 'border-transparent bg-foreground/5 text-muted-foreground hover:text-foreground hover:bg-foreground/10'
+              )}
+            >
+              {lang === 'en' ? 'English' : '中文'}
             </button>
           ))}
         </div>
-      </section>
+      </Section>
 
-      {/* Layer Colors */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground">Layer colors</h2>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">Color weight represents layer authority — fixed mapping</p>
-        </div>
+      {/* Layer colors */}
+      <Section label="Layer colors" sub="Color weight represents layer authority — fixed mapping">
         <div className="flex flex-col gap-2.5">
           {LAYERS.map(layer => (
             <div key={layer.id} className="flex items-center gap-4 p-3 rounded-xl border border-border bg-card">
@@ -116,7 +225,7 @@ export default function AppearancePage() {
             </div>
           ))}
         </div>
-      </section>
+      </Section>
     </div>
   )
 }
