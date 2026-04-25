@@ -118,7 +118,7 @@ const Sidebar: React.FC = () => {
         {/* Settings */}
         <button
           onClick={() => navigate('/settings')}
-          title={!open ? '外观设置' : undefined}
+          title={!open ? s.settings : undefined}
           className={`
             w-full flex items-center rounded-lg py-2 text-muted-foreground hover:text-foreground
             hover:bg-foreground/[0.05] transition-all duration-150
@@ -126,7 +126,7 @@ const Sidebar: React.FC = () => {
           `}
         >
           <Settings className="w-4 h-4 shrink-0" />
-          {open && <span className="text-xs">外观设置</span>}
+          {open && <span className="text-xs">{s.settings}</span>}
         </button>
         {/* Logout */}
         <button
