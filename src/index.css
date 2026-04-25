@@ -127,8 +127,17 @@
     }
   }
 
+  /* ── Font size AOP — data-font-size on <html> ── */
+  html[data-font-size="sm"] { font-size: 13px; }
+  html[data-font-size="md"] { font-size: 15px; }
+  html[data-font-size="lg"] { font-size: 17px; }
+
+  /* ── Font style AOP — data-font on <html> overrides --app-font ── */
+  html[data-font="sans"]   { --app-font: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  html[data-font="system"] { --app-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', ui-sans-serif, -apple-system, system-ui, sans-serif;
+    font-family: var(--app-font);
     font-optical-sizing: auto;
     font-weight: 600;
     line-height: 1.25;
