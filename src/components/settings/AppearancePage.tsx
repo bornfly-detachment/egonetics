@@ -1,146 +1,112 @@
 import { useThemeStore, type BaseMode } from '@/stores/useThemeStore'
 import { cn } from '@/lib/utils'
 
-// ── Mini UI preview for color mode cards (like claude_theme.png) ──
-
-function DarkPreview() {
-  return (
-    <div className="w-full h-full rounded-md overflow-hidden flex" style={{ background: '#090c12' }}>
-      <div className="w-5 h-full flex flex-col gap-1 p-1" style={{ background: '#111111' }}>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-1.5 rounded-sm" style={{ background: 'rgba(255,255,255,0.12)', width: i === 0 ? '100%' : '80%' }} />
-        ))}
-      </div>
-      <div className="flex-1 p-1.5 flex flex-col gap-1">
-        <div className="h-2 rounded" style={{ background: 'rgba(255,255,255,0.25)', width: '60%' }} />
-        <div className="h-1 rounded" style={{ background: 'rgba(255,255,255,0.08)', width: '80%' }} />
-        <div className="h-1 rounded" style={{ background: 'rgba(255,255,255,0.08)', width: '65%' }} />
-        <div className="mt-1 h-5 rounded-md" style={{ background: 'rgba(255,255,255,0.05)' }} />
-      </div>
-    </div>
-  )
-}
+// ── Mini UI previews (match claude_theme.png card style) ──
 
 function LightPreview() {
   return (
-    <div className="w-full h-full rounded-md overflow-hidden flex" style={{ background: '#f8fafc' }}>
-      <div className="w-5 h-full flex flex-col gap-1 p-1" style={{ background: '#e2e8f0' }}>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-1.5 rounded-sm" style={{ background: 'rgba(0,0,0,0.15)', width: i === 0 ? '100%' : '80%' }} />
-        ))}
+    <div className="w-full h-full flex flex-col" style={{ background: '#f5f5f4' }}>
+      <div className="flex justify-center pt-3">
+        <div className="rounded-full px-2.5 py-1 flex gap-1 items-center" style={{ background: '#e5e5e3' }}>
+          <div className="w-7 h-[3px] rounded-full" style={{ background: 'rgba(0,0,0,0.28)' }} />
+          <div className="w-4 h-[3px] rounded-full" style={{ background: 'rgba(0,0,0,0.14)' }} />
+        </div>
       </div>
-      <div className="flex-1 p-1.5 flex flex-col gap-1">
-        <div className="h-2 rounded" style={{ background: 'rgba(0,0,0,0.35)', width: '60%' }} />
-        <div className="h-1 rounded" style={{ background: 'rgba(0,0,0,0.12)', width: '80%' }} />
-        <div className="h-1 rounded" style={{ background: 'rgba(0,0,0,0.12)', width: '65%' }} />
-        <div className="mt-1 h-5 rounded-md" style={{ background: 'rgba(0,0,0,0.06)' }} />
+      <div className="flex-1 px-3 pt-3 flex flex-col gap-2">
+        <div className="h-[3px] rounded-full" style={{ background: 'rgba(0,0,0,0.2)', width: '58%' }} />
+        <div className="h-[3px] rounded-full" style={{ background: 'rgba(0,0,0,0.1)', width: '78%' }} />
+      </div>
+      <div className="px-2.5 pb-2.5">
+        <div className="h-7 rounded-lg flex items-center justify-end pr-2" style={{ background: 'rgba(0,0,0,0.07)' }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: '#C0341D' }} />
+        </div>
       </div>
     </div>
   )
 }
 
-// ── Color Mode cards ──
+function DarkPreview() {
+  return (
+    <div className="w-full h-full flex flex-col" style={{ background: '#1c1c1e' }}>
+      <div className="flex justify-center pt-3">
+        <div className="rounded-full px-2.5 py-1 flex gap-1 items-center" style={{ background: '#2c2c2e' }}>
+          <div className="w-7 h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }} />
+          <div className="w-4 h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+        </div>
+      </div>
+      <div className="flex-1 px-3 pt-3 flex flex-col gap-2">
+        <div className="h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.2)', width: '58%' }} />
+        <div className="h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.1)', width: '78%' }} />
+      </div>
+      <div className="px-2.5 pb-2.5">
+        <div className="h-7 rounded-lg flex items-center justify-end pr-2" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: '#C0341D' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const MODES: { value: BaseMode; label: string; Preview: React.FC }[] = [
-  { value: 'dark',  label: 'Black', Preview: DarkPreview  },
-  { value: 'light', label: 'White', Preview: LightPreview },
+  { value: 'light', label: 'Light', Preview: LightPreview },
+  { value: 'dark',  label: 'Dark',  Preview: DarkPreview  },
 ]
 
-// ── Layer color rows (theme_color.png style) ──
-
 const LAYERS = [
-  {
-    id: 'L0', label: 'L0', desc: '执行层',
-    segments: ['#C8F5EC', '#2BC9A0', '#007A62'],
-    name: 'Green',
-  },
-  {
-    id: 'L1', label: 'L1', desc: '编排层',
-    segments: ['#F0EAF8', '#8B62B8', '#6B3FA0'],
-    name: 'Purple',
-  },
-  {
-    id: 'L2', label: 'L2', desc: '裁决层',
-    segments: ['#fdecea', '#d4614e', '#C0341D'],
-    name: 'Red',
-  },
+  { id: 'L0', label: 'L0', desc: '执行层', segments: ['#C8F5EC', '#2BC9A0', '#007A62'], name: 'Green'  },
+  { id: 'L1', label: 'L1', desc: '编排层', segments: ['#F0EAF8', '#8B62B8', '#6B3FA0'], name: 'Purple' },
+  { id: 'L2', label: 'L2', desc: '裁决层', segments: ['#fdecea', '#d4614e', '#C0341D'], name: 'Red'    },
 ]
 
 export default function AppearancePage() {
   const { baseMode, setBaseMode } = useThemeStore()
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-6 space-y-10">
-      <div>
-        <h1 className="text-lg font-semibold text-foreground">外观设置</h1>
-        <p className="text-sm text-muted-foreground mt-1">个性化界面主题与层级配色</p>
-      </div>
+    <div className="max-w-2xl mx-auto py-10 px-8 space-y-10">
+      <h1 className="text-2xl font-semibold text-foreground">Appearance</h1>
 
       {/* Color Mode */}
-      <section>
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Color Mode
-        </h2>
-        <div className="flex gap-4">
+      <section className="space-y-4">
+        <h2 className="text-sm font-medium text-muted-foreground">Color mode</h2>
+        <div className="flex gap-3">
           {MODES.map(({ value, label, Preview }) => (
             <button
               key={value}
               onClick={() => setBaseMode(value)}
-              className={cn(
-                'flex flex-col items-center gap-2 focus:outline-none group'
-              )}
+              className="flex flex-col items-center gap-2.5 focus:outline-none group"
             >
               <div className={cn(
-                'w-32 h-20 rounded-xl border-2 p-1 transition-all duration-200',
+                'w-36 h-28 rounded-2xl overflow-hidden border-2 transition-all duration-200',
                 baseMode === value
-                  ? 'border-blue-500 ring-2 ring-blue-500/30'
-                  : 'border-border hover:border-muted-foreground/50'
+                  ? 'border-blue-500'
+                  : 'border-transparent opacity-70 group-hover:opacity-100'
               )}>
                 <Preview />
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className={cn(
-                  'w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all',
-                  baseMode === value ? 'border-blue-500' : 'border-muted-foreground/40'
-                )}>
-                  {baseMode === value && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  )}
-                </div>
-                <span className={cn(
-                  'text-sm font-medium',
-                  baseMode === value ? 'text-foreground' : 'text-muted-foreground'
-                )}>
-                  {label}
-                </span>
-              </div>
+              <span className={cn(
+                'text-sm transition-colors',
+                baseMode === value ? 'text-foreground' : 'text-muted-foreground'
+              )}>
+                {label}
+              </span>
             </button>
           ))}
         </div>
       </section>
 
       {/* Layer Colors */}
-      <section>
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-          Layer Colors
-        </h2>
-        <p className="text-xs text-muted-foreground mb-4">
-          颜色重量代表层级权重，固定映射，不可更改
-        </p>
-        <div className="flex flex-col gap-3">
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-sm font-medium text-muted-foreground">Layer colors</h2>
+          <p className="text-xs text-muted-foreground/60 mt-0.5">Color weight represents layer authority — fixed mapping</p>
+        </div>
+        <div className="flex flex-col gap-2.5">
           {LAYERS.map(layer => (
             <div key={layer.id} className="flex items-center gap-4 p-3 rounded-xl border border-border bg-card">
-              <div className="flex-none w-8 text-center">
-                <span className="text-xs font-bold text-foreground font-mono">{layer.label}</span>
-              </div>
-              {/* 3-segment gradient strip */}
-              <div className="flex-1 flex rounded-lg overflow-hidden h-8">
+              <span className="flex-none w-7 text-xs font-bold text-foreground font-mono text-center">{layer.label}</span>
+              <div className="flex-1 flex rounded-lg overflow-hidden h-7">
                 {layer.segments.map((color, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 h-full"
-                    style={{ background: color }}
-                  />
+                  <div key={i} className="flex-1 h-full" style={{ background: color }} />
                 ))}
               </div>
               <div className="flex-none text-right">
