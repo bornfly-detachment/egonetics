@@ -1,76 +1,77 @@
-# Egonetics — 本地环境初始化指南
+# Egonetics — 环境初始化指南
 
-> 新 clone 仓库后必读。git 不追踪 build 产物、软链和 env 文件，需手动补全。
-
----
-
-## 前置依赖
-
-| 依赖 | 用途 |
-|------|------|
-| Node.js 18+ | 前端 + 后端 |
-| npm | 包管理 |
-| `/Users/Shared/prvse_world_workspace/` | 共享配置、数据、知识库 |
-| `/Users/bornfly/Desktop/claude_code_learn/excalidraw/` | Excalidraw 本地 build |
+> 适用所有 CLI（CC / Codex / Gemini / OpenCode）从 git clone 后的首次环境搭建。  
+> 各 CLI 的 worktree 路径和端口见 [COLLABORATION-PROTOCOL.md](/Users/Shared/COLLABORATION-PROTOCOL.md)。
 
 ---
 
-## 初始化步骤（按顺序执行）
+## 各 CLI Worktree 对照表
 
-### 1. 安装前端依赖
+| CLI | Worktree 目录 | 前端端口 | 后端端口 |
+|-----|--------------|----------|----------|
+| CC（主） | `/Users/bornfly/Desktop/claude_code_learn/egonetics` | 3000 | 3002 |
+| Codex | `/Users/Shared/egonetics-codex` | 3010 | 3012 |
+| Gemini | `/Users/Shared/egonetics-gemini` | 3020 | 3022 |
+| OpenCode | `/Users/Shared/egonetics-opencode` | 3030 | 3032 |
+
+以下所有步骤在 **你自己的 worktree 根目录** 执行。
+
+---
+
+## 初始化步骤
+
+### 1. 安装依赖
 
 ```bash
 npm install
-```
-
-### 2. 安装后端依赖
-
-```bash
 cd server && npm install && cd ..
 ```
 
-### 3. 编译 Kernel
+### 2. 编译 Kernel
 
-后端启动时 `require('../../dist/index.cjs')`，需先 build：
+后端启动时需要 `dist/index.cjs`，git 不追踪此文件：
 
 ```bash
 npm run build:kernel
 ```
 
-### 4. 创建软链：配置文件
+### 3. 创建配置软链
 
-`.env` 和 `server/.env` 不在 git 里，指向 prvse_world_workspace 共享配置：
+`.env` 和 `server/.env` 统一指向共享配置，不在 git 中：
 
 ```bash
 ln -sf /Users/Shared/prvse_world_workspace/config/frontend.env .env
 ln -sf /Users/Shared/prvse_world_workspace/config/server.env server/.env
 ```
 
-### 5. 创建软链：Excalidraw
+> 如果没有 `/Users/Shared/prvse_world_workspace/config/` 的访问权限，
+> 联系 CC（Claude Code）获取 config 目录读取权限。
 
-`vite.config.ts` 中 `@excalidraw/excalidraw` 指向本地 build，不在 npm registry：
+### 4. 创建 Excalidraw 软链
+
+`vite.config.ts` 的 `@excalidraw/excalidraw` alias 指向 `../excalidraw/`（相对 worktree）。  
+这个包是本地 build，不在 npm registry，需要软链到 Desktop 的实际 build：
+
+**仅对 `/Users/Shared/` 下的 worktree 需要执行（CC 的 Desktop 目录天然满足）：**
 
 ```bash
-ln -sf /Users/bornfly/Desktop/claude_code_learn/excalidraw /Users/Shared/egonetics/excalidraw
+# 在 /Users/Shared/ 目录下创建一次即可，所有 CLI 共用
+ln -sf /Users/bornfly/Desktop/claude_code_learn/excalidraw /Users/Shared/excalidraw
 ```
 
-### 6. 创建软链：agent-spaces
+### 5. 创建 agent-spaces 软链
 
 ```bash
 ln -sf ../prvse_world_workspace/L2/ai-resources agent-spaces
 ```
 
-### 7. 创建软链：prvse_world_workspace（@prvse 路径别名）
-
-```bash
-ln -sf /Users/Shared/prvse_world_workspace /Users/Shared/egonetics/prvse_world_workspace
-```
-
-### 8. 初始化认证数据库（首次）
+### 6. 初始化认证数据库（首次）
 
 ```bash
 cd server && node scripts/init-auth-db.js && cd ..
 ```
+
+按提示创建管理员账号。`VITE_DEV_MODE=true` 已在 frontend.env 中，开发时无需登录。
 
 ---
 
@@ -80,49 +81,31 @@ cd server && node scripts/init-auth-db.js && cd ..
 ./start.sh
 ```
 
-- 前端：http://localhost:3000
-- 后端：http://localhost:3002
-
-`VITE_DEV_MODE=true`（已在 frontend.env 中）会跳过登录，直接以 admin 身份进入。
+脚本自动启动后端（3002）→ 健康检查 → 前端（3000）。  
+各 CLI 使用自己端口时，参考 COLLABORATION-PROTOCOL 修改端口配置。
 
 ---
 
-## 一键初始化脚本
-
-以上步骤汇总为单条命令，方便 CI 或新机器：
-
-```bash
-npm install && \
-cd server && npm install && cd .. && \
-npm run build:kernel && \
-ln -sf /Users/Shared/prvse_world_workspace/config/frontend.env .env && \
-ln -sf /Users/Shared/prvse_world_workspace/config/server.env server/.env && \
-ln -sf /Users/bornfly/Desktop/claude_code_learn/excalidraw /Users/Shared/egonetics/excalidraw && \
-ln -sf ../prvse_world_workspace/L2/ai-resources agent-spaces && \
-ln -sf /Users/Shared/prvse_world_workspace /Users/Shared/egonetics/prvse_world_workspace && \
-echo "✅ 初始化完成，运行 ./start.sh 启动"
-```
-
----
-
-## 常见问题
+## 踩坑记录
 
 | 症状 | 原因 | 修复 |
 |------|------|------|
 | `Cannot find module 'sqlite3'` | `server/node_modules` 不存在 | `cd server && npm install` |
 | `Cannot find module '.../dist/index.cjs'` | Kernel 未编译 | `npm run build:kernel` |
-| 所有页面白屏 | Excalidraw 软链缺失，Vite 无法解析模块 | 步骤 5 |
-| 跳转到 `/login` 无法进入 | `.env` 缺失，`VITE_DEV_MODE` 未设置 | 步骤 4 |
-| `@prvse` 路径找不到 | prvse_world_workspace 软链缺失 | 步骤 7 |
+| 所有页面白屏（无报错） | `@excalidraw/excalidraw` alias 路径不存在，Vite 无法挂载整个 app | 步骤 4 |
+| 跳转到 `/login` | `.env` 缺失，`VITE_DEV_MODE` 未生效 | 步骤 3 |
+| `@prvse` 路径找不到 | `/Users/Shared/` 下的 worktree 不需要额外软链（`../prvse_world_workspace` 即真实目录）；Desktop 下的 CC 需检查 `../prvse_world_workspace` 是否存在 | 按实际路径补软链 |
+| `server/data` 无数据 | 首次运行，数据库尚未初始化 | 步骤 6 |
 
 ---
 
 ## 存储说明
 
-| 目录 | 大小 | 说明 |
-|------|------|------|
-| `node_modules/` | ~560 MB | 前端依赖，正常 |
-| `server/node_modules/` | ~648 MB | `kuzu`（532MB 图数据库）是主要来源 |
-| `dist/` | ~44 KB | Kernel build 产物，不在 git |
+`node_modules` 合计约 1.2 GB，主要来源：
 
-如不使用图数据库功能，可 `cd server && npm uninstall kuzu` 节省 532MB。
+| 包 | 大小 | 说明 |
+|----|------|------|
+| `server/node_modules/kuzu` | ~532 MB | 嵌入式图数据库，含 native binary |
+| `node_modules/` (前端) | ~560 MB | React + Vite + UI 组件，正常范围 |
+
+如不使用图数据库功能：`cd server && npm uninstall kuzu`（节省 532 MB）。
