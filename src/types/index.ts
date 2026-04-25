@@ -77,6 +77,7 @@ export interface UIState {
     | 'resources-gemini'
     | 'excalidraw'
     | 'prvse-ui'
+    | 'settings'
   currentTaskId: string | null
   theme: 'dark' | 'light' | 'system'
   fontSize: 'sm' | 'md' | 'lg'
