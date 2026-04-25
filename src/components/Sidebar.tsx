@@ -28,7 +28,7 @@ import { getVisibleNavItems } from '@/components/AuthGuard'
 
 const Sidebar: React.FC = () => {
   const { uiState } = useChronicleStore()
-  const { t, language, setLanguage } = useTranslation()
+  const { t } = useTranslation()
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
 
