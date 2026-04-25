@@ -56,7 +56,7 @@ const LAYERS = [
   },
   {
     id: 'L1', label: 'L1', desc: '编排层',
-    segments: ['#F0EAF8', '#7B52A8', '#4E2579'],
+    segments: ['#F0EAF8', '#8B62B8', '#6B3FA0'],
     name: 'Purple',
   },
   {
