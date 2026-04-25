@@ -5,6 +5,7 @@
 @layer base {
   :root {
     --radius: 0.5rem;
+    --app-font: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     /* ── L0/L1/L2 Layer colors (fixed, theme-invariant) ── */
     --layer-l0:         #007A62;
     --layer-l0-muted:   #2BC9A0;
