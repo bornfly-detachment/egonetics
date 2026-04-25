@@ -128,8 +128,8 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate('/settings')}
           title={!open ? '外观设置' : undefined}
           className={`
-            w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-neutral-300
-            hover:bg-white/[0.05] transition-all duration-150
+            w-full flex items-center rounded-lg py-2 text-muted-foreground hover:text-foreground
+            hover:bg-foreground/[0.05] transition-all duration-150
             ${open ? 'px-3 gap-2' : 'justify-center'}
           `}
         >
@@ -141,8 +141,8 @@ const Sidebar: React.FC = () => {
           onClick={logout}
           title={!open ? s.logout : undefined}
           className={`
-            w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-red-400
-            hover:bg-white/[0.05] transition-all duration-150
+            w-full flex items-center rounded-lg py-2 text-muted-foreground hover:text-red-500
+            hover:bg-foreground/[0.05] transition-all duration-150
             ${open ? 'px-3 gap-2' : 'justify-center'}
           `}
         >
@@ -150,7 +150,7 @@ const Sidebar: React.FC = () => {
           {open && (
             <div className="flex-1 flex items-center justify-between min-w-0">
               <span className="text-xs truncate">{user?.username || user?.email || s.logout}</span>
-              <span className="text-[10px] text-neutral-700 ml-1 truncate">{user?.role}</span>
+              <span className="text-[10px] text-muted-foreground/40 ml-1 truncate">{user?.role}</span>
             </div>
           )}
         </button>
@@ -159,8 +159,8 @@ const Sidebar: React.FC = () => {
         <button
           onClick={() => useChronicleStore.getState().toggleSidebar()}
           className={`
-            w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-neutral-300
-            hover:bg-white/[0.05] transition-all duration-150
+            w-full flex items-center rounded-lg py-2 text-muted-foreground hover:text-foreground
+            hover:bg-foreground/[0.05] transition-all duration-150
             ${open ? 'px-3 gap-2' : 'justify-center'}
           `}
         >
