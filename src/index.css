@@ -18,37 +18,37 @@
     --layer-l2-surface: #FDF0ED;
   }
 
-  /* ── Dark theme (default) ── */
+  /* ── Dark theme (default) — neutral warm gray, matches claude dark.png ── */
   :root,
   [data-theme="dark"] {
-    --bg-base:     #090c12;
-    --bg-surface:  #111827;
-    --bg-elevated: #1a2235;
-    --text-primary:   #e2e8f0;
-    --text-secondary: #94a3b8;
-    --text-muted:     #475569;
-    --border-subtle:  rgba(255,255,255,0.08);
-    --border-default: rgba(255,255,255,0.12);
-    /* Shadcn dark */
-    --background: 222 47% 4%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 7%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 7%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 210 40% 96%;
-    --primary-foreground: 222 47% 4%;
-    --secondary: 217 33% 15%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 217 33% 15%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 217 33% 15%;
-    --accent-foreground: 210 40% 96%;
+    --bg-base:     #161616;
+    --bg-surface:  #1e1e1e;
+    --bg-elevated: #272727;
+    --text-primary:   #e0e0e0;
+    --text-secondary: #a3a3a3;
+    --text-muted:     #666666;
+    --border-subtle:  rgba(255,255,255,0.06);
+    --border-default: rgba(255,255,255,0.10);
+    /* Shadcn dark — neutral, no blue tint */
+    --background: 0 0% 9%;
+    --foreground: 0 0% 90%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 90%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 90%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 210 40% 96%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 90%;
   }
 
   /* ── Light theme ── */
