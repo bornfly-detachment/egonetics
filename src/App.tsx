@@ -248,6 +248,9 @@ const RouteSync: React.FC = () => {
       case 'prvse-ui':
         targetPath = '/prvse-ui'
         break
+      case 'settings':
+        targetPath = '/settings'
+        break
       default:
         targetPath = '/memory'
     }
