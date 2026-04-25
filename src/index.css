@@ -6,9 +6,9 @@
   :root {
     --radius: 0.5rem;
     /* ── L0/L1/L2 Layer colors (fixed, theme-invariant) ── */
-    --layer-l0:         #2E8B57;
-    --layer-l0-muted:   #7EB89A;
-    --layer-l0-surface: #EBF5F0;
+    --layer-l0:         #007A62;
+    --layer-l0-muted:   #2BC9A0;
+    --layer-l0-surface: #C8F5EC;
     --layer-l1:         #6B3FA0;
     --layer-l1-muted:   #9470B8;
     --layer-l1-surface: #F0EAF8;
