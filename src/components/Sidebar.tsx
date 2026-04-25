@@ -122,8 +122,19 @@ const Sidebar: React.FC = () => {
 
       {/* Bottom actions */}
       <div className="shrink-0 px-2 pb-4 space-y-1">
-        {/* Theme toggle */}
-        <ThemeToggle open={open} />
+        {/* Settings */}
+        <button
+          onClick={() => navigate('/settings')}
+          title={!open ? '外观设置' : undefined}
+          className={`
+            w-full flex items-center rounded-lg py-2 text-neutral-600 hover:text-neutral-300
+            hover:bg-white/[0.05] transition-all duration-150
+            ${open ? 'px-3 gap-2' : 'justify-center'}
+          `}
+        >
+          <Settings className="w-4 h-4 shrink-0" />
+          {open && <span className="text-xs">外观设置</span>}
+        </button>
         {/* Logout */}
         <button
           onClick={logout}
