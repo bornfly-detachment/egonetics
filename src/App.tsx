@@ -269,6 +269,7 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     console.log('Egonetics App initializing...')
+    initTheme()
     initialize()
     console.log('UI State:', uiState)
   }, [initialize])
