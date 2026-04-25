@@ -48,6 +48,18 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        /* L0/L1/L2 hierarchy colors (CSS var driven, theme-invariant) */
+        layer: {
+          l0:         'var(--layer-l0)',
+          'l0-muted': 'var(--layer-l0-muted)',
+          'l0-surface': 'var(--layer-l0-surface)',
+          l1:         'var(--layer-l1)',
+          'l1-muted': 'var(--layer-l1-muted)',
+          'l1-surface': 'var(--layer-l1-surface)',
+          l2:         'var(--layer-l2)',
+          'l2-muted': 'var(--layer-l2-muted)',
+          'l2-surface': 'var(--layer-l2-surface)',
+        },
         /* PRVSE layer colors */
         prvse: {
           p: '#16a34a',   /* Pattern  — green */
