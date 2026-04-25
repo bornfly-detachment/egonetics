@@ -122,6 +122,8 @@ const Sidebar: React.FC = () => {
 
       {/* Bottom actions */}
       <div className="shrink-0 px-2 pb-4 space-y-1">
+        {/* Theme toggle */}
+        <ThemeToggle open={open} />
         {/* Logout */}
         <button
           onClick={logout}
