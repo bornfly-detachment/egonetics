@@ -81,15 +81,7 @@ const Sidebar: React.FC = () => {
           style={{ height: 28, width: 'auto' }}
         />
         {open && (
-          <div className="flex-1 min-w-0 flex items-center justify-between">
-            <span className="font-semibold text-foreground text-sm tracking-wide">Egonetics</span>
-            <button
-              onClick={() => setLanguage(language === 'zh' ? 'en' : 'zh')}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded bg-foreground/5 hover:bg-foreground/10"
-            >
-              {language === 'zh' ? 'EN' : '中'}
-            </button>
-          </div>
+          <span className="font-semibold text-foreground text-sm tracking-wide">Egonetics</span>
         )}
       </div>
 
