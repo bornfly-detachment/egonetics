@@ -105,7 +105,7 @@ cd server && node scripts/init-auth-db.js && cd ..
 |------|------|------|
 | `Cannot find module 'sqlite3'` | `server/node_modules` 不存在 | `cd server && npm install` |
 | `Cannot find module '.../dist/index.cjs'` | Kernel 未编译 | `npm run build:kernel` |
-| 所有页面白屏（无报错） | `@excalidraw/excalidraw` alias 路径不存在，Vite 无法挂载整个 app | 步骤 4 |
+| 所有页面白屏（无报错，console 也无明显错误） | `@excalidraw/excalidraw` alias 在 `vite.config.ts` 中指向本地路径，该路径不存在时 Vite 在模块解析阶段就失败，**导致整个 React app 无法挂载**，不只是 `/excalidraw` 路由，所有页面都白屏 | 步骤 4 创建软链后重启 Vite |
 | 跳转到 `/login` | `.env` 缺失，`VITE_DEV_MODE` 未生效 | 步骤 3 |
 | `@prvse` 路径找不到 | `/Users/Shared/` 下的 worktree 不需要额外软链（`../prvse_world_workspace` 即真实目录）；Desktop 下的 CC 需检查 `../prvse_world_workspace` 是否存在 | 按实际路径补软链 |
 | `server/data` 无数据 | 首次运行，数据库尚未初始化 | 步骤 6 |
