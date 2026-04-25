@@ -51,6 +51,7 @@ import { useViewport } from './hooks/useViewport'
 import UsageLimitsView from './components/UsageLimitsView'
 import ResourcesGeminiView from './components/ai-resources/ResourcesGeminiView'
 import PRVSEUIDemo from './components/PRVSEUIDemo'
+import AppearancePage from './components/settings/AppearancePage'
 
 // 路由同步组件 - 将 URL 同步到 Zustand store
 const RouteSync: React.FC = () => {
