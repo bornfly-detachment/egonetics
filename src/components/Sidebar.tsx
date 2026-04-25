@@ -19,6 +19,7 @@ import {
   Waves,
   Terminal,
   BarChart2,
+  Settings,
 } from 'lucide-react'
 import { useChronicleStore } from '@/stores/useChronicleStore'
 import { useTranslation } from '@/lib/translations'
