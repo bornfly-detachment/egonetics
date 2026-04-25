@@ -61,7 +61,7 @@ const LAYERS = [
   },
   {
     id: 'L2', label: 'L2', desc: '裁决层',
-    segments: ['#fee2e2', '#f87171', '#dc2626'],
+    segments: ['#fdecea', '#d4614e', '#C0341D'],
     name: 'Red',
   },
 ]
