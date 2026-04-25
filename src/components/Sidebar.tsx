@@ -66,10 +66,11 @@ const Sidebar: React.FC = () => {
     <aside
       className={`
         flex flex-col h-full
-        bg-[#111111] border-r border-white/[0.06]
+        border-r border-border
         transition-all duration-300 ease-in-out
         ${open ? 'w-56' : 'w-[60px]'}
       `}
+      style={{ background: 'var(--bg-surface)' }}
     >
       {/* Logo */}
       <div className={`shrink-0 flex items-center gap-3 px-4 h-14 border-b border-white/[0.06] ${!open && 'justify-center'}`}>
