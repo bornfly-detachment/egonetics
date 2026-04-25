@@ -4,7 +4,63 @@
 
 @layer base {
   :root {
-    /* ── Shadcn/ui CSS variables (light) ── */
+    --radius: 0.5rem;
+    /* ── L0/L1/L2 Layer colors (fixed, theme-invariant) ── */
+    --layer-l0:         #16a34a;
+    --layer-l0-muted:   #bbf7d0;
+    --layer-l0-surface: #f0fdf4;
+    --layer-l1:         #7c3aed;
+    --layer-l1-muted:   #ede9fe;
+    --layer-l1-surface: #f5f3ff;
+    --layer-l2:         #dc2626;
+    --layer-l2-muted:   #fee2e2;
+    --layer-l2-surface: #fef2f2;
+  }
+
+  /* ── Dark theme (default) ── */
+  :root,
+  [data-theme="dark"] {
+    --bg-base:     #090c12;
+    --bg-surface:  #111827;
+    --bg-elevated: #1a2235;
+    --text-primary:   #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #475569;
+    --border-subtle:  rgba(255,255,255,0.08);
+    --border-default: rgba(255,255,255,0.12);
+    /* Shadcn dark */
+    --background: 222 47% 4%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 7%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 7%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 210 40% 96%;
+    --primary-foreground: 222 47% 4%;
+    --secondary: 217 33% 15%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 217 33% 15%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 210 40% 96%;
+  }
+
+  /* ── Light theme ── */
+  [data-theme="light"] {
+    --bg-base:     #f8fafc;
+    --bg-surface:  #ffffff;
+    --bg-elevated: #f1f5f9;
+    --text-primary:   #0f172a;
+    --text-secondary: #475569;
+    --text-muted:     #94a3b8;
+    --border-subtle:  rgba(0,0,0,0.06);
+    --border-default: rgba(0,0,0,0.10);
+    /* Shadcn light */
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
@@ -24,16 +80,7 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
-    /* ── Existing dark theme vars ── */
-    --bg-base:     #090c12;
-    --bg-surface:  #111827;
-    --bg-elevated: #1a2235;
-    --text-primary:   #e2e8f0;
-    --text-secondary: #94a3b8;
-    --text-muted:     #475569;
-    --border-subtle:  rgba(255,255,255,0.08);
-    --border-default: rgba(255,255,255,0.12);
+  }
     /* Safe area insets (notch / home indicator) */
     --safe-area-top:    env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
