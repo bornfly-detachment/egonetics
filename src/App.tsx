@@ -131,6 +131,8 @@ const RouteSync: React.FC = () => {
       view = 'excalidraw'
     } else if (path === '/prvse-ui') {
       view = 'prvse-ui'
+    } else if (path === '/settings') {
+      view = 'settings'
     } else {
       view = 'memory'
     }
