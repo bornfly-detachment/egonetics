@@ -51,7 +51,7 @@ const MODES: { value: BaseMode; label: string; Preview: React.FC }[] = [
 const LAYERS = [
   {
     id: 'L0', label: 'L0', desc: '执行层',
-    segments: ['#bbf7d0', '#4ade80', '#16a34a'],
+    segments: ['#EBF5F0', '#5A9E73', '#1A6B3A'],
     name: 'Green',
   },
   {
