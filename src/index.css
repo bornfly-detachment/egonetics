@@ -96,24 +96,23 @@
 
   html {
     font-size: 15px;
-    /* Prevent double-tap zoom on mobile */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    /* Prevent horizontal overflow */
     overflow-x: hidden;
   }
 
   body {
-    @apply antialiased;
     background-color: var(--bg-base);
     color: var(--text-primary);
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-optical-sizing: auto;
     font-weight: 400;
-    line-height: 1.65;
-    letter-spacing: 0.01em;
+    line-height: 1.6;
+    letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Use dynamic viewport height — handles iOS Safari address bar */
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1;
     height: 100vh;
     height: 100dvh;
     height: var(--app-height);
@@ -128,10 +127,11 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: 'Inter', ui-sans-serif, -apple-system, system-ui, sans-serif;
+    font-optical-sizing: auto;
     font-weight: 600;
-    line-height: 1.3;
-    letter-spacing: -0.02em;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
     color: var(--text-primary);
   }
 
