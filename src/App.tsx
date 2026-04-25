@@ -276,8 +276,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div
-      className="overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950"
-      style={{ height: 'var(--app-height, 100dvh)' }}
+      className="overflow-hidden"
+      style={{ height: 'var(--app-height, 100dvh)', background: 'var(--bg-base)' }}
     >
       <div className="flex h-full">
         {/* Sidebar — desktop only, BottomNav handles mobile */}
