@@ -107,8 +107,8 @@ const Sidebar: React.FC = () => {
                 transition-all duration-150
                 ${open ? 'px-3 py-2' : 'px-0 py-2 justify-center'}
                 ${active
-                  ? 'bg-white/10 text-white'
-                  : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/[0.05]'
+                  ? 'bg-foreground/10 text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-foreground/[0.05]'
                 }
               `}
             >
