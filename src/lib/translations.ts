@@ -60,6 +60,7 @@ export interface Translation {
     recycle: string
     collapse: string
     logout: string
+    settings: string
   }
 
   // ── Home ──
@@ -391,7 +392,7 @@ const zh: Translation = {
     home: '主页', memory: '记忆', theory: '生变论', chronicle: '生变录',
     tasks: '任务', blog: '博客', egonetics: '自我控制论', tagTree: '标签语义树',
     protocol: '人机协议', protoBuilder: '协议构建器', prvseWorld: 'PRVSE World', freeCode: 'Free Code',
-    lab: '测试环境', mq: '消息队列', resourcesClaude: 'AI 用量', resourcesGemini: 'Gemini 感知', recycle: '回收站', collapse: '收起', logout: '退出',
+    lab: '测试环境', mq: '消息队列', resourcesClaude: 'AI 用量', resourcesGemini: 'Gemini 感知', recycle: '回收站', collapse: '收起', logout: '退出', settings: '设置',
   },
 
   home: {
@@ -665,7 +666,7 @@ const en: Translation = {
     home: 'Home', memory: 'Memory', theory: 'Bornfly Theory', chronicle: 'Chronicle',
     tasks: 'Tasks', blog: 'Blog', egonetics: 'Egonetics', tagTree: 'Tag Tree',
     protocol: 'HM Protocol', protoBuilder: 'Proto Builder', prvseWorld: 'PRVSE World', freeCode: 'Free Code',
-    lab: 'Lab', mq: 'MQ Stream', resourcesClaude: 'AI Usage', resourcesGemini: 'Gemini', recycle: 'Archive', collapse: 'Collapse', logout: 'Logout',
+    lab: 'Lab', mq: 'MQ Stream', resourcesClaude: 'AI Usage', resourcesGemini: 'Gemini', recycle: 'Archive', collapse: 'Collapse', logout: 'Logout', settings: 'Settings',
   },
 
   home: {
