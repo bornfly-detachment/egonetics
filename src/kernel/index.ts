@@ -1,4 +1,20 @@
 /**
+ * ⚠️  DEPRECATED — 2026-04-26
+ *
+ * This kernel (CFL tick-based) has been superseded by the PRVSE-S Broker runtime
+ * in prvse_world_workspace. Do NOT add new features here.
+ *
+ * Migrated assets (use these instead):
+ *   - compiler pipeline  →  @prvse/kernel/compiler  (Scanner→Binder→Checker→Emitter)
+ *   - patch algebra      →  @prvse/kernel/cfl/patch
+ *   - CFL formal types   →  @prvse/kernel/cfl/types
+ *
+ * Runtime kernel  →  @prvse/kernel/runtime  (KernelRuntime + Broker)
+ *
+ * This directory will be deleted once egonetics frontend is fully decoupled from kernel.
+ */
+
+/**
  * PRVSE Kernel — Public API
  *
  * Pure TypeScript, zero dependencies.
