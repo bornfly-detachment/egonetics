@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ 内核废弃警告 — 必读（2026-04-26）
+
+**`src/kernel/` 已废弃，禁止在此目录添加任何新代码。**
+
+| 废弃路径 | 替代位置（通过 `@prvse/*` alias） |
+|---|---|
+| `src/kernel/compiler/` | `@prvse/kernel/compiler` |
+| `src/kernel/patch.ts` 相关 | `@prvse/kernel/cfl/patch` |
+| `src/kernel/types.ts` 相关 | `@prvse/kernel/cfl/types` |
+| Runtime / Broker | `@prvse/kernel/runtime` |
+
+**原因**：egonetics frontend 定位为纯 UI shell，所有 kernel 逻辑集中到 `prvse_world_workspace`，通过 HTTP 接入。`src/kernel/` 是旧 CFL tick 架构，已被 PRVSE-S Broker runtime 取代。
+
+如需引用 kernel 能力，统一走 `@prvse/kernel/*`（tsconfig 已配置 alias）。
+
 ## 开发宪法 — 必须遵守，优先级高于一切
 
 ### 核心原则：主动式设计，而非反应式修 bug
